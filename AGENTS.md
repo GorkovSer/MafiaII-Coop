@@ -12,6 +12,8 @@ Target currently audited: GOG EXE SHA256 `16c79a3be483e582719e43d7b451e887e89414
 
 Current code is a diagnostic x86 DLL/launcher only. Build: `scripts/build-probe.ps1 -Toolchain <pinned LLVM-MinGW directory>`. Verify: `python tests/test_audit_game.py` and `scripts/test-probe.ps1`. Runtime evidence remains local; publish only a sanitized test report.
 
+User requires all Mafia II test launches in windowed mode on the second display. Use `scripts/start-probe.ps1 -Observer -SecondScreen -WaitForExit` with the intended build directory; video settings are changed only in the isolated profile. Do not run a fullscreen or primary-display game test. Never force-close an existing user game to make a new test possible.
+
 Do not tag or publish a Release until an actual roadmap stage's acceptance criteria are met. Unstable accepted builds must be prereleases, archives must exclude game files/secrets, and their descriptions must explicitly state whether TWO-PC Radmin VPN gameplay was tested.
 
 No background saving after this chat is configured.

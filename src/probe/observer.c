@@ -7,6 +7,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
+#include "../game/telemetry.h"
 
 static wchar_t log_path[MAX_PATH];
 static const unsigned char original[5] = {0x8b, 0x42, 0x1c, 0x6a, 0x0a};
@@ -71,7 +72,7 @@ static int write_startup_patch(const void *bytes) {
     return VirtualProtect(target, 5, old, &ignored) != 0;
 }
 
-typedef struct { const char *name; LONG count; } observation;
+typedef struct { const char *name; LONG count; unsigned int id; } observation;
 typedef void (__attribute__((thiscall)) *callback_type)(void *, void *);
 typedef unsigned char (__attribute__((thiscall)) *add_action_type)(
     void *, unsigned int, int, void *, callback_type, float, unsigned int, unsigned int);
@@ -79,6 +80,7 @@ typedef unsigned char (__attribute__((thiscall)) *add_action_type)(
 static void __attribute__((thiscall, force_align_arg_pointer)) on_event(void *self, void *context) {
     (void)context;
     observation *item = (observation *)self;
+    CoopTelemetryEvent(item->id);
     LONG count = InterlockedIncrement(&item->count);
     /* Tick/render only log their first invocation; no disk I/O every frame. */
     if (count == 1) record(item->name, (unsigned long)count, 0);
@@ -90,17 +92,19 @@ static void __attribute__((thiscall, force_align_arg_pointer)) on_event(void *se
     }
 }
 
+#define EVENT(id, name) {id, {name, 0, id}}
 static struct { unsigned int id; observation item; } events[] = {
-    {3, {"tick", 0}}, {4, {"tick_paused", 0}}, {5, {"tick_always", 0}},
-    {7, {"render", 0}}, {9, {"mission_before_open", 0}}, {10, {"mission_open", 0}},
-    {11, {"mission_before_close", 0}}, {12, {"mission_close", 0}},
-    {13, {"game_init", 0}}, {14, {"game_done", 0}}, {19, {"game_restore", 0}},
-    {20, {"no_game_start", 0}}, {21, {"no_game_end", 0}},
-    {22, {"no_game_tick", 0}}, {23, {"no_game_render", 0}},
-    {24, {"gameloop_after", 0}}, {27, {"game_save", 0}},
-    {32, {"load_started", 0}}, {33, {"load_finished", 0}},
-    {34, {"game_paused", 0}}, {35, {"game_unpaused", 0}}, {39, {"shutdown", 0}}
+    EVENT(3, "tick"), EVENT(4, "tick_paused"), EVENT(5, "tick_always"),
+    EVENT(7, "render"), EVENT(9, "mission_before_open"), EVENT(10, "mission_open"),
+    EVENT(11, "mission_before_close"), EVENT(12, "mission_close"),
+    EVENT(13, "game_init"), EVENT(14, "game_done"), EVENT(19, "game_restore"),
+    EVENT(20, "no_game_start"), EVENT(21, "no_game_end"),
+    EVENT(22, "no_game_tick"), EVENT(23, "no_game_render"),
+    EVENT(24, "gameloop_after"), EVENT(27, "game_save"),
+    EVENT(32, "load_started"), EVENT(33, "load_finished"),
+    EVENT(34, "game_paused"), EVENT(35, "game_unpaused"), EVENT(39, "shutdown")
 };
+#undef EVENT
 
 __attribute__((used, noinline)) static void observer_register(void) {
     if (InterlockedCompareExchange(&registration_started, 1, 0)) return;
@@ -140,6 +144,7 @@ DWORD CoopObserverInstall(const wchar_t *path) {
         !readable(add, sizeof(add_prefix)) || memcmp(add, add_prefix, sizeof(add_prefix))) {
         record("refused_signature_mismatch", 0, 0); return 12;
     }
+    CoopTelemetryStart(path);
     unsigned char patch[5] = {0xe9};
     uint32_t delta = (uint32_t)(uintptr_t)startup_bridge - (0x4f2f05u + 5u);
     memcpy(patch + 1, &delta, sizeof(delta));
