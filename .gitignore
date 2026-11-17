@@ -1,0 +1,42 @@
+# Local research clones, private diagnostics, game data and backups
+/work/
+/outputs/
+/local/
+/backups/
+/saves/
+/logs/
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.pfx
+*.p12
+credentials*
+*token*.local.*
+# Build products are distributed only as reviewed release assets
+/build/
+/dist/
+/out/
+.vs/
+.vscode/
+__pycache__/
+node_modules/
+*.obj
+*.o
+*.pdb
+*.ilk
+*.lib
+*.a
+*.dll
+*.asi
+*.exe
+*.zip
+*.7z
+*.dmp
+*.log
+# Never distribute original game resources or personal saves
+*.sds
+*.sav
+*.save
+*.bak
