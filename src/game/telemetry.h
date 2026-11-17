@@ -13,6 +13,6 @@ typedef struct {
     int model_valid;
 } CoopPlayerSnapshot;
 
-void CoopTelemetryStart(const wchar_t *log_path);
+int CoopTelemetryStart(const wchar_t *log_path);
 void CoopTelemetryEvent(unsigned int event_id);
 #endif

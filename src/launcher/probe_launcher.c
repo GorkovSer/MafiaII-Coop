@@ -9,6 +9,7 @@
 #include <wchar.h>
 int CoopSecondMonitorAvailable(void);
 int CoopPlaceOnSecondMonitor(DWORD pid, HANDLE process);
+BOOL CoopCreateUserProcess(const wchar_t *, wchar_t *, const wchar_t *, STARTUPINFOW *, PROCESS_INFORMATION *);
 
 static uintptr_t remote_module(DWORD pid, const wchar_t *name) {
     HANDLE snapshot = CreateToolhelp32Snapshot(TH32CS_SNAPMODULE, pid);
@@ -63,15 +64,16 @@ static DWORD call_remote(HANDLE process, uintptr_t address, void *arg, DWORD *co
 }
 
 int wmain(int argc, wchar_t **argv) {
-    int monitor = 0, early = 0, second_screen = 0;
+    int monitor = 0, early = 0, second_screen = 0, user = 0;
     for (int i = 4; i < argc; ++i) {
         if (!wcscmp(argv[i], L"--wait")) monitor = 1;
         else if (!wcscmp(argv[i], L"--early")) early = 1;
         else if (!wcscmp(argv[i], L"--monitor2")) second_screen = 1;
+        else if (!wcscmp(argv[i], L"--user")) user = 1;
         else return 2;
     }
     if (argc < 4 || sizeof(void *) != 4) {
-        fwprintf(stderr, L"Usage: probe_launcher.exe <absolute exe> <absolute DLL> <new absolute log> [--wait] [--early] [--monitor2]\n");
+        fwprintf(stderr, L"Usage: probe_launcher.exe <absolute exe> <absolute DLL> <new absolute log> [--wait] [--early] [--monitor2] [--user]\n");
         return 2;
     }
     if (second_screen && !CoopSecondMonitorAvailable()) {
@@ -101,8 +103,9 @@ int wmain(int argc, wchar_t **argv) {
     STARTUPINFOW startup = {0};
     startup.cb = sizeof(startup);
     PROCESS_INFORMATION child = {0};
-    if (!CreateProcessW(exe, cmd, NULL, NULL, FALSE, CREATE_SUSPENDED,
-                        NULL, cwd, &startup, &child)) {
+    BOOL created = user ? CoopCreateUserProcess(exe, cmd, cwd, &startup, &child) :
+        CreateProcessW(exe, cmd, NULL, NULL, FALSE, CREATE_SUSPENDED, NULL, cwd, &startup, &child);
+    if (!created) {
         fprintf(stderr, "CreateProcess failed: %lu\n", GetLastError()); return 8;
     }
     DWORD failure = 0, exit_code = 0;

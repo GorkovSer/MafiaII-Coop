@@ -1,5 +1,7 @@
 param([Parameter(Mandatory=$true)][string]$GameDirectory, [switch]$WaitForExit,
-      [switch]$Observer, [string]$BuildDirectory = 'build/probe', [switch]$SecondScreen)
+      [switch]$Observer, [string]$BuildDirectory = 'build/probe', [switch]$SecondScreen,
+      [ValidateSet('off','host','guest')][string]$NetworkRole='off',
+      [string]$Address='127.0.0.1', [ValidateRange(1,65535)][int]$Port=28960)
 $ErrorActionPreference = 'Stop'
 $root = Split-Path $PSScriptRoot -Parent
 $exe = Join-Path $GameDirectory 'pc/mafia2.exe'
@@ -11,6 +13,17 @@ if (Get-Process mafia2 -ErrorAction SilentlyContinue) { throw 'Close existing Ma
 $stamp = Get-Date -Format 'yyyyMMdd-HHmmss-fff'
 $local = Join-Path $root "work/probe-sessions/$stamp"
 New-Item -ItemType Directory -Path $local -Force | Out-Null
+if($NetworkRole -ne 'off') {
+    if(!$Observer) {throw 'Network telemetry requires observer build'}
+    $parsedAddress=$null
+    if($Address -notmatch '^(0|[1-9]\d{0,2})(\.(0|[1-9]\d{0,2})){3}$' -or
+       ![Net.IPAddress]::TryParse($Address,[ref]$parsedAddress) -or
+       $parsedAddress.AddressFamily -ne [Net.Sockets.AddressFamily]::InterNetwork) {
+        throw 'A literal IPv4 address is required'
+    }
+    [IO.File]::WriteAllText((Join-Path $local 'coop-session.ini'),
+        "[network]`r`nrole=$NetworkRole`r`naddress=$Address`r`nport=$Port`r`n",[Text.Encoding]::ASCII)
+}
 # Private data stays in ignored work; absence is recorded, never fabricated.
 $candidates = @(
     (Join-Path $env:LOCALAPPDATA '2K Games/Mafia II'),
@@ -63,7 +76,7 @@ $launcher = Join-Path (Join-Path $root $BuildDirectory) 'probe_launcher.exe'
 $dllName = if ($Observer) { 'coop_observer.dll' } else { 'coop_probe.dll' }
 $dll = Join-Path (Join-Path $root $BuildDirectory) $dllName
 $log = Join-Path $local 'probe.log'
-$extra = @()
+$extra = @('--user')
 if ($WaitForExit) { $extra += '--wait' }
 if ($Observer) { $extra += '--early' }
 if ($SecondScreen) { $extra += '--monitor2' }
@@ -79,6 +92,6 @@ $profileChanges = @(@($profileBefore.Keys) + @($profileAfter.Keys) | Sort-Object
 if ($profileChanges.Count) { throw "Original profile changed; inspect private backups in $local. No automatic restore performed." }
 if ($launchExit -ne 0) { throw "Probe failed; private evidence in $local" }
 if (!(Test-Path -LiteralPath $log)) { throw 'Launcher succeeded without probe log' }
-Get-Content -LiteralPath $log
+Get-Content -LiteralPath $log -Tail 25
 Write-Output "Private evidence: $local"
 Write-Output 'Diagnostic code only. A log entry must prove each callback; no co-op support is implied.'

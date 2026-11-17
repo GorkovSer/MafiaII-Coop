@@ -63,3 +63,7 @@ try {
 } finally {
     $env:COOP_PROFILE_TEST_ROOT = $oldRoot
 }
+$userLog=Join-Path $dir 'user.log'
+$userResult=(& $launcher $hostExe $dll $userLog --early --user --wait) -join "`n"
+if($LASTEXITCODE -ne 0 -or $userResult -notmatch 'child_exit=0') {throw 'Limited-token test host failed'}
+Write-Output 'PASS same-account user-token launch, early DLL and normal process exit'

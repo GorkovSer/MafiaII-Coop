@@ -10,16 +10,27 @@ if ($LASTEXITCODE -ne 0 -or $version[0] -notmatch 'clang version 23\.1\.5') {
 $out = Join-Path $root $OutputDirectory
 New-Item -ItemType Directory -Path $out -Force | Out-Null
 $common = @('-std=c11', '-O2', '-Wall', '-Wextra', '-Werror', '-static')
+& (Join-Path $PSScriptRoot 'build-enet.ps1') -Toolchain $Toolchain -OutputDirectory $OutputDirectory
+$netSources=@((Join-Path $root 'src/net/wire.c'),(Join-Path $root 'src/net/session.c'))
+$netLink=@('-I',(Join-Path $root 'third_party/enet/include'),(Join-Path $out 'enet.a'),'-lws2_32','-lwinmm','-lbcrypt')
 & $cc @common -shared (Join-Path $root 'src/probe/probe.c') '-Wl,--kill-at' -o (Join-Path $out 'coop_probe.dll')
 if ($LASTEXITCODE -ne 0) { throw 'Probe DLL build failed' }
-& $cc @common -DCOOP_OBSERVER -shared (Join-Path $root 'src/probe/probe.c') (Join-Path $root 'src/probe/observer.c') (Join-Path $root 'src/probe/profile.c') (Join-Path $root 'src/game/telemetry.c') '-Wl,--kill-at' -o (Join-Path $out 'coop_observer.dll') -ladvapi32
+& $cc @common -DCOOP_OBSERVER -shared (Join-Path $root 'src/probe/probe.c') (Join-Path $root 'src/probe/observer.c') (Join-Path $root 'src/probe/profile.c') (Join-Path $root 'src/game/telemetry.c') (Join-Path $root 'src/net/game_bridge.c') @netSources '-Wl,--kill-at' -o (Join-Path $out 'coop_observer.dll') -ladvapi32 @netLink
 if ($LASTEXITCODE -ne 0) { throw 'Event observer DLL build failed' }
 & $cc @common -DCOOP_PROFILE_TEST -shared (Join-Path $root 'src/probe/probe.c') (Join-Path $root 'src/probe/profile.c') '-Wl,--kill-at' -o (Join-Path $out 'coop_profile_probe.dll')
 if ($LASTEXITCODE -ne 0) { throw 'Profile redirect test DLL build failed' }
 & $cc @common -mwindows (Join-Path $root 'tests/profile_host.c') -o (Join-Path $out 'profile_host.exe') -lshell32
 if ($LASTEXITCODE -ne 0) { throw 'Profile test host build failed' }
-& $cc @common -municode (Join-Path $root 'src/launcher/probe_launcher.c') (Join-Path $root 'src/launcher/window.c') -o (Join-Path $out 'probe_launcher.exe') -luser32 -lpsapi
+& $cc @common -municode (Join-Path $root 'src/launcher/probe_launcher.c') (Join-Path $root 'src/launcher/window.c') (Join-Path $root 'src/launcher/user_process.c') -o (Join-Path $out 'probe_launcher.exe') -luser32 -lpsapi -ladvapi32
 if ($LASTEXITCODE -ne 0) { throw 'Launcher build failed' }
 & $cc @common -mwindows (Join-Path $root 'tests/probe_host.c') -o (Join-Path $out 'probe_host.exe')
 if ($LASTEXITCODE -ne 0) { throw 'Probe test host build failed' }
+& $cc @common (Join-Path $root 'tests/test_wire.c') (Join-Path $root 'src/net/wire.c') -o (Join-Path $out 'test_wire.exe')
+if ($LASTEXITCODE -ne 0) {throw 'Wire test build failed'}
+& $cc @common (Join-Path $root 'tests/session_peer.c') @netSources -o (Join-Path $out 'session_peer.exe') @netLink
+if ($LASTEXITCODE -ne 0) {throw 'Session fixture build failed'}
+& $cc @common -municode (Join-Path $root 'tests/network_bridge_host.c') (Join-Path $root 'src/net/game_bridge.c') @netSources -o (Join-Path $out 'network_bridge_host.exe') @netLink
+if ($LASTEXITCODE -ne 0) {throw 'Network thread fixture build failed'}
+& $cc @common (Join-Path $root 'src/tools/netcheck.c') @netSources -o (Join-Path $out 'coop_netcheck.exe') @netLink
+if ($LASTEXITCODE -ne 0) {throw 'Passive network diagnostic build failed'}
 Get-FileHash -LiteralPath (Join-Path $out 'coop_probe.dll'),(Join-Path $out 'probe_launcher.exe'),(Join-Path $out 'probe_host.exe') | Format-Table

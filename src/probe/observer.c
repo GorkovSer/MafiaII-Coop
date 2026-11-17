@@ -144,7 +144,7 @@ DWORD CoopObserverInstall(const wchar_t *path) {
         !readable(add, sizeof(add_prefix)) || memcmp(add, add_prefix, sizeof(add_prefix))) {
         record("refused_signature_mismatch", 0, 0); return 12;
     }
-    CoopTelemetryStart(path);
+    if (CoopTelemetryStart(path)) { record("refused_network_config", 0, 0); return 14; }
     unsigned char patch[5] = {0xe9};
     uint32_t delta = (uint32_t)(uintptr_t)startup_bridge - (0x4f2f05u + 5u);
     memcpy(patch + 1, &delta, sizeof(delta));
