@@ -3,23 +3,50 @@
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 #include <tlhelp32.h>
+#include <psapi.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <wchar.h>
+int CoopSecondMonitorAvailable(void);
+int CoopPlaceOnSecondMonitor(DWORD pid, HANDLE process);
 
 static uintptr_t remote_module(DWORD pid, const wchar_t *name) {
     HANDLE snapshot = CreateToolhelp32Snapshot(TH32CS_SNAPMODULE, pid);
-    if (snapshot == INVALID_HANDLE_VALUE) return 0;
     MODULEENTRY32W entry = {0};
     entry.dwSize = sizeof(entry);
     uintptr_t result = 0;
-    if (Module32FirstW(snapshot, &entry)) do {
+    if (snapshot != INVALID_HANDLE_VALUE && Module32FirstW(snapshot, &entry)) do {
         if (!_wcsicmp(entry.szModule, name)) {
             result = (uintptr_t)entry.modBaseAddr;
             break;
         }
     } while (Module32NextW(snapshot, &entry));
-    CloseHandle(snapshot);
+    if (snapshot != INVALID_HANDLE_VALUE) CloseHandle(snapshot);
+    if (!result) {
+        /* Before loader initialization the PEB module list can still be empty.
+           Query mapped image allocations directly rather than guessing ASLR. */
+        HANDLE process = OpenProcess(PROCESS_QUERY_INFORMATION | PROCESS_VM_READ, FALSE, pid);
+        if (!process) return 0;
+        MEMORY_BASIC_INFORMATION region;
+        uintptr_t cursor = 0;
+        while (VirtualQueryEx(process, (void *)cursor, &region, sizeof(region)) == sizeof(region)) {
+            if (region.Type == MEM_IMAGE && region.BaseAddress == region.AllocationBase) {
+                wchar_t mapped[MAX_PATH];
+                DWORD n = GetMappedFileNameW(process, region.AllocationBase, mapped, MAX_PATH);
+                if (n && n < MAX_PATH) {
+                    wchar_t *base = wcsrchr(mapped, L'\\');
+                    if (!_wcsicmp(base ? base + 1 : mapped, name)) {
+                        result = (uintptr_t)region.AllocationBase;
+                        break;
+                    }
+                }
+            }
+            uintptr_t next = (uintptr_t)region.BaseAddress + region.RegionSize;
+            if (next <= cursor) break;
+            cursor = next;
+        }
+        CloseHandle(process);
+    }
     return result;
 }
 
@@ -36,10 +63,19 @@ static DWORD call_remote(HANDLE process, uintptr_t address, void *arg, DWORD *co
 }
 
 int wmain(int argc, wchar_t **argv) {
-    int monitor = argc == 5 && !wcscmp(argv[4], L"--wait");
-    if ((argc != 4 && !monitor) || sizeof(void *) != 4) {
-        fwprintf(stderr, L"Usage: probe_launcher.exe <absolute exe> <absolute DLL> <new absolute log> [--wait]\n");
+    int monitor = 0, early = 0, second_screen = 0;
+    for (int i = 4; i < argc; ++i) {
+        if (!wcscmp(argv[i], L"--wait")) monitor = 1;
+        else if (!wcscmp(argv[i], L"--early")) early = 1;
+        else if (!wcscmp(argv[i], L"--monitor2")) second_screen = 1;
+        else return 2;
+    }
+    if (argc < 4 || sizeof(void *) != 4) {
+        fwprintf(stderr, L"Usage: probe_launcher.exe <absolute exe> <absolute DLL> <new absolute log> [--wait] [--early] [--monitor2]\n");
         return 2;
+    }
+    if (second_screen && !CoopSecondMonitorAvailable()) {
+        fprintf(stderr, "DISPLAY2 unavailable; no process launched\n"); return 14;
     }
     wchar_t exe[MAX_PATH], dll[MAX_PATH], log[MAX_PATH], cwd[MAX_PATH], cmd[MAX_PATH + 4];
     wchar_t *paths[] = {exe, dll, log};
@@ -71,9 +107,11 @@ int wmain(int argc, wchar_t **argv) {
     }
     DWORD failure = 0, exit_code = 0;
     void *remote = NULL;
-    if (ResumeThread(child.hThread) == (DWORD)-1) { failure = GetLastError(); goto cleanup; }
-    /* GUI input idle is only startup coordination, not evidence of gameplay. */
-    WaitForInputIdle(child.hProcess, 10000);
+    if (!early) {
+        if (ResumeThread(child.hThread) == (DWORD)-1) { failure = GetLastError(); goto cleanup; }
+        /* GUI input idle is only startup coordination, not evidence of gameplay. */
+        WaitForInputIdle(child.hProcess, 10000);
+    }
     HMODULE local_owner = NULL;
     FARPROC load = GetProcAddress(GetModuleHandleW(L"kernel32.dll"), "LoadLibraryW");
     if (!load || !GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS |
@@ -84,6 +122,20 @@ int wmain(int argc, wchar_t **argv) {
     if (!GetModuleFileNameW(local_owner, owner_path, MAX_PATH)) { failure = GetLastError(); goto cleanup; }
     wchar_t *owner_name = wcsrchr(owner_path, L'\\');
     uintptr_t owner = remote_module(child.dwProcessId, owner_name ? owner_name + 1 : owner_path);
+    if (!owner && early) {
+        /* Let Windows initialize the new process' DLL loader on a temporary
+           thread while the primary thread remains suspended before entry.
+           Its only user routine exits itself. Resolve the actual export RVA
+           from the system's ntdll, never assume equal DLL base addresses. */
+        HMODULE ntdll = GetModuleHandleW(L"ntdll.dll");
+        FARPROC exit_thread = GetProcAddress(ntdll, "RtlExitUserThread");
+        uintptr_t remote_ntdll = remote_module(child.dwProcessId, L"ntdll.dll");
+        if (!exit_thread || !remote_ntdll) { failure = ERROR_PROC_NOT_FOUND; goto cleanup; }
+        failure = call_remote(child.hProcess,
+            remote_ntdll + (uintptr_t)exit_thread - (uintptr_t)ntdll, NULL, &exit_code);
+        if (failure) goto cleanup;
+        owner = remote_module(child.dwProcessId, owner_name ? owner_name + 1 : owner_path);
+    }
     if (!owner) { failure = ERROR_MOD_NOT_FOUND; goto cleanup; }
     size_t dll_bytes = (wcslen(dll) + 1) * sizeof(wchar_t);
     size_t log_bytes = (wcslen(log) + 1) * sizeof(wchar_t);
@@ -100,7 +152,13 @@ int wmain(int argc, wchar_t **argv) {
     if (!exit_code) { failure = ERROR_DLL_INIT_FAILED; goto cleanup; }
     uintptr_t loaded_dll = exit_code;
     failure = call_remote(child.hProcess, loaded_dll + probe_rva, (char *)remote + dll_bytes, &exit_code);
-    if (!failure && exit_code) failure = ERROR_FUNCTION_FAILED;
+    if (!failure && exit_code) {
+        fprintf(stderr, "probe_export_return=%lu\n", exit_code);
+        failure = ERROR_FUNCTION_FAILED;
+    }
+    if (!failure && early && ResumeThread(child.hThread) == (DWORD)-1) failure = GetLastError();
+    if (!failure && second_screen && !CoopPlaceOnSecondMonitor(child.dwProcessId, child.hProcess))
+        failure = ERROR_INVALID_WINDOW_HANDLE;
 cleanup:
     if (failure) {
         fprintf(stderr, "Probe failed: %lu; newly launched process terminated\n", failure);

@@ -1,4 +1,5 @@
-param([Parameter(Mandatory=$true)][string]$GameDirectory, [switch]$WaitForExit)
+param([Parameter(Mandatory=$true)][string]$GameDirectory, [switch]$WaitForExit,
+      [switch]$Observer, [string]$BuildDirectory = 'build/probe', [switch]$SecondScreen)
 $ErrorActionPreference = 'Stop'
 $root = Split-Path $PSScriptRoot -Parent
 $exe = Join-Path $GameDirectory 'pc/mafia2.exe'
@@ -23,17 +24,61 @@ for ($i=0; $i -lt $candidates.Count; $i++) {
     if ($present) { Copy-Item -LiteralPath $candidates[$i] -Destination (Join-Path $local "save-backup-$i") -Recurse }
 }
 $saveState | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $local 'save-locations.json')
+function Get-OriginalProfileHashes {
+    $result = @{}
+    for ($i=0; $i -lt $candidates.Count; $i++) {
+        if (Test-Path -LiteralPath $candidates[$i]) {
+            Get-ChildItem -LiteralPath $candidates[$i] -File -Recurse | ForEach-Object {
+                $key = "$i/" + $_.FullName.Substring($candidates[$i].Length+1)
+                $result[$key] = (Get-FileHash -LiteralPath $_.FullName).Hash
+            }
+        }
+    }
+    return $result
+}
+$profileBefore = Get-OriginalProfileHashes
+$profileBefore | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $local 'original-profile-before.json')
+if ($Observer) {
+    $profileRoot = Join-Path $local 'profile-localappdata'
+    $profileParent = Join-Path $profileRoot '2K Games'
+    New-Item -ItemType Directory -Path $profileParent -Force | Out-Null
+    if (Test-Path -LiteralPath $candidates[0]) {
+        Copy-Item -LiteralPath $candidates[0] -Destination (Join-Path $profileParent 'Mafia II') -Recurse
+    }
+    if ($SecondScreen) {
+        $videoPath = Join-Path $profileParent 'Mafia II/Saves/videoconfig.cfg'
+        $video = (Get-Content -LiteralPath $videoPath -Raw).Trim() -split '\s+'
+        if ($video.Count -ne 8 -or @($video | Where-Object {$_ -notmatch '^-?\d+$'}).Count) {
+            throw 'Unknown video configuration; no game launched'
+        }
+        $video[0]='0'; $video[1]='0'; $video[2]='1280'; $video[3]='720'; $video[4]='0'
+        [IO.File]::WriteAllText($videoPath, ($video -join ' '), [Text.Encoding]::ASCII)
+    }
+}
+if ($SecondScreen -and !$Observer) { throw 'Second-screen tests require isolated observer profile' }
 Get-ChildItem -LiteralPath (Join-Path $GameDirectory 'pc') -File |
     Where-Object Extension -in '.exe','.dll','.asi','.ini','.cfg' |
     Get-FileHash | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $local 'baseline-hashes.json')
-$launcher = Join-Path $root 'build/probe/probe_launcher.exe'
-$dll = Join-Path $root 'build/probe/coop_probe.dll'
+$launcher = Join-Path (Join-Path $root $BuildDirectory) 'probe_launcher.exe'
+$dllName = if ($Observer) { 'coop_observer.dll' } else { 'coop_probe.dll' }
+$dll = Join-Path (Join-Path $root $BuildDirectory) $dllName
 $log = Join-Path $local 'probe.log'
 $extra = @()
 if ($WaitForExit) { $extra += '--wait' }
+if ($Observer) { $extra += '--early' }
+if ($SecondScreen) { $extra += '--monitor2' }
 & $launcher $exe $dll $log @extra
-if ($LASTEXITCODE -ne 0) { throw "Probe failed; private evidence in $local" }
+$launchExit = $LASTEXITCODE
+$profileAfter = Get-OriginalProfileHashes
+$profileAfter | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $local 'original-profile-after.json')
+$profileChanges = @(@($profileBefore.Keys) + @($profileAfter.Keys) | Sort-Object -Unique | Where-Object {
+    $profileBefore[$_] -ne $profileAfter[$_]
+})
+[pscustomobject]@{WaitedForExit=[bool]$WaitForExit; ChangedFiles=$profileChanges.Count} |
+    ConvertTo-Json | Set-Content -LiteralPath (Join-Path $local 'original-profile-comparison.json')
+if ($profileChanges.Count) { throw "Original profile changed; inspect private backups in $local. No automatic restore performed." }
+if ($launchExit -ne 0) { throw "Probe failed; private evidence in $local" }
 if (!(Test-Path -LiteralPath $log)) { throw 'Launcher succeeded without probe log' }
 Get-Content -LiteralPath $log
 Write-Output "Private evidence: $local"
-Write-Output 'DLL loading only. Campaign, game callbacks and co-op are NOT verified.'
+Write-Output 'Diagnostic code only. A log entry must prove each callback; no co-op support is implied.'
