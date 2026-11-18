@@ -445,3 +445,29 @@ NOT executed. Source compilation completed; no module invocation except the
 read-only EXE audit, no game/live process reads, DLL calls, input, network or
 test suites/fixtures. Runtime reader checks and real campaign correlation are
 deferred under the continuing Cyberpunk hold; no new gameplay PASS is claimed.
+
+## 2026-11-18 — native script progress observation (compile only)
+
+Implemented the production C bounded script-variable reader using an injected
+read callback: at most 100 records / 200 name fragments, conservative 4096-byte
+name budget, type-2 finite integral 0..65535 values, native reverse-lookup
+duplicate priority, and repeated singleton/count/record/name comparisons.
+Non-observed results always zero the output. No retained engine pointers,
+game API calls, writes, world authorization or network protocol changes.
+
+Observer telemetry now logs private script_progress records on relevant
+lifecycle/save/load events and at most 2 Hz during tick/paused/menu tick. Each
+includes event/epoch/initialized/loaded/paused and explicit false world/checkpoint
+flags; missing/invalid states omit the numeric pair. Menu/boundary observations
+may contain stale script values and exist to correlate/reset their lifetime.
+Telemetry fixture uses a zero script slot and cannot read game singleton data.
+
+Full pinned clang 23.1.5 warnings-as-errors build completed in build/script-progress.
+The new production-source C fixture was compiled only; prepared cases cover
+normal pair, count bounds and full 100-slot scan, bad type/numeric/name bounds,
+missing/duplicate precedence, changed names/records/singleton, unreadable data,
+bad pointers and cleared output. test-probe now includes this fixture for future
+authorized runs; it was NOT invoked. The existing Python reader cases also
+remain deferred. Rechecked static exact-byte EXE audit; evidence matched.
+No game, DLL/fixture execution, test suite, live process read, sockets or input
+was performed. Full in-game correlation and two-PC acceptance remain unverified.

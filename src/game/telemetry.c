@@ -4,6 +4,7 @@
 #include "telemetry.h"
 #include "../net/game_bridge.h"
 #include "story_test.h"
+#include "script_progress.h"
 #include <math.h>
 #include <stdio.h>
 #include <string.h>
@@ -12,7 +13,7 @@
 static wchar_t evidence_path[MAX_PATH];
 static uint32_t epoch;
 static int initialized, loaded, paused, last_status = -1;
-static ULONGLONG next_sample, next_log;
+static ULONGLONG next_sample, next_log, next_progress_log;
 
 /* Only the standalone fixture build substitutes its own pointer storage and
    clock. The game DLL retains the audited singleton and Windows clock. */
@@ -21,9 +22,12 @@ extern uintptr_t CoopTelemetryTestGameSlot(void);
 extern ULONGLONG CoopTelemetryTestNow(void);
 #define GAME_SLOT CoopTelemetryTestGameSlot()
 #define SAMPLE_TIME() CoopTelemetryTestNow()
+/* Standalone telemetry fixture never reads the game's script singleton. */
+#define SCRIPT_SLOT 0u
 #else
 #define GAME_SLOT ((uintptr_t)0x1abfe14)
 #define SAMPLE_TIME() GetTickCount64()
+#define SCRIPT_SLOT 0x1abfe24u
 #endif
 
 static int copy_at(uintptr_t at, void *out, size_t size) {
@@ -78,6 +82,35 @@ static void append(const char *line, int size) {
     CloseHandle(file);
 }
 
+static int progress_read(void *context, uint32_t address, void *out, size_t size) {
+    (void)context;
+    return copy_at(address, out, size);
+}
+
+static void log_script_progress(unsigned int event_id) {
+    int transition = event_id == 10 || event_id == 11 || event_id == 12 || event_id == 13 ||
+        event_id == 14 || event_id == 19 || event_id == 20 || event_id == 21 ||
+        event_id == 27 || event_id == 32 || event_id == 33 || event_id == 39;
+    if (!evidence_path[0] || (!transition && event_id != 3 && event_id != 4 && event_id != 22)) return;
+    ULONGLONG now = SAMPLE_TIME();
+    if (!transition && now < next_progress_log) return;
+    next_progress_log = now + 500;
+    CoopScriptProgress progress;
+    CoopProgressStatus status = CoopReadScriptProgress(progress_read, NULL, SCRIPT_SLOT, &progress);
+    char line[512];
+    int size = snprintf(line, sizeof(line),
+        "script_progress ms=%llu event=%u epoch=%lu initialized=%d loaded=%d paused=%d status=%d world_verified=0 checkpoint_verified=0",
+        (unsigned long long)now, event_id, (unsigned long)epoch, initialized, loaded, paused, (int)status);
+    if (size <= 0 || (size_t)size >= sizeof(line)) return;
+    int tail;
+    if (status == COOP_PROGRESS_OBSERVED)
+        tail = snprintf(line + size, sizeof(line) - (size_t)size, " mission_number=%lu mission_part=%lu\r\n",
+            (unsigned long)progress.mission_number, (unsigned long)progress.mission_part);
+    else tail = snprintf(line + size, sizeof(line) - (size_t)size, "\r\n");
+    if (tail <= 0 || (size_t)tail >= sizeof(line) - (size_t)size) return;
+    append(line, size + tail);
+}
+
 int CoopTelemetryStart(const wchar_t *path) {
     if (path && wcslen(path) < MAX_PATH) wcscpy(evidence_path, path);
     if(CoopStoryTestStart(path))return 1;
@@ -99,6 +132,7 @@ void CoopTelemetryEvent(unsigned int event_id) {
        subsequent loaded ticks to republish. */
     if (!initialized || !loaded || paused)
         CoopNetworkPublish(epoch, NULL);
+    log_script_progress(event_id);
     if (event_id == 39) CoopNetworkStop();
     if (event_id != 3 || !initialized || !loaded || paused || !evidence_path[0]) return;
     ULONGLONG now = SAMPLE_TIME();

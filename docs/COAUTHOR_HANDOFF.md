@@ -449,3 +449,24 @@ Next: audit additional story callbacks and lifecycle/reset behavior; after user
 resumes tests, run deferred reader checks and correlate this pair through real
 Continue/checkpoint/failure/reload/chapter/menu. Two-PC Radmin acceptance remains
 outstanding.
+
+## 2026-11-18 — native script progress logs (compile only)
+
+Added src/game/script_progress.c/.h, a pure bounded reader with cleared failure
+output, 100-slot cap, finite type-2 integer pair, native reverse lookup priority
+and singleton/count/record/name rereads. Telemetry invokes it only under the
+observer's pinned-image/game-thread context, at lifecycle/save/load boundaries
+and at most 2 Hz on active/paused/menu ticks. Private script_progress logs carry
+event/local epoch/init/load/pause/status plus the pair only when observed;
+world_verified=0 and checkpoint_verified=0 always. Do not use these logs or
+values as world handshake authority; menu/load values may be stale.
+
+Full pinned warnings-as-errors build succeeded in build/script-progress. New
+C fixture compiled only, including full 100-slot and changed-read cases;
+test-probe wiring added for future runs. Telemetry fixture uses a zero script
+slot, never a real game address. Rechecked pinned static audit. No game,
+fixture/suite/DLL execution, live memory, network or input; Cyberpunk hold remains.
+No wire/position publication behavior changed. After test authorization, run
+deferred C/Python/loader/network checks before ordinary Continue/checkpoint/
+failure/reload/chapter/menu correlation. The pair's lifecycle and checkpoint
+coverage, remote Human control and two-PC Radmin mission acceptance are pending.

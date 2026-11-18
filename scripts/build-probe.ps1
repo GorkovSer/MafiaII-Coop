@@ -14,11 +14,12 @@ $common = @('-std=c11', '-O2', '-Wall', '-Wextra', '-Werror', '-static')
 $netSources=@((Join-Path $root 'src/net/wire.c'),(Join-Path $root 'src/net/session.c'))
 $registrySource=Join-Path $root 'src/game/entity_registry.c'
 $commandSource=Join-Path $root 'src/game/command_queue.c'
+$progressSource=Join-Path $root 'src/game/script_progress.c'
 $remoteSource=Join-Path $root 'src/net/remote_snapshot.c'
 $netLink=@('-I',(Join-Path $root 'third_party/enet/include'),(Join-Path $out 'enet.a'),'-lws2_32','-lwinmm','-lbcrypt')
 & $cc @common -shared (Join-Path $root 'src/probe/probe.c') '-Wl,--kill-at' -o (Join-Path $out 'coop_probe.dll')
 if ($LASTEXITCODE -ne 0) { throw 'Probe DLL build failed' }
-& $cc @common -DCOOP_OBSERVER -shared (Join-Path $root 'src/probe/probe.c') (Join-Path $root 'src/probe/observer.c') (Join-Path $root 'src/probe/profile.c') (Join-Path $root 'src/game/telemetry.c') (Join-Path $root 'src/game/story_test.c') (Join-Path $root 'src/game/model_test.c') (Join-Path $root 'src/game/human_test.c') $registrySource $commandSource (Join-Path $root 'src/net/game_bridge.c') $remoteSource @netSources '-Wl,--kill-at' -o (Join-Path $out 'coop_observer.dll') -ladvapi32 @netLink
+& $cc @common -DCOOP_OBSERVER -shared (Join-Path $root 'src/probe/probe.c') (Join-Path $root 'src/probe/observer.c') (Join-Path $root 'src/probe/profile.c') (Join-Path $root 'src/game/telemetry.c') (Join-Path $root 'src/game/story_test.c') (Join-Path $root 'src/game/model_test.c') (Join-Path $root 'src/game/human_test.c') $registrySource $commandSource $progressSource (Join-Path $root 'src/net/game_bridge.c') $remoteSource @netSources '-Wl,--kill-at' -o (Join-Path $out 'coop_observer.dll') -ladvapi32 @netLink
 if ($LASTEXITCODE -ne 0) { throw 'Event observer DLL build failed' }
 & $cc @common -DCOOP_PROFILE_TEST -shared (Join-Path $root 'src/probe/probe.c') (Join-Path $root 'src/probe/profile.c') '-Wl,--kill-at' -o (Join-Path $out 'coop_profile_probe.dll')
 if ($LASTEXITCODE -ne 0) { throw 'Profile redirect test DLL build failed' }
@@ -30,8 +31,10 @@ if ($LASTEXITCODE -ne 0) { throw 'Launcher build failed' }
 if ($LASTEXITCODE -ne 0) { throw 'Probe test host build failed' }
 & $cc @common (Join-Path $root 'tests/test_wire.c') (Join-Path $root 'src/net/wire.c') -o (Join-Path $out 'test_wire.exe')
 if ($LASTEXITCODE -ne 0) {throw 'Wire test build failed'}
-& $cc @common -DCOOP_TELEMETRY_TEST (Join-Path $root 'tests/telemetry_host.c') (Join-Path $root 'src/game/telemetry.c') -o (Join-Path $out 'telemetry_host.exe')
+& $cc @common -DCOOP_TELEMETRY_TEST (Join-Path $root 'tests/telemetry_host.c') (Join-Path $root 'src/game/telemetry.c') $progressSource -o (Join-Path $out 'telemetry_host.exe')
 if ($LASTEXITCODE -ne 0) {throw 'Telemetry fixture build failed'}
+& $cc @common (Join-Path $root 'tests/test_script_progress.c') $progressSource -o (Join-Path $out 'test_script_progress.exe')
+if ($LASTEXITCODE -ne 0) {throw 'Script progress fixture build failed'}
 & $cc @common (Join-Path $root 'tests/test_entity_registry.c') $registrySource -o (Join-Path $out 'test_entity_registry.exe')
 if ($LASTEXITCODE -ne 0) {throw 'Entity registry fixture build failed'}
 & $cc @common (Join-Path $root 'tests/test_command_queue.c') $commandSource -o (Join-Path $out 'test_command_queue.exe')

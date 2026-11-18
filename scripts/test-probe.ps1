@@ -11,6 +11,8 @@ $out = Join-Path $root $BuildDirectory
 if ($LASTEXITCODE -ne 0) { throw 'Production entity registry fixture failed' }
 & (Join-Path $out 'test_command_queue.exe')
 if ($LASTEXITCODE -ne 0) { throw 'Production command queue fixture failed' }
+& (Join-Path $out 'test_script_progress.exe')
+if ($LASTEXITCODE -ne 0) { throw 'Production script progress fixture failed' }
 & (Join-Path $out 'telemetry_host.exe')
 if ($LASTEXITCODE -ne 0) { throw 'Production telemetry lifecycle fixture failed' }
 $dir = Join-Path $root ('work/loader-test/' + [Guid]::NewGuid().ToString('N'))
