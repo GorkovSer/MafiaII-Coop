@@ -95,6 +95,19 @@ def audit(path):
     match(0x19740d8 + 8, struct.pack('<I', 0xb2ce40))
     match(0xb2cec1, bytes.fromhex('8b4e1c8a5618c70044349701885004894808c7400c00000000'))
 
+    # CGame's registered Game Restore callback is a virtual forwarding thunk.
+    # In this installed CGame table its destination is an empty handler. This
+    # does not describe other modules' handlers or establish the context type.
+    match(0x1167210, bytes.fromhex('a1bce8ab01c3'))
+    match(0x5c9e8b, bytes.fromhex('e880d3b900'))
+    match(0x5c9e96, bytes.fromhex('8b108b521c6a006a00518b0d14feab01d91c24'))
+    match(0x5c9ea9, bytes.fromhex('68a07759005168f40100006a138bc8ffd2'))
+    match(0x5977a0, bytes.fromhex('8b01ff6030'))
+    match(0x5c21dd, bytes.fromhex('c70618af9001'))
+    match(0x190af18 + 0x14, struct.pack('<I', 0x5cd760))
+    match(0x190af18 + 0x30, struct.pack('<I', 0x58a740))
+    match(0x58a740, bytes.fromhex('c20400'))
+
     return dict(schema=1, sha256=EXPECTED, game_api_calls=0, memory_writes=0,
                 mode_values={name: value for _, _, name, _, value in modes},
                 playing_chapter_is_chapter_number=False,
@@ -108,6 +121,11 @@ def audit(path):
                 load_operation_save_id_offset=8,
                 load_request_mode_interface_offset=0x64,
                 loaded_mission_confirmation=False,
+                cgame_restore_callback='005977a0',
+                cgame_restore_virtual_slot=0x30,
+                cgame_restore_handler='0058a740',
+                cgame_restore_handler_is_empty=True,
+                restore_event_context_type_verified=False,
                 candidate_meaning_verified=False,
                 candidate_lifetime_verified=False, world_identity_verified=False)
 

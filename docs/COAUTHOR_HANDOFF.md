@@ -391,3 +391,18 @@ remains active. Next: trace the SAVE data consumer through actual restore and
 loaded mission/checkpoint publication. Do not infer success from candidate,
 operation AL, local state counters or operation absence. Existing deferred
 reader/network/Human checks still need execution after authorization.
+
+## 2026-11-18 — CGame's Game Restore notification is an empty handler
+
+Static audit now covers event 19 registration at 0x5c9e8b, priority 500,
+CGame singleton and callback 0x5977a0. That thunk forwards vtable+0x30;
+installed CGame table 0x190af18 maps it to empty ret-4 handler 0x58a740.
+Do not invoke it to recover a mission ID or infer a payload layout from its
+name. This result is specific to CGame: other module handlers and the event
+producer/context remain unaudited. Observer behavior and game calls unchanged.
+
+Read-only exact-byte file audit matched the pinned EXE; source compilation
+only otherwise. No game/test/suite/live-memory/input/network execution; hold
+remains active. Continue at the actual SAVE data consumer behind interface
+0x1ac0c48 and restoration callbacks. A world ID is still not established,
+and the two-PC Radmin mission/failure/save acceptance remains outstanding.

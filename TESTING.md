@@ -380,3 +380,21 @@ candidate_may_precede_completion=true alongside the still-unverified candidate.
 Source compilation completed without executing modules. No suite, fixture,
 game, DLL, live process read, network peer or UI input was started. Runtime
 checks remain deferred under the Cyberpunk hold; no gameplay PASS is claimed.
+
+## 2026-11-18 — CGame Restore callback audit (static file only)
+
+Traced CGame registration at 0x5c9e8b: manager accessor 0x1167210, AddAction
+slot+0x1c, event 19, priority 500, singleton object and callback 0x5977a0.
+The callback forwards to virtual slot+0x30. The installed table 0x190af18
+(constructor write 0x5c21dd, Open slot+0x14 -> 0x5cd760) maps this slot to
+0x58a740, an empty ret-4 handler. This particular handler cannot provide a
+mission/checkpoint ID. Other modules' restore handlers, the event producer
+and payload layout remain unverified; no conclusion about them is implied.
+
+Added bounded exact-byte/vtable checks to audit_story_identity.py and ran only
+that read-only file audit on the full-SHA256 pinned EXE; all matched. Source
+compilation was performed without executing the module. No code was added to
+dereference event context, call engine functions or change observer behavior.
+No game, DLL, live process reads, suites/fixtures, sockets or input were run.
+The Cyberpunk test hold remains active. Next static work targets the SAVE data
+consumer and actual restoration rather than this empty CGame notification.
