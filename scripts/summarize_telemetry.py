@@ -5,13 +5,15 @@ import math
 from pathlib import Path
 
 
-def summarize(lines):
+def summarize(lines, require_lifecycle=False, launch_result=None):
     initialized = loaded = False
     epoch = 0
     previous_ms = None
     epochs = {}
     callback_threads = set()
     reader_threads = set()
+    closed_epochs = set()
+    saw_menu_after_close = saw_shutdown = False
     for number, line in enumerate(lines, 1):
         if line.startswith('observer='):
             fields = dict(part.split('=', 1) for part in line.split())
@@ -27,6 +29,12 @@ def summarize(lines):
                 loaded = True
             elif event in ('mission_before_close', 'mission_close', 'game_done', 'shutdown'):
                 initialized = loaded = False
+            if event == 'mission_close':
+                closed_epochs.add(epoch)
+            if event == 'no_game_start' and epoch in closed_epochs:
+                saw_menu_after_close = True
+            if event == 'shutdown':
+                saw_shutdown = True
             if event not in ('startup_hook_installed', 'refused_unknown_image'):
                 callback_threads.add(int(fields['thread']))
         elif line.startswith('player_reader_status='):
@@ -37,7 +45,7 @@ def summarize(lines):
             current_epoch = int(fields['epoch'])
             ms = int(fields['ms'])
             xyz = tuple(float(value) for value in fields['xyz'].split(','))
-            if not initialized or not loaded or current_epoch != epoch:
+            if not epoch or not initialized or not loaded or current_epoch != epoch:
                 raise ValueError(f'Sample outside initialized mission at line {number}')
             if len(xyz) != 3 or not all(math.isfinite(v) and abs(v) < 1000000 for v in xyz):
                 raise ValueError(f'Invalid position at line {number}')
@@ -54,18 +62,39 @@ def summarize(lines):
         raise ValueError('No actual player samples; runtime acceptance is unproven')
     if len(reader_threads) != 1 or reader_threads != callback_threads:
         raise ValueError('Reader and observed callbacks do not share one thread')
+    # A single valid stationary sample is useful diagnostic evidence but does
+    # not satisfy the roadmap's two-load, moving-state and clean-exit check.
+    moving_epochs = {key for key, value in epochs.items() if value['samples'] >= 2 and
+                     any(high > low for low, high in zip(value['low'], value['high']))}
+    process_verified = (isinstance(launch_result, dict) and launch_result.get('schema') == 1 and
+        launch_result.get('waited_for_exit') is True and all(
+            type(launch_result.get(field)) is int and launch_result[field] == 0
+            for field in ('launcher_exit', 'child_exit_code', 'original_profile_changed_files')))
+    lifecycle = (len(moving_epochs) >= 2 and set(epochs) <= closed_epochs and
+                 saw_menu_after_close and saw_shutdown and process_verified)
+    if require_lifecycle and not lifecycle:
+        raise ValueError('Lifecycle acceptance requires two moving mission epochs, '
+                         'closure of every sampled epoch, menu return, shutdown and '
+                         'a verified zero process exit with unchanged original profile')
     return dict(schema=1, epochs=[dict(epoch=key, samples=value['samples'],
         distinct_local_guids=len(value['guids']),
         axis_ranges=[round(high-low, 5) for low, high in zip(value['low'], value['high'])])
         for key, value in epochs.items()], one_game_thread=True,
-        all_samples_within_loaded_mission=True)
+        all_samples_within_loaded_mission=True,
+        lifecycle_acceptance=bool(lifecycle))
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('log', type=Path)
+    parser.add_argument('--require-lifecycle', action='store_true',
+                        help='Fail unless two moving loads, menu return and shutdown are evidenced')
+    parser.add_argument('--launch-result', type=Path,
+                        help='Private launch-result.json written by start-probe.ps1 after exit')
     args = parser.parse_args()
-    print(json.dumps(summarize(args.log.read_text(encoding='utf-8').splitlines()), indent=2))
+    launch_result = json.loads(args.launch_result.read_text(encoding='utf-8-sig')) if args.launch_result else None
+    print(json.dumps(summarize(args.log.read_text(encoding='utf-8').splitlines(),
+                               require_lifecycle=args.require_lifecycle, launch_result=launch_result), indent=2))
 
 
 if __name__ == '__main__':

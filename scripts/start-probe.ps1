@@ -6,6 +6,7 @@ param([Parameter(Mandatory=$true)][string]$GameDirectory, [switch]$WaitForExit,
       [switch]$ContinueMainStory)
 $ErrorActionPreference = 'Stop'
 $root = Split-Path $PSScriptRoot -Parent
+. (Join-Path $PSScriptRoot 'launch-result.ps1')
 $exe = Join-Path $GameDirectory 'pc/mafia2.exe'
 $expected = '16c79a3be483e582719e43d7b451e887e89414be81ca7ecfc0536dd8185e6c2f'
 if ((Get-FileHash -LiteralPath $exe).Hash.ToLowerInvariant() -ne $expected) {
@@ -90,7 +91,7 @@ $extra = @('--user')
 if ($WaitForExit) { $extra += '--wait' }
 if ($Observer) { $extra += '--early' }
 if ($SecondScreen) { $extra += '--monitor2' }
-& $launcher $exe $dll $log @extra
+& $launcher $exe $dll $log @extra | Tee-Object -FilePath (Join-Path $local 'launcher-output.txt')
 $launchExit = $LASTEXITCODE
 $profileAfter = Get-OriginalProfileHashes
 $profileAfter | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $local 'original-profile-after.json')
@@ -99,6 +100,10 @@ $profileChanges = @(@($profileBefore.Keys) + @($profileAfter.Keys) | Sort-Object
 })
 [pscustomobject]@{WaitedForExit=[bool]$WaitForExit; ChangedFiles=$profileChanges.Count} |
     ConvertTo-Json | Set-Content -LiteralPath (Join-Path $local 'original-profile-comparison.json')
+$launcherText = Get-Content -LiteralPath (Join-Path $local 'launcher-output.txt') -Raw
+Get-CoopLaunchResult -LauncherOutput $launcherText -LauncherExit $launchExit `
+    -WaitedForExit ([bool]$WaitForExit) -OriginalProfileChanges $profileChanges.Count |
+    ConvertTo-Json | Set-Content -LiteralPath (Join-Path $local 'launch-result.json')
 if ($profileChanges.Count) { throw "Original profile changed; inspect private backups in $local. No automatic restore performed." }
 if ($launchExit -ne 0) { throw "Probe failed; private evidence in $local" }
 if (!(Test-Path -LiteralPath $log)) { throw 'Launcher succeeded without probe log' }

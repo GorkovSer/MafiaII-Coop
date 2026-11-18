@@ -1,7 +1,14 @@
 param([string]$BuildDirectory = 'build/probe')
 $ErrorActionPreference = 'Stop'
 $root = Split-Path $PSScriptRoot -Parent
+. (Join-Path $PSScriptRoot 'launch-result.ps1')
+foreach($invalid in @('', "child_exit=0`nchild_exit=7", 'child_exit=unknown')) {
+    $unknown=Get-CoopLaunchResult -LauncherOutput $invalid -LauncherExit 0 -WaitedForExit $true -OriginalProfileChanges 0
+    if($null -ne $unknown.child_exit_code) {throw 'Ambiguous launcher result incorrectly accepted'}
+}
 $out = Join-Path $root $BuildDirectory
+& (Join-Path $out 'telemetry_host.exe')
+if ($LASTEXITCODE -ne 0) { throw 'Production telemetry lifecycle fixture failed' }
 $dir = Join-Path $root ('work/loader-test/' + [Guid]::NewGuid().ToString('N'))
 New-Item -ItemType Directory -Path $dir -Force | Out-Null
 $launcher = Join-Path $out 'probe_launcher.exe'
@@ -17,6 +24,8 @@ if ($fields.pointer_bits -ne '32' -or $fields.pe_machine -ne '014c' -or
 }
 if ($result -notmatch "pid=$($fields.process_id) ") { throw 'PID evidence mismatch' }
 if ($result -notmatch 'child_exit=0') { throw 'Test host did not exit normally' }
+$fixtureResult=Get-CoopLaunchResult -LauncherOutput $result -LauncherExit 0 -WaitedForExit $true -OriginalProfileChanges 0
+if($fixtureResult.child_exit_code -ne 0 -or !$fixtureResult.waited_for_exit) {throw 'Native fixture exit evidence missing'}
 if ($fields.test_host_entry_seen -ne '1') { throw 'Normal load should follow test host entry' }
 Write-Output 'PASS real x86 load, explicit export invocation, matching PID and log'
 Write-Output 'PASS native process handle reports normal child exit'
