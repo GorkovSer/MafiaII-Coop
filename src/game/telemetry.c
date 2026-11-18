@@ -3,6 +3,7 @@
 #define WIN32_LEAN_AND_MEAN
 #include "telemetry.h"
 #include "../net/game_bridge.h"
+#include "story_test.h"
 #include <math.h>
 #include <stdio.h>
 #include <string.h>
@@ -67,10 +68,12 @@ static void append(const char *line, int size) {
 
 int CoopTelemetryStart(const wchar_t *path) {
     if (path && wcslen(path) < MAX_PATH) wcscpy(evidence_path, path);
+    if(CoopStoryTestStart(path))return 1;
     return CoopNetworkStart(path);
 }
 
 void CoopTelemetryEvent(unsigned int event_id) {
+    CoopStoryTestEvent(event_id);
     if (event_id == 10) { ++epoch; initialized = loaded = 0; last_status = -1; next_sample = next_log = 0; }
     if (event_id == 13) initialized = 1;
     if (event_id == 32) loaded = 0;

@@ -11,6 +11,7 @@
 static char isolated_local[MAX_PATH];
 static wchar_t evidence_path[MAX_PATH];
 static volatile LONG redirected;
+int CoopProfileWasRedirected(void) {return InterlockedCompareExchange(&redirected,0,0)>0;}
 typedef HRESULT (WINAPI *folder_type)(HWND, int, HANDLE, DWORD, LPSTR);
 static folder_type original_folder;
 

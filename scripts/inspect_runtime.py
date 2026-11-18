@@ -82,6 +82,15 @@ def main():
         physics_vtable = u32(physics) if physics else None
         result['local_player_candidate']['physics_position_target'] = (
             u32(physics_vtable + 0x54) if physics_vtable else None)
+        save_manager=u32(0x1ac0c50)
+        begin=u32(save_manager+0x0c) if save_manager else None
+        end=u32(save_manager+0x10) if save_manager else None
+        count=(end-begin)//4 if begin is not None and end is not None and end>=begin and (end-begin)%4==0 else None
+        result['save_manager_candidate']=dict(entries=count,ids=[])
+        if count is not None and count<=256:
+            for index in range(count):
+                record=u32(begin+index*4)
+                result['save_manager_candidate']['ids'].append(u32(record+8) if record else None)
         model = u32(player + 0x60) if player else None
         if model:
             values = [read(model + offset, 4) for offset in (0x44, 0x54, 0x64)]

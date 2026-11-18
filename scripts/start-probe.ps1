@@ -1,7 +1,9 @@
 param([Parameter(Mandatory=$true)][string]$GameDirectory, [switch]$WaitForExit,
       [switch]$Observer, [string]$BuildDirectory = 'build/probe', [switch]$SecondScreen,
       [ValidateSet('off','host','guest')][string]$NetworkRole='off',
-      [string]$Address='127.0.0.1', [ValidateRange(1,65535)][int]$Port=28960)
+      [string]$Address='127.0.0.1', [ValidateRange(1,65535)][int]$Port=28960,
+      [ValidatePattern('^\d{8}-\d{6}-\d{3}$')][string]$TestProfileFrom,
+      [switch]$ContinueMainStory)
 $ErrorActionPreference = 'Stop'
 $root = Split-Path $PSScriptRoot -Parent
 $exe = Join-Path $GameDirectory 'pc/mafia2.exe'
@@ -13,6 +15,10 @@ if (Get-Process mafia2 -ErrorAction SilentlyContinue) { throw 'Close existing Ma
 $stamp = Get-Date -Format 'yyyyMMdd-HHmmss-fff'
 $local = Join-Path $root "work/probe-sessions/$stamp"
 New-Item -ItemType Directory -Path $local -Force | Out-Null
+if($ContinueMainStory) {
+    if(!$Observer -or !$TestProfileFrom){throw 'Continue test requires observer and an explicit earlier test profile'}
+    [IO.File]::WriteAllText((Join-Path $local 'story-test.ini'),"[test]`r`ncontinue_main_story=1`r`n",[Text.Encoding]::ASCII)
+}
 if($NetworkRole -ne 'off') {
     if(!$Observer) {throw 'Network telemetry requires observer build'}
     $parsedAddress=$null
@@ -55,8 +61,12 @@ if ($Observer) {
     $profileRoot = Join-Path $local 'profile-localappdata'
     $profileParent = Join-Path $profileRoot '2K Games'
     New-Item -ItemType Directory -Path $profileParent -Force | Out-Null
-    if (Test-Path -LiteralPath $candidates[0]) {
-        Copy-Item -LiteralPath $candidates[0] -Destination (Join-Path $profileParent 'Mafia II') -Recurse
+    $profileSource=if($TestProfileFrom) {
+        Join-Path $root "work/probe-sessions/$TestProfileFrom/profile-localappdata/2K Games/Mafia II"
+    } else {$candidates[0]}
+    if($TestProfileFrom -and !(Test-Path -LiteralPath $profileSource)){throw 'Earlier test profile not found'}
+    if (Test-Path -LiteralPath $profileSource) {
+        Copy-Item -LiteralPath $profileSource -Destination (Join-Path $profileParent 'Mafia II') -Recurse
     }
     if ($SecondScreen) {
         $videoPath = Join-Path $profileParent 'Mafia II/Saves/videoconfig.cfg'
