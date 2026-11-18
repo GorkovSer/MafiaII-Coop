@@ -72,3 +72,18 @@
 - Windows input observations must distinguish the game's own cursor from the system cursor shown by the automation helper. Previous coordinate clicks alone did not prove that the game cursor reached a button. Keyboard/UI operation remains under investigation.
 - Both diagnostic builds compiled with warnings treated as errors. Loader/profile fixtures passed 9 integration checks; telemetry evidence checks passed one valid and seven invalid cases. The final build passed wire tests and two-process loopback handshake, state reset, compatibility rejection, reconnect and stalled-producer checks. These fixtures are not Radmin/two-PC gameplay.
 - Game GUI resource metadata was inspected locally through a read-only SDS19 adapter based on zlib-licensed Gibbed.Illusion b166d9fb8854620ee9eba08246b86c0d1109c948. Extracted original resources and the local adapter remain ignored and are not distributed. No game files were edited by this research.
+
+## 2026-11-18 — continuation on the installed C: copy
+
+- Revalidated the installed Classic GOG executable against the pinned SHA256. Recovered the pinned LLVM-MinGW archive, verified its SHA256 and rebuilt the current sources with warnings treated as errors.
+- PE audit checks (4), telemetry evidence checks (valid movement plus 7 rejected cases), all 9 loader/profile checks and the complete network fixture suite passed. These are diagnostic and loopback checks, not two-PC gameplay.
+- The first windowed launch reported DISPLAY2 and client 1280x720, but Windows capture showed the right/bottom edges outside the visible screen. The user moved the window fully into view. No active mission or moving position has yet been observed in this session.
+- Added per-monitor-v2 DPI context to the launcher's own thread before monitor enumeration, with refusal before launch if unavailable. The final placement now requires the whole outer rectangle inside DISPLAY2's work area and logs both rectangles. The child and system display settings are unchanged. API reference: https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-setthreaddpiawarenesscontext
+- The placement correction builds successfully; loader regression checks and a fresh DISPLAY2 runtime launch are being verified. Do not count the user's manual move as validation of the new placement code.
+
+## 2026-11-18 — live factory inspection and remaining gameplay limits
+
+- The original diagnostic process entered the main-story introduction. Its log has mission_open, game_init, load_finished and exactly one accepted position sample, then game_paused/tick_paused. The sample has zero observed coordinate range. This proves neither movement nor a complete lifecycle acceptance test.
+- A module-version-3 passive peer connected to that real game: 120 received states over 60 seconds, 0 active samples, exit 4. Do not report active game-to-peer position acceptance, a second game client, or Radmin gameplay.
+- The read-only factory audit traversed 48 registered records and found Human and Player callbacks in executable image sections. The original game process was not modified by the inspection. Factory tests cover missing head/record memory, an empty list, bounded traversal, cycles, duplicate types and nonexecutable targets.
+- The DPI placement patch passed all nine loader/profile regression checks. Its two source files were published through the authenticated internal browser in commit b060b2c; fetched contents match the reviewed local sources. A fresh runtime placement check is still pending.
