@@ -76,6 +76,15 @@ int wmain(int argc, wchar_t **argv) {
         fwprintf(stderr, L"Usage: probe_launcher.exe <absolute exe> <absolute DLL> <new absolute log> [--wait] [--early] [--monitor2] [--user]\n");
         return 2;
     }
+    /* Keep monitor bounds, window rectangles and SetWindowPos in physical
+       coordinates on mixed-DPI desktops. This affects this launcher thread
+       only, not the child's DPI policy or the user's display settings. */
+    typedef DPI_AWARENESS_CONTEXT (WINAPI *set_dpi_type)(DPI_AWARENESS_CONTEXT);
+    set_dpi_type set_dpi = (set_dpi_type)(uintptr_t)GetProcAddress(
+        GetModuleHandleW(L"user32.dll"), "SetThreadDpiAwarenessContext");
+    if (second_screen && (!set_dpi || !set_dpi(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2))) {
+        fprintf(stderr, "Cannot establish physical display coordinates; no process launched\n"); return 14;
+    }
     if (second_screen && !CoopSecondMonitorAvailable()) {
         fprintf(stderr, "DISPLAY2 unavailable; no process launched\n"); return 14;
     }

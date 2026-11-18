@@ -68,9 +68,18 @@ int CoopPlaceOnSecondMonitor(DWORD pid, HANDLE process) {
     int y = work.top + (work.bottom - work.top - height) / 2;
     if (!SetWindowPos(target.window, NULL, x, y, 0, 0, SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE)) return 0;
     if (MonitorFromWindow(target.window, MONITOR_DEFAULTTONEAREST) != second) return 0;
+    RECT placed;
+    if (!GetWindowRect(target.window, &placed) || placed.left < work.left ||
+        placed.top < work.top || placed.right > work.right || placed.bottom > work.bottom) {
+        fprintf(stderr, "Game window is not fully inside DISPLAY2 work area\n");
+        return 0;
+    }
     RECT client;
     GetClientRect(target.window, &client);
     printf("window_display=DISPLAY2 x=%d y=%d client=%ldx%ld\n", x, y, client.right, client.bottom);
+    printf("window_contained=1 work=%ld,%ld,%ld,%ld outer=%ld,%ld,%ld,%ld\n",
+        work.left, work.top, work.right, work.bottom,
+        placed.left, placed.top, placed.right, placed.bottom);
     fflush(stdout);
     return 1;
 }
