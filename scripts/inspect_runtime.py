@@ -13,6 +13,7 @@ import math
 import time
 from audit_game import PE
 from factory_audit import inspect_factory
+from story_audit import inspect_story
 
 
 def main():
@@ -97,6 +98,8 @@ def main():
             for index in range(count):
                 record=u32(begin+index*4)
                 result['save_manager_candidate']['ids'].append(u32(record+8) if record else None)
+        result['story_context_candidates'] = inspect_story(
+            game, u32, read, result['save_manager_candidate']['ids'])
         model = u32(player + 0x60) if player else None
         if model:
             values = [read(model + offset, 4) for offset in (0x44, 0x54, 0x64)]
@@ -125,7 +128,11 @@ def main():
         args.output.parent.mkdir(parents=True, exist_ok=True)
         args.output.write_text(json.dumps(result, indent=2) + '\n', encoding='utf-8')
         public = {k: v for k, v in result.items() if k not in (
-            'local_player_candidate', 'position_samples', 'entity_factory_candidate')}
+            'local_player_candidate', 'position_samples', 'entity_factory_candidate',
+            'story_context_candidates')}
+        story = result['story_context_candidates']
+        public['story_context_candidates'] = {key: story[key] for key in (
+            'identity_verified', 'candidate_matches_catalogue', 'game_open', 'map_header_status')}
         public['entity_factory_candidate'] = {k: v for k, v in factory.items() if k != 'candidates'}
         public['entity_factory_candidate']['types'] = {
             name: dict(target_executable=item['target_executable'])
