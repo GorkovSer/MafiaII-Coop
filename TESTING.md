@@ -248,3 +248,23 @@ its stack argument reference. Native queue/free-list interpretation is documente
 in docs/HUMAN_CONTROL.md. These are static contract findings only. No runtime
 safe-control, AI arbitration, allocation-failure recovery, command cancellation
 or movement/animation acceptance is claimed. The observer is unchanged here.
+
+## 2026-11-18 — native command-queue reader, compile-only stage
+
+Implemented CoopReadCommandQueue using a bounded read callback and the pinned
+layout from the prior static audit. It validates all slot/head ranges and list
+partitioning, rejects cycles/cross-list aliases/orphan/free-owned references,
+requires readable occupied headers with positive signed reference counts and
+queue flag 0x400, and rejects changed raw topology on its second read. Failure
+returns an all-zero output. This validates observable shape only; it does not
+verify dynamic class methods, AI ownership, race-free concurrency or enqueue
+permission. A valid full queue reports zero available slots.
+
+The opt-in Human path now records queue status/free/used counts only after fresh
+registry validation, immediately after activation and at five seconds. It adds
+no game calls or writes to commands. A production-source fixture was authored
+for empty/full, cyclic/overlapping/orphan topology, reference/header failures,
+address overflow and changed-snapshot cases. Both observer and fixture compiled
+in the full pinned clang 23.1.5 warnings-as-errors build. The fixture was NOT
+executed, and no suite/game/input was run: the user's Cyberpunk test hold remains
+in force. Consequently no PASS/runtime queue result is claimed for this stage.

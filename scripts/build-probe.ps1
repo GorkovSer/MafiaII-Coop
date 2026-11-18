@@ -13,10 +13,11 @@ $common = @('-std=c11', '-O2', '-Wall', '-Wextra', '-Werror', '-static')
 & (Join-Path $PSScriptRoot 'build-enet.ps1') -Toolchain $Toolchain -OutputDirectory $OutputDirectory
 $netSources=@((Join-Path $root 'src/net/wire.c'),(Join-Path $root 'src/net/session.c'))
 $registrySource=Join-Path $root 'src/game/entity_registry.c'
+$commandSource=Join-Path $root 'src/game/command_queue.c'
 $netLink=@('-I',(Join-Path $root 'third_party/enet/include'),(Join-Path $out 'enet.a'),'-lws2_32','-lwinmm','-lbcrypt')
 & $cc @common -shared (Join-Path $root 'src/probe/probe.c') '-Wl,--kill-at' -o (Join-Path $out 'coop_probe.dll')
 if ($LASTEXITCODE -ne 0) { throw 'Probe DLL build failed' }
-& $cc @common -DCOOP_OBSERVER -shared (Join-Path $root 'src/probe/probe.c') (Join-Path $root 'src/probe/observer.c') (Join-Path $root 'src/probe/profile.c') (Join-Path $root 'src/game/telemetry.c') (Join-Path $root 'src/game/story_test.c') (Join-Path $root 'src/game/model_test.c') (Join-Path $root 'src/game/human_test.c') $registrySource (Join-Path $root 'src/net/game_bridge.c') @netSources '-Wl,--kill-at' -o (Join-Path $out 'coop_observer.dll') -ladvapi32 @netLink
+& $cc @common -DCOOP_OBSERVER -shared (Join-Path $root 'src/probe/probe.c') (Join-Path $root 'src/probe/observer.c') (Join-Path $root 'src/probe/profile.c') (Join-Path $root 'src/game/telemetry.c') (Join-Path $root 'src/game/story_test.c') (Join-Path $root 'src/game/model_test.c') (Join-Path $root 'src/game/human_test.c') $registrySource $commandSource (Join-Path $root 'src/net/game_bridge.c') @netSources '-Wl,--kill-at' -o (Join-Path $out 'coop_observer.dll') -ladvapi32 @netLink
 if ($LASTEXITCODE -ne 0) { throw 'Event observer DLL build failed' }
 & $cc @common -DCOOP_PROFILE_TEST -shared (Join-Path $root 'src/probe/probe.c') (Join-Path $root 'src/probe/profile.c') '-Wl,--kill-at' -o (Join-Path $out 'coop_profile_probe.dll')
 if ($LASTEXITCODE -ne 0) { throw 'Profile redirect test DLL build failed' }
@@ -32,6 +33,8 @@ if ($LASTEXITCODE -ne 0) {throw 'Wire test build failed'}
 if ($LASTEXITCODE -ne 0) {throw 'Telemetry fixture build failed'}
 & $cc @common (Join-Path $root 'tests/test_entity_registry.c') $registrySource -o (Join-Path $out 'test_entity_registry.exe')
 if ($LASTEXITCODE -ne 0) {throw 'Entity registry fixture build failed'}
+& $cc @common (Join-Path $root 'tests/test_command_queue.c') $commandSource -o (Join-Path $out 'test_command_queue.exe')
+if ($LASTEXITCODE -ne 0) {throw 'Command queue fixture build failed'}
 & $cc @common -mwindows (Join-Path $root 'tests/input_host.c') -o (Join-Path $out 'input_host.exe') -ldinput8 -ldxguid -luser32
 if ($LASTEXITCODE -ne 0) {throw 'Optional input diagnostic build failed'}
 & $cc @common -municode (Join-Path $root 'src/tools/native_input.c') -o (Join-Path $out 'coop_input.exe') -ladvapi32 -luser32

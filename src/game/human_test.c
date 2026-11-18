@@ -3,6 +3,7 @@
 #define WIN32_LEAN_AND_MEAN
 #include "human_test.h"
 #include "entity_registry.h"
+#include "command_queue.h"
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
@@ -67,6 +68,16 @@ static int human_valid(void *human) {
     return resolve_guid(owned_guid, &current) == COOP_ENTITY_PRESENT &&
         (uintptr_t)human == current && readable(human, 0x220) && *(uintptr_t *)human == 0x1967058 &&
         *(uint32_t *)((char *)human + 0x1c) == owned_guid;
+}
+static void record_command_queue(void *human) {
+    if (!human_valid(human)) { record("command_queue_lost_handle", 1); return; }
+    CoopCommandQueue queue;
+    CoopCommandQueueStatus status = CoopReadCommandQueue(registry_read, NULL, (uint32_t)(uintptr_t)human, &queue);
+    record("command_queue_status", (unsigned int)status);
+    if (status == COOP_COMMAND_QUEUE_VALID) {
+        record("command_queue_free", queue.free_count);
+        record("command_queue_used", queue.used_count);
+    }
 }
 static void poll_removal(void) {
     if (!pending_removal) return;
@@ -146,7 +157,7 @@ void CoopHumanTestEvent(unsigned int id) {
     if (id == 35) paused = 0;
     if (owned && (id == 3 || id == 4) && GetTickCount64() >= remove_at) remove_owned();
     if (owned && id == 3 && !position_reported && GetTickCount64() + 55000 >= remove_at) {
-        position_reported = 1; record_position(owned);
+        position_reported = 1; record_position(owned); record_command_queue(owned);
     }
     if (attempted || id != 3 || !initialized || !loaded || paused) return;
     if (!CoopProfileWasRedirected()) { attempted = 1; record("refused_profile", 0); return; }
@@ -220,4 +231,5 @@ void CoopHumanTestEvent(unsigned int id) {
     record("active", !!(*(uint32_t *)((char *)human + 0x20) & 1));
     remove_at = GetTickCount64() + 60000;
     record_position(human);
+    record_command_queue(human);
 }

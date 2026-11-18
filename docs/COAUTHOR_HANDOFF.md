@@ -240,3 +240,32 @@ recovery false. This is static evidence, not an executed movement or test suite.
 Next static work: trace AI/script arbitration and interruption, then prepare the
 controlled command adapter. In-game verification remains deferred until explicit
 test resumption; the two-PC Radmin campaign acceptance is still outstanding.
+
+## 2026-11-18 — bounded native command-queue observation (tests still held)
+
+Added src/game/command_queue.c/h. This read-only production helper validates
+all eight slot links, five queue heads and free head, requires a disjoint full
+partition of the slots, catches cycles/cross-list aliasing/orphans, and checks
+free null references versus readable occupied headers with positive signed
+refcounts and engine flag 0x400. It rereads the raw layout to detect changes and
+leaves the output zero on any failure. Aligned nonzero vtables are only shape
+checks, not verified command classes. Valid/full is distinct from enqueue capacity.
+
+The opt-in Human test now records queue status and counts after activation and
+at five seconds, only after a fresh registry/owned-address/class check. No new
+command API, allocation, queue mutation or AI override is called. This is
+observation for the future controlled adapter, not network avatar control.
+
+Pinned full build completed with warnings-as-errors in build/command-queue.
+Fixture tests/test_command_queue.c was authored and compiled only; do not report
+it as passed. No test suite, game/DLL/fixture executable or UI input was run in
+this stage. The user's Cyberpunk hold remains active. Actual registry-guarded
+Human and queue-layout behavior, AI arbitration, movement and cleanup are still
+pending real-game acceptance.
+
+After explicit test resumption, rebuild before running the updated test-probe
+suite (it now expects test_command_queue.exe), finish required loader/profile
+checks, and inspect real -TestHuman queue/registry results. Reject inconsistent
+layouts rather than repairing raw lists. Continue static AI/script arbitration
+work without starting tests until authorized. Full two-PC Radmin mission/failure/
+save acceptance remains unachieved.

@@ -9,6 +9,8 @@ foreach($invalid in @('', "child_exit=0`nchild_exit=7", 'child_exit=unknown')) {
 $out = Join-Path $root $BuildDirectory
 & (Join-Path $out 'test_entity_registry.exe')
 if ($LASTEXITCODE -ne 0) { throw 'Production entity registry fixture failed' }
+& (Join-Path $out 'test_command_queue.exe')
+if ($LASTEXITCODE -ne 0) { throw 'Production command queue fixture failed' }
 & (Join-Path $out 'telemetry_host.exe')
 if ($LASTEXITCODE -ne 0) { throw 'Production telemetry lifecycle fixture failed' }
 $dir = Join-Path $root ('work/loader-test/' + [Guid]::NewGuid().ToString('N'))

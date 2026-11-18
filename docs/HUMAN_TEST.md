@@ -63,6 +63,13 @@ the production telemetry fixture passed. The loader/profile suite was interrupte
 at the user's request to play Cyberpunk; remaining checks and the real-game test
 are deferred. Do not launch or inject game input until testing is authorized again.
 
+The newest version also reads command-queue topology at creation and five seconds,
+after fresh registry validation, recording only status/free/used counts. The native
+reader detects invalid indices, cycles, overlapping/free-orphaned slots, invalid
+reference headers and changed raw layout. It never creates/changes commands. Its
+fixture was compiled but not run during the test hold. No queue result from the
+real game has been established; see [HUMAN_CONTROL.md](HUMAN_CONTROL.md).
+
 Next: make creation/removal repeatable across mission reloads, establish AI
 ownership and controlled position updates, then connect the real received
 snapshot mailbox. Two-PC Radmin mission acceptance remains outstanding.
