@@ -45,6 +45,19 @@ def main():
     launch = dict(schema=1, launcher_exit=0, waited_for_exit=True, child_exit_code=0,
                   original_profile_changed_files=0)
     assert module.summarize(lifecycle, require_lifecycle=True, launch_result=launch)['lifecycle_acceptance']
+    rejects(shutdown + lifecycle[:-1], require_lifecycle=True, launch_result=launch)
+    rejects(moving + close + shutdown + second + close, require_lifecycle=True, launch_result=launch)
+    rejects(moving + close + second + shutdown + close, require_lifecycle=True, launch_result=launch)
+    rejects(moving + [close[0]] + second + [close[0]] + shutdown + [close[1]],
+            require_lifecycle=True, launch_result=launch)
+    pause = ['observer=game_paused value=1 thread=7 detail=0']
+    resume = ['observer=game_unpaused value=1 thread=7 detail=0']
+    rejects(prefix + pause + moving[len(prefix):])
+    rejects(prefix + [pause[0].replace('game_paused', 'tick_paused')] + moving[len(prefix):])
+    rejects(prefix + pause + moving[len(prefix):] + close + second + close + shutdown,
+            require_lifecycle=True, launch_result=launch)
+    resumed = prefix + pause + resume + moving[len(prefix):] + close + second + close + shutdown
+    assert module.summarize(resumed, require_lifecycle=True, launch_result=launch)['lifecycle_acceptance']
     rejects(lifecycle, require_lifecycle=True)  # A shutdown callback is not an OS process-exit result.
     for field, value in [('child_exit_code', 1), ('child_exit_code', None), ('child_exit_code', False),
                          ('waited_for_exit', False), ('launcher_exit', 9), ('original_profile_changed_files', 1)]:

@@ -104,3 +104,11 @@ python scripts/summarize_telemetry.py work/probe-sessions/<session>/probe.log --
 ```
 
 This strict diagnostic result still does not establish two-PC gameplay, NPC synchronization or campaign support.
+
+## 2026-11-18 — integration review and deterministic lifecycle checks
+
+- Reviewed development through a73f70c and lifecycle work through 2b74f22 without rewriting the coauthor's commits. Added negative evidence cases after reproducing acceptance of shutdown before missions and samples during an unresumed pause.
+- The analyzer now rejects initialization/loading after shutdown and position samples during pause. Strict acceptance requires sampled mission closures and a menu return before the first shutdown, in addition to the existing native-exit/profile evidence.
+- The actual adapter now retains its paused state until game_unpaused. An ordinary tick cannot republish position during pause. This adds no new engine calls or game-memory writes; fresh Mafia II runtime verification remains pending.
+- The original native fixture intermittently failed at fixed-address allocation and at a real-time Sleep-based expectation. The fixture now supplies owned singleton storage and controlled time only in its separate test build. The production DLL retains the audited address and Windows clock; its symbol table contains no fixture substitution functions.
+- Build passed with warnings treated as errors. Python evidence, factory and four PE checks passed, as did all nine loader/profile checks and the network fixture suite. The deterministic production-adapter fixture passed 100 consecutive process runs. This is regression evidence, not automated movement, a second avatar, a second game client or Radmin gameplay.

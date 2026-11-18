@@ -11,8 +11,20 @@
 
 static wchar_t evidence_path[MAX_PATH];
 static uint32_t epoch;
-static int initialized, loaded, last_status = -1;
+static int initialized, loaded, paused, last_status = -1;
 static ULONGLONG next_sample, next_log;
+
+/* Only the standalone fixture build substitutes its own pointer storage and
+   clock. The game DLL retains the audited singleton and Windows clock. */
+#ifdef COOP_TELEMETRY_TEST
+extern uintptr_t CoopTelemetryTestGameSlot(void);
+extern ULONGLONG CoopTelemetryTestNow(void);
+#define GAME_SLOT CoopTelemetryTestGameSlot()
+#define SAMPLE_TIME() CoopTelemetryTestNow()
+#else
+#define GAME_SLOT ((uintptr_t)0x1abfe14)
+#define SAMPLE_TIME() GetTickCount64()
+#endif
 
 static int copy_at(uintptr_t at, void *out, size_t size) {
     MEMORY_BASIC_INFORMATION region;
@@ -41,7 +53,7 @@ static int read_player(CoopPlayerSnapshot *out) {
     uintptr_t game, player, vtable, target, physics, physics_vtable, getter, model;
     memset(out, 0, sizeof(*out));
     out->epoch = epoch;
-    if (!pointer_at(0x1abfe14, &game) || !pointer_at(game + 0x118, &player)) return 1;
+    if (!pointer_at(GAME_SLOT, &game) || !pointer_at(game + 0x118, &player)) return 1;
     if (!pointer_at(player, &vtable) || !pointer_at(vtable + 0x8c, &target) ||
         target != 0x938250) return 2;
     if (!pointer_at(player + 0x190, &physics) || !pointer_at(physics, &physics_vtable) ||
@@ -78,15 +90,18 @@ void CoopTelemetryEvent(unsigned int event_id) {
     if (event_id == 13) initialized = 1;
     if (event_id == 32) loaded = 0;
     if (event_id == 33) loaded = 1;
+    if (event_id == 34 || event_id == 4) paused = 1;
+    if (event_id == 35) paused = 0;
     if (event_id == 11 || event_id == 12 || event_id == 14 || event_id == 39) initialized = loaded = 0;
     /* A pause can stop ordinary ticks completely. Invalidate the published
        position at the pause callback instead of retaining it for the worker's
-       two-second producer-stall timeout. The next loaded tick can republish. */
-    if (!initialized || !loaded || event_id == 34 || event_id == 4)
+       two-second producer-stall timeout. Only an explicit unpause allows
+       subsequent loaded ticks to republish. */
+    if (!initialized || !loaded || paused)
         CoopNetworkPublish(epoch, NULL);
     if (event_id == 39) CoopNetworkStop();
-    if (event_id != 3 || !initialized || !loaded || !evidence_path[0]) return;
-    ULONGLONG now = GetTickCount64();
+    if (event_id != 3 || !initialized || !loaded || paused || !evidence_path[0]) return;
+    ULONGLONG now = SAMPLE_TIME();
     if (now < next_sample) return;
     next_sample = now + 50;
     CoopPlayerSnapshot snapshot;

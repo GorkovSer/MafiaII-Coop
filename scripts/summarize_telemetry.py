@@ -6,7 +6,7 @@ from pathlib import Path
 
 
 def summarize(lines, require_lifecycle=False, launch_result=None):
-    initialized = loaded = False
+    initialized = loaded = paused = False
     epoch = 0
     previous_ms = None
     epochs = {}
@@ -14,10 +14,15 @@ def summarize(lines, require_lifecycle=False, launch_result=None):
     reader_threads = set()
     closed_epochs = set()
     saw_menu_after_close = saw_shutdown = False
+    closed_at_shutdown = set()
+    menu_before_shutdown = False
     for number, line in enumerate(lines, 1):
         if line.startswith('observer='):
             fields = dict(part.split('=', 1) for part in line.split())
             event = fields['observer']
+            if saw_shutdown and event in ('mission_open', 'game_init', 'load_started',
+                                          'load_finished', 'game_unpaused'):
+                raise ValueError(f'New game activity after shutdown at line {number}')
             if event == 'mission_open':
                 epoch += 1
                 initialized = loaded = False
@@ -29,11 +34,17 @@ def summarize(lines, require_lifecycle=False, launch_result=None):
                 loaded = True
             elif event in ('mission_before_close', 'mission_close', 'game_done', 'shutdown'):
                 initialized = loaded = False
+            if event in ('game_paused', 'tick_paused'):
+                paused = True
+            elif event == 'game_unpaused':
+                paused = False
             if event == 'mission_close':
                 closed_epochs.add(epoch)
             if event == 'no_game_start' and epoch in closed_epochs:
                 saw_menu_after_close = True
-            if event == 'shutdown':
+            if event == 'shutdown' and not saw_shutdown:
+                closed_at_shutdown = closed_epochs.copy()
+                menu_before_shutdown = saw_menu_after_close
                 saw_shutdown = True
             if event not in ('startup_hook_installed', 'refused_unknown_image'):
                 callback_threads.add(int(fields['thread']))
@@ -45,7 +56,7 @@ def summarize(lines, require_lifecycle=False, launch_result=None):
             current_epoch = int(fields['epoch'])
             ms = int(fields['ms'])
             xyz = tuple(float(value) for value in fields['xyz'].split(','))
-            if not epoch or not initialized or not loaded or current_epoch != epoch:
+            if saw_shutdown or paused or not epoch or not initialized or not loaded or current_epoch != epoch:
                 raise ValueError(f'Sample outside initialized mission at line {number}')
             if len(xyz) != 3 or not all(math.isfinite(v) and abs(v) < 1000000 for v in xyz):
                 raise ValueError(f'Invalid position at line {number}')
@@ -70,8 +81,8 @@ def summarize(lines, require_lifecycle=False, launch_result=None):
         launch_result.get('waited_for_exit') is True and all(
             type(launch_result.get(field)) is int and launch_result[field] == 0
             for field in ('launcher_exit', 'child_exit_code', 'original_profile_changed_files')))
-    lifecycle = (len(moving_epochs) >= 2 and set(epochs) <= closed_epochs and
-                 saw_menu_after_close and saw_shutdown and process_verified)
+    lifecycle = (len(moving_epochs) >= 2 and set(epochs) <= closed_at_shutdown and
+                 menu_before_shutdown and saw_shutdown and process_verified)
     if require_lifecycle and not lifecycle:
         raise ValueError('Lifecycle acceptance requires two moving mission epochs, '
                          'closure of every sampled epoch, menu return, shutdown and '

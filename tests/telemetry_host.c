@@ -12,6 +12,11 @@ static uint32_t game[0x120/4], player[0x198/4], player_table[0x90/4];
 static uint32_t physics[0x1e8/4], physics_table[0x58/4];
 static int active, publications, stopped;
 static uint32_t published_epoch;
+static uintptr_t game_pointer;
+static ULONGLONG now=1000;
+
+uintptr_t CoopTelemetryTestGameSlot(void) {return (uintptr_t)&game_pointer;}
+ULONGLONG CoopTelemetryTestNow(void) {return now;}
 
 int CoopStoryTestStart(const wchar_t *path) {(void)path; return 0;}
 void CoopStoryTestEvent(unsigned int event) {(void)event;}
@@ -22,15 +27,13 @@ void CoopNetworkPublish(uint32_t epoch,const float *position) {
     if(position && (position[0]!=1 || position[1]!=2 || position[2]!=3)) active=-1;
 }
 static int tick_expects(int expected) {
-    Sleep(55); CoopTelemetryEvent(3); return active==expected;
+    now+=50; CoopTelemetryEvent(3); return active==expected;
 }
 #define CHECK(test) do {if(!(test)){fprintf(stderr,"FAIL line %d\n",__LINE__);return 1;}} while(0)
 int main(void) {
-    /* Map only the singleton pointer page in this owned x86 fixture process. */
-    void *page=VirtualAlloc((void *)(uintptr_t)0x1ab0000,0x10000,
-                           MEM_RESERVE|MEM_COMMIT,PAGE_READWRITE);
-    CHECK(page==(void *)(uintptr_t)0x1ab0000);
-    *(uintptr_t *)(uintptr_t)0x1abfe14=(uintptr_t)game;
+    /* Ordinary owned storage avoids conflicting with an existing mapping.
+       The compile-time fixture seam is absent from the actual game DLL. */
+    game_pointer=(uintptr_t)game;
     game[0x118/4]=(uint32_t)(uintptr_t)player;
     player[0]=(uint32_t)(uintptr_t)player_table;
     player[0x190/4]=(uint32_t)(uintptr_t)physics;
@@ -46,10 +49,15 @@ int main(void) {
     CHECK(tick_expects(0));  /* Objects exist but loading is unfinished. */
     CoopTelemetryEvent(33); CHECK(tick_expects(1)); CHECK(published_epoch==1);
     int before_pause=publications;
+    now+=49; CoopTelemetryEvent(3); CHECK(publications==before_pause);
+    now+=1; CoopTelemetryEvent(3); CHECK(publications==before_pause+1);
+    before_pause=publications;
     CoopTelemetryEvent(34);
     CHECK(active==0 && publications==before_pause+1); /* No stall timeout. */
+    CHECK(tick_expects(0)); /* A stray ordinary tick must not undo pause. */
     CoopTelemetryEvent(35); CHECK(tick_expects(1));
-    CoopTelemetryEvent(4); CHECK(active==0); CHECK(tick_expects(1));
+    CoopTelemetryEvent(4); CHECK(active==0); CHECK(tick_expects(0));
+    CoopTelemetryEvent(35); CHECK(tick_expects(1));
     CoopTelemetryEvent(32); CHECK(tick_expects(0));
     CoopTelemetryEvent(33); CHECK(tick_expects(1));
     player_table[0x8c/4]=0; CHECK(tick_expects(0));
@@ -60,7 +68,6 @@ int main(void) {
     CoopTelemetryEvent(13); CHECK(tick_expects(1)); CHECK(published_epoch==2);
     CoopTelemetryEvent(14); CHECK(tick_expects(0));
     CoopTelemetryEvent(39); CHECK(stopped && active==0);
-    CHECK(VirtualFree(page,0,MEM_RELEASE));
     puts("PASS production adapter fixture: loading, pause, invalid reader, close, second epoch and shutdown");
     return 0;
 }
