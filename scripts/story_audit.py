@@ -8,11 +8,62 @@ asset-root pointers at +0x0c..+0x18 into the resident GMP buffer at +0x2c.
 import struct
 
 
+def inspect_load_operation(read_u32, read_bytes):
+    """Observe the queued load request only; never confirm a loaded mission.
+
+    Snapshot rereads can reject visible changes, not prove atomicity or acquire
+    engine references. Keep IDs private, and never consume this as world state.
+    """
+    interface, main = 0x1cc395c, 0x1cc3958
+    result = dict(status='unavailable', loaded_world_verified=False,
+                  requested_save_id=None, request_mode=None)
+    vtable = read_u32(interface)
+    if vtable is None:
+        return result
+    if vtable != 0x1974668:
+        result['status'] = 'unknown_interface'
+        return result
+    operation = read_u32(main + 0x14)
+    phase = read_u32(interface + 0x18)
+    mode = read_u32(interface + 0x64)
+    if operation is None or phase is None or mode is None:
+        return result
+    if not operation:
+        result['status'] = 'no_operation'
+        return result
+    if operation > 0xffffffff - 11 or operation & 3:
+        result['status'] = 'invalid_operation'
+        return result
+    raw = read_bytes(operation, 12)
+    if raw is None or len(raw) != 12:
+        return result
+    if struct.unpack_from('<I', raw)[0] != 0x197343c:
+        result['status'] = 'other_operation'
+        return result
+    if (read_u32(interface) != vtable or
+            read_u32(main + 0x14) != operation or
+            read_u32(interface + 0x18) != phase or
+            read_u32(interface + 0x64) != mode or
+            read_bytes(operation, 12) != raw):
+        result['status'] = 'changed'
+        return result
+    # Phase 8 and load modes 0..2 are from the audited request path. Do not
+    # infer completion from the operation's byte at +4 or from its absence.
+    save_id = struct.unpack_from('<I', raw, 8)[0]
+    if phase != 8 or mode not in (0, 1, 2) or not 0 < save_id < 0x80000000:
+        result['status'] = 'unclassified_request'
+        return result
+    result.update(status='observed_load_request', requested_save_id=save_id,
+                  request_mode=mode)
+    return result
+
+
 def inspect_story(game, read_u32, read_bytes, save_ids):
     value = read_u32(0x1cc395c + 0x68)
     result = dict(identity_verified=False, save_load_value_candidate=value,
                   candidate_matches_catalogue=value is not None and value in save_ids,
                   game_open=None, map_header_status='unavailable', asset_roots=[])
+    result['load_request'] = inspect_load_operation(read_u32, read_bytes)
     if not game:
         return result
     flags = read_u32(game + 4)

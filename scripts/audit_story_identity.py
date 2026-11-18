@@ -68,6 +68,17 @@ def audit(path):
     match(0xb2cc30, bytes.fromhex('6a00b95839cc01e894fdffff'))
     match(0xb2c220, bytes.fromhex('8b44240489416cc20400'))
 
+    # Derived save interface slot +0x30 is the asynchronous load wrapper.
+    # Its second argument is stored at interface+0x64 (main+0x68), while
+    # the requested save ID is stored in the allocated operation at +8.
+    match(0xb666a6, bytes.fromhex('c7460468469701'))
+    match(0x1974668 + 0x30, struct.pack('<I', 0xb2d020))
+    match(0x450ca3, bytes.fromhex('8b10578bc88b423056ffd0'))
+    match(0xb2d020, bytes.fromhex('8b442408568b7424085750568bf9e80df7ffff'))
+    match(0xb2c740, bytes.fromhex('8b442408894164c7411808000000c6412100c20800'))
+    match(0xb2d041, bytes.fromhex('508d4ffcc7003c349701c6400400897008e869f9ffff'))
+    match(0xb2c9c0, bytes.fromhex('8b442404894114894110c20400'))
+
     return dict(schema=1, sha256=EXPECTED, game_api_calls=0, memory_writes=0,
                 mode_values={name: value for _, _, name, _, value in modes},
                 playing_chapter_is_chapter_number=False,
@@ -75,6 +86,10 @@ def audit(path):
                 candidate_interface_offset=0x68, candidate_main_offset=0x6c,
                 candidate_absolute_address='01cc39c4',
                 neighboring_clear_main_offset=0x68,
+                load_operation_vtable='0197343c',
+                load_operation_save_id_offset=8,
+                load_request_mode_interface_offset=0x64,
+                loaded_mission_confirmation=False,
                 candidate_meaning_verified=False,
                 candidate_lifetime_verified=False, world_identity_verified=False)
 

@@ -152,6 +152,9 @@ def main():
         story = result['story_context_candidates']
         public['story_context_candidates'] = {key: story[key] for key in (
             'identity_verified', 'candidate_matches_catalogue', 'game_open', 'map_header_status')}
+        public['story_context_candidates']['load_request'] = {
+            key: story['load_request'][key]
+            for key in ('status', 'loaded_world_verified')}
         public['entity_factory_candidate'] = {k: v for k, v in factory.items() if k != 'candidates'}
         public['entity_factory_candidate']['types'] = {
             name: dict(target_executable=item['target_executable'])

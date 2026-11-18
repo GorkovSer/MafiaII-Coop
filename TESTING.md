@@ -333,3 +333,27 @@ and world identity. No game, DLL, test fixture, suite, sockets or UI input was
 started. No runtime identity or two-PC mission acceptance is claimed. Updated
 STORY_IDENTITY.md removes the obsolete input-block statement and records the
 continuing Cyberpunk test hold plus the actual native UI instructions.
+
+## 2026-11-18 — trace asynchronous Continue load request (static only)
+
+Pinned file analysis traced constructor 0xb66690 installing interface vtable
+0x1974668, slot+0x30 -> 0xb2d020 and the existing 0x450ca3 virtual load call.
+The wrapper stores its mode argument through 0xb2c740 in interface+0x64 and
+sets phase 8; it creates a 12-byte operation of vtable 0x197343c with the save
+ID at +8, then installs the pointer through 0xb2c9c0. Extended exact-byte audit
+matched these sites against the full pinned EXE hash. This is an asynchronous
+request path, not proof of current loaded world/checkpoint or load completion.
+
+Added a bounded external load-operation reader to story_audit. Unknown class,
+unreadable/overflow/misaligned pointers, unsupported phase/mode/ID and visible
+changes cannot produce an observed request. The reader acquires no references;
+rereading does not prove atomicity or prevent ABA. IDs/modes remain private;
+console output exposes status and loaded_world_verified=false only. Existing
+unverified candidate and asset-root diagnostics remain distinct.
+
+Authored synthetic cases for recognized request, unknown interface/operation,
+no operation, bad pointers, unsupported phase/mode/ID and changed reads. They
+were NOT executed under the continuing test hold. Only static file auditing
+and Python source compilation were performed; no live process reads, game,
+DLL, suite, fixture, networking or UI input occurred in this stage. No runtime
+PASS or loaded mission identity is claimed.

@@ -354,3 +354,22 @@ change and menu only after the user resumes tests. Matching static bytes or a
 save catalogue entry is insufficient. Current candidate meaning/lifetime and
 world identity remain unverified; the audit explicitly reports them false.
 No game/test executable/suite or UI input was run in this stage.
+
+## 2026-11-18 — asynchronous load request observation (not loaded identity)
+
+Static follow-up traced the actual Continue load slot: derived interface vtable
+0x1974668 +0x30 -> 0xb2d020, creating operation vtable 0x197343c with requested
+save ID at +8. The nearby main+0x68 field is load mode on this path, written by
+0xb2c740; it is not current chapter. Exact-byte audit now covers this chain.
+story_audit adds bounded/repeated external reads of this known operation;
+inspect_runtime exposes its ID/mode only privately and status publicly.
+loaded_world_verified remains false in every case. A stable request or absent
+operation must never be promoted to confirmed loaded mission/checkpoint.
+
+Synthetic reader cases were authored but not run. Only static EXE auditing and
+source compilation were performed, with no game/live-memory inspection or
+test/suite/input. The Cyberpunk hold remains active. After tests resume, include
+the expanded test_story_audit.py in deferred checks before live correlation.
+Next static identity work: trace the load operation's completion/restore
+consumer and actual mission/checkpoint producer; do not use request data for
+remote-avatar authorization or world handshake yet.
