@@ -87,3 +87,20 @@
 - A module-version-3 passive peer connected to that real game: 120 received states over 60 seconds, 0 active samples, exit 4. Do not report active game-to-peer position acceptance, a second game client, or Radmin gameplay.
 - The read-only factory audit traversed 48 registered records and found Human and Player callbacks in executable image sections. The original game process was not modified by the inspection. Factory tests cover missing head/record memory, an empty list, bounded traversal, cycles, duplicate types and nonexecutable targets.
 - The DPI placement patch passed all nine loader/profile regression checks. Its two source files were published through the authenticated internal browser in commit b060b2c; fetched contents match the reviewed local sources. A fresh runtime placement check is still pending.
+
+## 2026-11-18 — pause invalidation and explicit lifecycle acceptance
+
+- Telemetry now publishes inactive on game_paused and tick_paused immediately; a loaded ordinary tick may publish position again. Previously the network worker could retain the last active position for its two-second producer timeout after pause. This change adds no engine calls.
+- Observer logging preserves every lifecycle transition, including repeated mission_before_close, no_game_start/end and pause/unpause. Per-frame events remain limited to their first log record. This makes later menu returns observable to the acceptance checker.
+- Added an isolated x86 fixture using the production telemetry adapter. It supplies test memory only inside its own process and checks pre-load rejection, immediate pause invalidation, resume, loading, changed reader target, closure, a second epoch and shutdown. It passed. Fixture coordinates and numeric vtable values are not game evidence; no game callbacks are executed by that fixture.
+- The evidence summary now exposes lifecycle_acceptance=false for a lone stationary sample. Strict mode requires at least two moving sampled epochs, closure of every sampled epoch, a later menu return, shutdown and a launch-result.json proving a waited-for zero native child exit and unchanged original profile. Missing, nonzero, malformed or ambiguous exit evidence cannot pass. The Python acceptance cases and launcher-result parser cases passed.
+- start-probe.ps1 saves private launcher stdout and an exit/profile result after completion. The new result writer parses successfully and its parsing is checked against native loader-fixture output. Its use in a fresh real-game session remains pending.
+- The updated DLLs and telemetry fixture built with warnings treated as errors. Loader/profile and network suites passed for this build. The current previously launched game still provides only one stationary sample, so actual two-load lifecycle acceptance, new pause behavior in Mafia II and fresh DISPLAY2 placement are not claimed.
+
+Example after an actual test session has finished:
+
+```powershell
+python scripts/summarize_telemetry.py work/probe-sessions/<session>/probe.log --require-lifecycle --launch-result work/probe-sessions/<session>/launch-result.json
+```
+
+This strict diagnostic result still does not establish two-PC gameplay, NPC synchronization or campaign support.
