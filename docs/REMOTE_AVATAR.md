@@ -96,3 +96,8 @@ The standalone audit remains read-only. The separate explicitly enabled test
 now executes the validated model factory, clone and single-reference release;
 the model-only test creates no entity. The separate Human test now exercises
 factory/Setup/Activate/removal. Remote-state application is not implemented.
+
+The next movement audit is now recorded in [HUMAN_CONTROL.md](HUMAN_CONTROL.md).
+It rejects the upstream MoveDir allocation/vtable combination on this EXE and
+identifies the native creation/enqueue/reference and free-list contracts.
+These are static findings; no new command function is called by the observer.

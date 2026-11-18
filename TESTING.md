@@ -229,3 +229,22 @@ The new adapter has no real-game creation/removal evidence yet. Further suites
 and game runs are deferred by explicit user request. Earlier visible Human and
 registry-removal evidence applies to the previous version. AI control, remote
 avatar application and repeated world lifetime remain open.
+
+## 2026-11-18 — static movement-command analysis, no tests resumed
+
+While the user's Cyberpunk test hold remained active, only the installed EXE
+file and existing upstream source were inspected. The whole EXE SHA256 still
+matched the pinned value. New audit_human_commands.py checked bounded exact-byte
+sites for native MoveDir allocation/class/destructor, the incompatible upstream
+class, AddCommand dispatch, queue insertion and intrusive reference retention/
+release. Its read-only report was produced under ignored work/control-audit.
+No game API calls, process memory writes, game launches or test suites occurred.
+
+The upstream 0x58/0x19661bc combination is rejected for this build: its destructor
+accesses +0x78 and its actual engine allocation is 0x98. The actual MoveDir
+0x58 class is 0x18f14b0 with destructor 0x42d3e0. Native candidate 0x95b0f0 creates
+and enqueues type 0/1 and returns an owned output reference; AddCommand consumes
+its stack argument reference. Native queue/free-list interpretation is documented
+in docs/HUMAN_CONTROL.md. These are static contract findings only. No runtime
+safe-control, AI arbitration, allocation-failure recovery, command cancellation
+or movement/animation acceptance is claimed. The observer is unchanged here.

@@ -205,3 +205,38 @@ Next after explicit test resumption: finish required loader checks, run the new
 confirmation on the game thread. Then continue AI ownership/real remote-state
 application and mission reload coverage. Keep the full two-PC Radmin campaign
 goal unchanged; no two-game-client mission acceptance is claimed.
+
+## 2026-11-18 — movement command ABI and incompatible upstream class
+
+Tests remain on the user's Cyberpunk hold. This stage only read source/the pinned
+EXE file and added static-analysis code/documentation. No game/DLL/fixture was
+launched and no UI input was sent. Read docs/HUMAN_CONTROL.md before movement work.
+
+Static evidence found a concrete mismatch in the upstream pedestrian example:
+its 0x58 MoveDir allocation is paired with vtable 0x19661bc, whose destructor
+0x953b80 touches +0x78; the game's matching allocation path uses 0x98 bytes.
+Do not copy that class/size or its manual delete. The real pinned MoveDir class
+is vtable 0x18f14b0, size 0x58, deleting destructor 0x42d3e0, independently visible
+in local-player initialization and command creation.
+
+Candidate 0x95b0f0 creates/enqueues simple commands (0 Stand / 1 MoveDir) and
+returns an additional owned reference through an out smart-pointer argument.
+AddCommand 0x94d400 consumes its by-value argument reference; insertion retains
+the queue reference, and final argument destruction decrements the reference.
+The normal creator path statically balances one queue and one output reference.
+Allocation-failure recovery, runtime count behavior and AI ownership remain
+unverified. Do not call the new candidate from observer yet.
+
+Human+0x18c is the free-list head, not a current-command selector. Eight pointer/
+link slots start at +0x138/+0x13c with stride 8, and five queue heads at +0x178.
+Do not set free_head=1 or write an arbitrary command slot as the upstream does.
+Future enqueue must validate free-list/queue bounds, cycles, disjoint membership
+and available capacity on a registry-validated Human game-thread callback.
+
+Added scripts/audit_human_commands.py. A read-only analysis of the installed
+full-hash-matching EXE confirmed its bounded exact-byte evidence; its output
+always sets runtime_control_verified/ai_ownership_verified/allocation failure
+recovery false. This is static evidence, not an executed movement or test suite.
+Next static work: trace AI/script arbitration and interruption, then prepare the
+controlled command adapter. In-game verification remains deferred until explicit
+test resumption; the two-PC Radmin campaign acceptance is still outstanding.
