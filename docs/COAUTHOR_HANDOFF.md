@@ -487,3 +487,18 @@ continues. Next static work: native SaveGame binding and save-event story ID
 producer. After explicit test resumption, correlate real checkpoint/failure/
 reload with script pair and host transition generation. Two-PC mission
 acceptance and remote Human control remain outstanding.
+
+## 2026-11-19 — Lua save request ticket is separate from save argument
+
+Static pinned EXE trace maps SaveGame -> 0xad6620 -> interface slots +0x34 /
++0x38 -> 0xb6e130 / 0xb4efc0. The request creates a counter ticket independently
+of the numeric Lua argument and inserts a 12-byte ticket/argument/reference
+record. The second method resolves an object by ticket. The Lua bridge's final
+1 is its result count, not disk-save success. Queue insertion can precede a
+zero-return branch. SAVE_RESTORE.md documents addresses and limits; the public
+static audit now pins the relevant bytes and keeps durable completion false.
+
+Read-only EXE audit matched. No tests, game, live process reads, input or sockets
+were run; Cyberpunk hold remains. Next: queued-save consumer at main vtable+0x18
+and returned object's completion/failure protocol, then actual file commit.
+Do not use tickets as shared world/checkpoint IDs or saved-progress proof.

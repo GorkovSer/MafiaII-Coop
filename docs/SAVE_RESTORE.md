@@ -137,3 +137,48 @@ EXE SHA256 gate и на игровом callback thread. Читается мак�
 чтобы не читать игровые адреса. Полная сборка завершилась, fixtures только
 скомпилированы. После снятия hold сначала выполнить отложенные проверки reader,
 затем проверить журнал на обычном Continue и переходах сюжета.
+
+## Native Lua SaveGame binding (2026-11-19)
+
+Pinned EXE only; addresses require the full hash recorded above. The function
+registration pair at 0x1aaa368 maps string SaveGame (0x196e1f0) to 0xad6620.
+This bridge parses Lua argument index 2 through numeric-to-integer helper
+0x440430, obtains interface 0x1cc395c via 0xb2d230, then calls interface slots
++0x34 and +0x38. Constructor 0xb66690 installs table 0x1974668 at main+4;
+these slots resolve to 0xb6e130 and 0xb4efc0, respectively.
+
+The first method is a request path, not a durable-save result:
+
+- 0xb6e136 checks interface+0x1c bit 1 and returns zero on that branch;
+  interface+0x44 is another rejection check. These flags' complete semantics
+  and runtime timing are not established.
+- 0xb6e158 reads and increments global counter 0x1aabaa0. The previous value
+  becomes a ticket, distinct from the incoming numeric argument.
+- 0xb6e167 retains the caller's argument in the second word of a temporary
+  three-word record. 0xb6e193 passes the record to vector insertion 0xb6cf40
+  at interface+0x50. The insertion's copy at 0xb6cf84 confirms the layout:
+  ticket, numeric argument, reference-managed object. No manual ownership or
+  engine-call API is being proposed here.
+- Nonzero interface state can take a zero-return branch after insertion;
+  state 9 also checks the queue length. The idle path changes state to 9
+  and calls main vtable+0x18. Its consumer/completion work is not audited yet.
+- 0xb6e20d returns the generated ticket on the remaining path.
+
+Slot +0x38 (0xb4efc0) searches 12-byte records in interface+0x54..+0x58 for
+that ticket and a nonnull third word. A hit copies the managed reference;
+otherwise it creates an object through 0x11e6bd0 / 0x11e2200 / 0x11e7680.
+The Lua bridge then pushes its object result via 0x11818d0 and returns integer
+1 as the Lua C function's result count. That final 1 is not save success.
+The returned object's completion/failure protocol is still unverified.
+
+Keep the Lua numeric save argument, local request ticket, story event ID,
+script progress pair and durable host progress separate. Neither the ticket,
+queue membership nor a returned object establishes a finished disk write or a
+shared checkpoint. Counter initialization/wrap/lifetime are unaudited; do not
+send it as a cross-client identity.
+
+Exact-byte checks for the binding, installed slots, ticket generation, record
+copy and lookup matched the pinned file in scripts/audit_story_identity.py.
+No game API was called. Next static target: main vtable+0x18's queued-save
+consumer, managed object's completion/failure transitions, and the actual
+write/commit path. Live confirmation remains deferred by the user's test hold.

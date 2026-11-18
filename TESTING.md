@@ -487,3 +487,17 @@ VM/game/DLL/fixture execution, live process read, UI input or networking. No
 original assets or extracted chunks are published. The Cyberpunk test hold
 remains active. Checkpoint uniqueness, runtime reachability, other chapters and
 two-PC mission/failure/saved-progress acceptance remain unverified.
+
+## 2026-11-19 — native Lua SaveGame request trace
+
+Inspected bounded file disassembly and registration/vtable data under the full
+pinned EXE hash. Traced binding 0xad6620, slots 0x34/0x38, generated ticket counter,
+record insertion/copy and lookup. Extended audit_story_identity.py exact-byte
+checks matched the original EXE; public output keeps durable completion false.
+The numeric Lua argument is distinct from its generated request ticket. The
+Lua C function's return 1 counts results; it does not prove save completion.
+
+This is static evidence only. No game/Lua VM/DLL/fixture/suite execution, live
+memory, network or UI input. Completion-object semantics, queued-save consumer,
+actual disk commit and runtime/two-PC acceptance remain unverified. User test
+hold remains in force.

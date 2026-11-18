@@ -79,6 +79,23 @@ def audit(path):
     match(0xb2d041, bytes.fromhex('508d4ffcc7003c349701c6400400897008e869f9ffff'))
     match(0xb2c9c0, bytes.fromhex('8b442404894114894110c20400'))
 
+    # Lua SaveGame resolves an asynchronous request ticket and then an object.
+    # The ticket is generated separately from the Lua numeric argument.
+    match(0x196e1f0, b'SaveGame\0')
+    match(0x1aaa368, struct.pack('<II', 0x196e1f0, 0xad6620))
+    match(0xad6633, bytes.fromhex('8d44241c506a0257e8f09d96ff'))
+    match(0xad6648, bytes.fromhex('e8e36b05008bf08b168b4424108b5234508bceffd2'))
+    match(0xad665d, bytes.fromhex('8b168b5238508d442410508bceffd2'))
+    match(0x1974668 + 0x34, struct.pack('<I', 0xb6e130))
+    match(0x1974668 + 0x38, struct.pack('<I', 0xb4efc0))
+    match(0xb6e136, bytes.fromhex('f6461c01740933c05e83c40cc20400'))
+    match(0xb6e158, bytes.fromhex('a1a0baaa018944240c40a3a0baaa01'))
+    match(0xb6e167, bytes.fromhex('8b44241c8d4c241c5189442414'))
+    match(0xb6e193, bytes.fromhex('8d54240c8d7e50528bcfe89eedffff'))
+    match(0xb6cf84, bytes.fromhex('8b4424108b08890e8b500483c008508d4e08895604'))
+    match(0xb4efd0, bytes.fromhex('39107506837808007540'))
+    match(0xb6e20d, bytes.fromhex('8b44240c5f5b5e83c40cc20400'))
+
     # Later operation writes the candidate BEFORE dispatching SAVE data work.
     # A matching candidate is not evidence that the requested load succeeded.
     match(0x1973444 + 4, struct.pack('<I', 0xb407f0))
@@ -178,6 +195,12 @@ def audit(path):
                 load_operation_vtable='0197343c',
                 load_operation_save_id_offset=8,
                 load_request_mode_interface_offset=0x64,
+                lua_save_binding='00ad6620',
+                lua_save_request_method='00b6e130',
+                lua_save_object_lookup='00b4efc0',
+                lua_save_ticket_counter='01aabaa0',
+                lua_save_ticket_is_completion=False,
+                lua_save_durable_completion_verified=False,
                 loaded_mission_confirmation=False,
                 cgame_restore_callback='005977a0',
                 cgame_restore_virtual_slot=0x30,
