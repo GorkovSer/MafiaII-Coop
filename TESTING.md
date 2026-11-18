@@ -315,3 +315,21 @@ future loopback silent-STATE/ENet-service scenario and post-Stop zero-output che
 These fixtures were compiled only. No test suite, networking fixture, game, DLL
 or UI input was executed due to the user's continuing test hold. This stage has
 no runtime PASS; prior transport/game results do not validate the new logic.
+
+## 2026-11-18 — static rejection of mode enum as story identity
+
+Read-only disassembly and the new scripts/audit_story_identity.py confirmed
+the pinned EXE's exact mode-string branches: PLAYING_CHAPTER maps to constant
+zero, alongside MAIN_MENU=1, IDLE_GAME=2, PAUSED_GAME=3, PLAYING=4,
+BROWSING_FAMILY_ALBUM=5 and END_LIST=7. This source cannot distinguish chapters.
+The audit also pins the save interface getter/caller and main-object clear:
+interface this=main+4, so interface+0x68 is main+0x6c, whereas the adjacent
+operation-clear branch writes main+0x68. It does not establish candidate reset.
+The setter-shaped function's calling context and argument meaning remain unknown.
+
+The static audit executed against the full-SHA256-pinned local EXE and matched
+the bounded evidence. Its report retains false for candidate meaning/lifetime
+and world identity. No game, DLL, test fixture, suite, sockets or UI input was
+started. No runtime identity or two-PC mission acceptance is claimed. Updated
+STORY_IDENTITY.md removes the obsolete input-block statement and records the
+continuing Cyberpunk test hold plus the actual native UI instructions.

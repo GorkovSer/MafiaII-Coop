@@ -336,3 +336,21 @@ not verify this version. After user authorizes tests, run the complete required
 suites and real game acceptance. AI ownership/controlled movement, authoritative
 world identity, mission transitions and two-PC Radmin mission/failure/save proof
 remain outstanding.
+
+## 2026-11-18 — story identity static exclusions
+
+Current work remains on codex/story-context-audit; tests are held for Cyberpunk.
+Added read-only scripts/audit_story_identity.py, executed only on the pinned EXE
+file. Exact branches prove PLAYING_CHAPTER is mode constant zero, not a chapter
+number (the same enum includes menu/pause/playing modes). Do not use this enum
+as world identity. Save/load candidate interface+0x68 equals main+0x6c; the
+neighboring operation-clear writes main+0x68 and proves no candidate reset.
+See STORY_IDENTITY.md for exact sites and limitations. Setter-shaped 0xb2c220
+still lacks a verified caller/argument contract. No new game call was added.
+
+Next identity work must trace the actual loaded mission/checkpoint producer,
+then correlate it with normal Continue, checkpoint, failure/reload, chapter
+change and menu only after the user resumes tests. Matching static bytes or a
+save catalogue entry is insufficient. Current candidate meaning/lifetime and
+world identity remain unverified; the audit explicitly reports them false.
+No game/test executable/suite or UI input was run in this stage.
