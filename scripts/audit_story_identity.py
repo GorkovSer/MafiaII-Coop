@@ -79,12 +79,30 @@ def audit(path):
     match(0xb2d041, bytes.fromhex('508d4ffcc7003c349701c6400400897008e869f9ffff'))
     match(0xb2c9c0, bytes.fromhex('8b442404894114894110c20400'))
 
+    # Later operation writes the candidate BEFORE dispatching SAVE data work.
+    # A matching candidate is not evidence that the requested load succeeded.
+    match(0x1973444 + 4, struct.pack('<I', 0xb407f0))
+    match(0xb407f0, bytes.fromhex('568bf18b460c83e800742d'))
+    match(0xb40828, bytes.fromhex('807e0400750c8b460885c07405a3c439cc01'))
+    match(0xb4083a, bytes.fromhex('803d7c39cc01007462'))
+    match(0xb40843, bytes.fromhex('807e040075cf8b460885c074c8'))
+    match(0xb40850, bytes.fromhex('8b0d480cac018b1168e8409701508b420cffd084c075b1'))
+    match(0x19740e8, b'SAVE\0')
+    # The false-result path schedules another operation; both true/false
+    # branches are after the earlier candidate write. AL is not world proof.
+    match(0xb40875, bytes.fromhex('8b4e080fb6560451528bc8e8ebeeffff'))
+    match(0xb3f7b6, bytes.fromhex('c706d8409701c74604cc409701894e1c'))
+    match(0x19740d8 + 8, struct.pack('<I', 0xb2ce40))
+    match(0xb2cec1, bytes.fromhex('8b4e1c8a5618c70044349701885004894808c7400c00000000'))
+
     return dict(schema=1, sha256=EXPECTED, game_api_calls=0, memory_writes=0,
                 mode_values={name: value for _, _, name, _, value in modes},
                 playing_chapter_is_chapter_number=False,
                 save_interface_address='01cc395c',
                 candidate_interface_offset=0x68, candidate_main_offset=0x6c,
                 candidate_absolute_address='01cc39c4',
+                candidate_may_precede_save_data_result=True,
+                candidate_operation_writer='00b40835',
                 neighboring_clear_main_offset=0x68,
                 load_operation_vtable='0197343c',
                 load_operation_save_id_offset=8,

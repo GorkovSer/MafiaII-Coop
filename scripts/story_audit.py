@@ -3,7 +3,8 @@
 CGame::Open 0x5cd760 loads /games/%s.bin; parser 0x5c9090 assigns four
 asset-root pointers at +0x0c..+0x18 into the resident GMP buffer at +0x2c.
 0xb2d230 returns the interface address 0x1cc395c (not a pointer stored there).
-0xb2c690 returns its +0x68 value. Its gameplay meaning remains unverified.
+0xb2c690 returns its +0x68 value. Operation 0xb407f0 writes this value before
+checking SAVE data dispatch results, so it is not loaded-world confirmation.
 """
 import struct
 
@@ -61,6 +62,7 @@ def inspect_load_operation(read_u32, read_bytes):
 def inspect_story(game, read_u32, read_bytes, save_ids):
     value = read_u32(0x1cc395c + 0x68)
     result = dict(identity_verified=False, save_load_value_candidate=value,
+                  candidate_may_precede_completion=True,
                   candidate_matches_catalogue=value is not None and value in save_ids,
                   game_open=None, map_header_status='unavailable', asset_roots=[])
     result['load_request'] = inspect_load_operation(read_u32, read_bytes)

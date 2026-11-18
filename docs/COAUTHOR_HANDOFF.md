@@ -373,3 +373,21 @@ the expanded test_story_audit.py in deferred checks before live correlation.
 Next static identity work: trace the load operation's completion/restore
 consumer and actual mission/checkpoint producer; do not use request data for
 remote-avatar authorization or world handshake yet.
+
+## 2026-11-18 — save candidate is written before SAVE result
+
+Static work found an actual candidate writer independent of setter 0xb2c220:
+0xb407f0, operation vtable 0x1973444, writes its nonzero input+8 to 0x1cc39c4
+at 0xb40835 before checking the subsequent SAVE data result. A matching candidate
+therefore cannot confirm a loaded mission/checkpoint. Added this rule to AGENTS
+and a public diagnostic qualifier candidate_may_precede_completion=true; IDs
+remain private. Exact-byte audit now checks the writer/result branch and a
+continuation chain through 0xb3f770 -> vtable 0x19740d8 -> 0xb2ce40 that can
+reinstall operation 0x1973444 with its saved input and reset local state.
+
+Only pinned EXE file reads and source compilation were performed; no game,
+live-memory inspection, test fixture/suite, input or networking. The test hold
+remains active. Next: trace the SAVE data consumer through actual restore and
+loaded mission/checkpoint publication. Do not infer success from candidate,
+operation AL, local state counters or operation absence. Existing deferred
+reader/network/Human checks still need execution after authorization.

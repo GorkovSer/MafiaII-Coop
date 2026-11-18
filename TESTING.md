@@ -357,3 +357,26 @@ were NOT executed under the continuing test hold. Only static file auditing
 and Python source compilation were performed; no live process reads, game,
 DLL, suite, fixture, networking or UI input occurred in this stage. No runtime
 PASS or loaded mission identity is claimed.
+
+## 2026-11-18 — candidate write precedes SAVE result (static only)
+
+Further pinned disassembly found a direct writer to candidate 0x1cc39c4:
+operation vtable 0x1973444 -> 0xb407f0. In local state zero, byte+4 zero and
+nonzero input+8, 0xb40835 stores that input before the later SAVE data interface
+call/result branch at 0xb40850..0xb40865. Both subsequent branches follow the
+write. This establishes a concrete reason to reject candidate equality as
+completion evidence, independent of the previously unknown setter's callers.
+
+Traced a retry/continuation chain from 0xb3f770 installing vtable 0x19740d8,
+slot+8 -> 0xb2ce40, whose local state 0x10 path reinstalls a 0x1973444 operation
+with the saved ID/byte and state zero. Exact semantics of SAVE outcomes, other
+writers and later world restoration remain unverified. AL return values and
+local operation states are not mission/checkpoint identity.
+
+Extended scripts/audit_story_identity.py with bounded exact instruction/vtable/
+literal checks, executed read-only against the full-SHA256 pinned file; all
+matched. story_audit/inspect_runtime now publish the non-sensitive qualifier
+candidate_may_precede_completion=true alongside the still-unverified candidate.
+Source compilation completed without executing modules. No suite, fixture,
+game, DLL, live process read, network peer or UI input was started. Runtime
+checks remain deferred under the Cyberpunk hold; no gameplay PASS is claimed.

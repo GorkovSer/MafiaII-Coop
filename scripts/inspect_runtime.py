@@ -151,7 +151,8 @@ def main():
                               for slot, target in result['release_context_candidate']['targets'].items()})
         story = result['story_context_candidates']
         public['story_context_candidates'] = {key: story[key] for key in (
-            'identity_verified', 'candidate_matches_catalogue', 'game_open', 'map_header_status')}
+            'identity_verified', 'candidate_matches_catalogue',
+            'candidate_may_precede_completion', 'game_open', 'map_header_status')}
         public['story_context_candidates']['load_request'] = {
             key: story['load_request'][key]
             for key in ('status', 'loaded_world_verified')}

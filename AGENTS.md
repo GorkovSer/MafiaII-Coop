@@ -38,4 +38,6 @@ Current user hold (2026-11-18): defer tests while the user plays Cyberpunk. Do n
 
 Future remote-avatar consumers must read through `CoopNetworkReadRemote` each update and require active freshness; ready alone is not authority to move. Receiver-local packet/worker validity is documented in `docs/NETWORK.md`. Session/connection metadata and local epoch do not establish a shared story world. New receiver-expiry code is compiled only while the test hold remains active.
 
+Save/load candidate at 0x1cc39c4 is written from an operation input before SAVE data result checks (0xb40835). Neither a catalogue match nor an observed load request confirms a loaded mission/checkpoint. Keep world authorization closed until a separate loaded-state producer and lifetime are verified; see `docs/STORY_IDENTITY.md`.
+
 The user has explicitly delegated all further control AND tests while asleep. Do not wait for manual game/menu steps; use the computer-use skill for observed Windows UI actions when available, or continue independent implementation and report unverified runtime work accurately. This does not authorize claiming a loopback fixture/passive telemetry peer is a second game client or a two-PC Radmin test. `--user` lowers only the launcher's own child token; do not change OS security settings or raise the computer-use helper's privileges.
