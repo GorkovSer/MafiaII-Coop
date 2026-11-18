@@ -145,6 +145,27 @@ def audit(path):
     for index, (instruction, _, _) in enumerate(layers[1:], 1):
         match(instruction - 5, b'\x83\xf8' + bytes([index]) + b'\x75\x06')
 
+    # Application's save callback and its missionNumber/missionPart accesses.
+    # These are script progress candidates, not yet correlated checkpoint IDs.
+    match(0x4e23aa, bytes.fromhex('8dbe94000000'))
+    match(0x4e23c5, bytes.fromhex('c707544f8f01'))
+    match(0x18f4f54 + 4, struct.pack('<I', 0x507f60))
+    match(0x473830, bytes.fromhex('8db79400000056e8646bd500'))
+    match(0x473858, bytes.fromhex('8b0d480cac016a0856e83a6bd500'))
+    match(0x507f60, bytes.fromhex('8b0d3828ab01e9c5fbffff'))
+    match(0x507c8a, bytes.fromhex('8b0d24feab01d91c246848148f01e833050900'))
+    match(0x507ca2, bytes.fromhex('8b0d24feab01d91c2468b0588f01e81b050900'))
+    match(0x47395b, bytes.fromhex('8b0d24feab016848148f01e8d5461200'))
+    match(0x47396f, bytes.fromhex('8b0d24feab0168b0588f01e8c1461200'))
+    match(0x18f1448, b'missionNumber\0')
+    match(0x18f58b0, b'missionPart\0')
+    match(0x58b4b5, bytes.fromhex('8bb3b4040000'))
+    match(0x58b4c4, bytes.fromhex('8d04768d7c8304'))
+    match(0x58b4d0, bytes.fromhex('8b4ff483ef0c8d840bb8040000'))
+    match(0x598056, bytes.fromhex('8d044066837c860c028d04867507d94008'))
+    match(0x597ff4, bytes.fromhex('8bbeb404000083ff647c08'))
+    match(0x5981f2, bytes.fromhex('8b5424108d04408d0486b9020000006689480c895008'))
+
     return dict(schema=1, sha256=EXPECTED, game_api_calls=0, memory_writes=0,
                 mode_values={name: value for _, _, name, _, value in modes},
                 playing_chapter_is_chapter_number=False,
@@ -168,6 +189,10 @@ def audit(path):
                 save_layer_read_dispatcher='011c4600',
                 save_layers={str(i): name for i, (_, _, name) in enumerate(layers)},
                 save_layer_callbacks_verified=False,
+                application_progress_read_callback='00507b30',
+                script_variables_global='01abfe24',
+                script_progress_names=['missionNumber', 'missionPart'],
+                script_progress_checkpoint_mapping_verified=False,
                 candidate_meaning_verified=False,
                 candidate_lifetime_verified=False, world_identity_verified=False)
 

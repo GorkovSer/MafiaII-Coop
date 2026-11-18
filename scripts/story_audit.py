@@ -7,6 +7,7 @@ asset-root pointers at +0x0c..+0x18 into the resident GMP buffer at +0x2c.
 checking SAVE data dispatch results, so it is not loaded-world confirmation.
 """
 import struct
+from script_progress_audit import inspect_script_progress
 
 
 def inspect_load_operation(read_u32, read_bytes):
@@ -66,6 +67,7 @@ def inspect_story(game, read_u32, read_bytes, save_ids):
                   candidate_matches_catalogue=value is not None and value in save_ids,
                   game_open=None, map_header_status='unavailable', asset_roots=[])
     result['load_request'] = inspect_load_operation(read_u32, read_bytes)
+    result['script_progress'] = inspect_script_progress(read_u32, read_bytes)
     if not game:
         return result
     flags = read_u32(game + 4)

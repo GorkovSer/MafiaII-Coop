@@ -419,3 +419,29 @@ Python source compilation only otherwise. No game, live process inspection,
 DLL/API calls, test fixture/suite, networking or UI input were executed. The
 user's test hold continues. SAVE_RESTORE.md records the next source-level
 reverse-engineering targets without claiming runtime/two-PC acceptance.
+
+## 2026-11-18 — missionNumber/missionPart script progress candidate
+
+Resolved a concrete Application callback: constructor installs subobject+0x94
+vtable 0x18f4f54; 0x473810 registers it for layers 10/0/1/8/4/9; read slot+4
+forwards via 0x507f60 to Application method 0x507b30. Its INIT branch restores
+missionNumber and missionPart through global 0x1abfe24 / setter 0x5981d0.
+Writer 0x473910 reads the same names with 0x598040. Static exact-byte audit now
+checks this chain plus type/stride/count/name-pool access and the native 100-slot
+limit. All bounded pinned-file checks matched. This is static provenance;
+chapter/checkpoint mapping, lifecycle freshness and completeness remain unknown.
+
+Added production external reader script_progress_audit.py to story inspection.
+It validates pointer/count, bounds records/name reads, requires type-2 finite
+integral values 0..65535, preserves native reverse-lookup duplicate priority,
+and rejects visible changes via rereads. The pool cap of 4096 is a conservative
+diagnostic budget, not a claimed engine capacity. Outputs remain empty on missing
+or invalid data. Readback is not atomic and does not exclude ABA or stale values.
+Public output contains only status/false verification flags; raw pair is private.
+
+Authored synthetic valid pair, missing/count, nonfinite/fractional/range/type,
+name-offset, duplicate-priority, changed-record and bad-manager cases. They were
+NOT executed. Source compilation completed; no module invocation except the
+read-only EXE audit, no game/live process reads, DLL calls, input, network or
+test suites/fixtures. Runtime reader checks and real campaign correlation are
+deferred under the continuing Cyberpunk hold; no new gameplay PASS is claimed.

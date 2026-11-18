@@ -59,11 +59,12 @@ Radmin VPN: игроки, бой, транспорт, NPC, сюжетные со
 | --- | --- | --- |
 | Игровая проверка и ввод | Штатно загрузить тестовое сохранение через меню, получить видимую управляемую сцену, движение и реальные активные сетевые снимки | Пока не подтверждены автономное движение и текущая полная игровая приёмка |
 | Удалённый персонаж | Проверить создание обычного Human, модель, размещение и единичное корректное удаление при выходе/смене миссии | Пока только исследование; не вызывать непроверенные функции и не копировать bulk SDK patches |
-| Идентификатор сюжетного мира | Сопоставить новое save/load candidate-поле с загрузкой, checkpoint и сменой главы; см. STORY_IDENTITY.md | GameBase +0x0c — буфер запроса; четыре строки CGame — корни ресурсов. Ни одно пока не является world ID |
+| Идентификатор сюжетного мира | Проследить и затем сопоставить script variables missionNumber/missionPart с главой, checkpoint и провалом; см. SAVE_RESTORE.md | Save candidate пишется до результата операции; script progress ещё не проверен в игре. World ID не установлен |
 
 Перед одновременным изменением одних файлов указать здесь взятое направление,
-ветку и фактический статус. Текущий основной участок — игровая проверка и ввод;
-соавтор может независимо продолжать исследование жизненного цикла удалённого
+ветку и фактический статус. Текущий основной участок — статический разбор
+сюжетного восстановления при отложенных тестах; соавтор может независимо
+продолжать исследование жизненного цикла удалённого
 Human. После устранения ограничения ввода основной агент завершил
 read-only аудит сюжетного контекста в `codex/story-context-audit`: изменения
 scripts/inspect_runtime.py, scripts/story_audit.py и tests/test_story_audit.py.
@@ -424,3 +425,27 @@ active. Next work: identify registered story-data callbacks in those layers
 and trace their read methods to mission/checkpoint storage plus overall load
 completion. Existing deferred checks still need execution after user resumes
 tests; no two-PC Radmin mission/failure/progress acceptance is claimed.
+
+## 2026-11-18 — script progress candidate from Application restore
+
+Traced concrete Application registration: subobject+0x94 vtable 0x18f4f54,
+read slot+4 -> 0x507f60 -> 0x507b30, including INIT and POSTLOAD layers.
+INIT restores missionNumber/missionPart through global 0x1abfe24 and setter
+0x5981d0; writer 0x473910 reads the same names via 0x598040. See SAVE_RESTORE.md
+for exact lookup layout and restrictions. These are stronger story candidates
+than the save request ID, but current chapter/checkpoint mapping and freshness
+are not proven. Never turn them into world authorization on name evidence alone.
+
+Added bounded external script_progress_audit reader and private report values;
+public console includes only status and unverified flags. It caps count at 100,
+name reads within a conservative 4096-byte pool budget and finite integral values
+0..65535, matches native newest-name priority, and rereads observable state.
+No game calls/writes, observer changes or network identity encoding were added.
+
+Pinned static audit matched; source compilation only otherwise. Synthetic cases
+for good/missing/invalid/duplicate/changed data were authored but NOT executed.
+No live game/memory/input/network or suite/fixture execution; hold still active.
+Next: audit additional story callbacks and lifecycle/reset behavior; after user
+resumes tests, run deferred reader checks and correlate this pair through real
+Continue/checkpoint/failure/reload/chapter/menu. Two-PC Radmin acceptance remains
+outstanding.

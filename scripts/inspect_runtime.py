@@ -156,6 +156,9 @@ def main():
         public['story_context_candidates']['load_request'] = {
             key: story['load_request'][key]
             for key in ('status', 'loaded_world_verified')}
+        public['story_context_candidates']['script_progress'] = {
+            key: story['script_progress'][key]
+            for key in ('status', 'identity_verified', 'checkpoint_mapping_verified')}
         public['entity_factory_candidate'] = {k: v for k, v in factory.items() if k != 'candidates'}
         public['entity_factory_candidate']['types'] = {
             name: dict(target_executable=item['target_executable'])
