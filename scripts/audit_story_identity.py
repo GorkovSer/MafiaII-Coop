@@ -96,6 +96,21 @@ def audit(path):
     match(0xb4efd0, bytes.fromhex('39107506837808007540'))
     match(0xb6e20d, bytes.fromhex('8b44240c5f5b5e83c40cc20400'))
 
+    # Main-object update consumes operations before dispatching state 9.
+    # Queue notification is not itself a disk-write success result.
+    match(0x19746b8 + 0x0c, struct.pack('<I', 0xb6a6d0))
+    match(0x19746b8 + 0x18, struct.pack('<I', 0xb2d070))
+    match(0xb2d090, bytes.fromhex('c70044349701895008e822f9ffff'))
+    match(0xb6a7b7, bytes.fromhex('8b4e108b118b4204ffd08b4e10394e14'))
+    match(0xb6a7e3, bytes.fromhex('8b461c4883f8080f871b010000ff248518a9b600'))
+    match(0xb6a918 + 8 * 4, struct.pack('<I', 0xb6a8bd))
+    match(0xb6a8bd, bytes.fromhex('8b7e588b4f0855e8b7cd6700'))
+    match(0xb6a8c9, bytes.fromhex('8b4e0c0fb656188b018b401c52ffd0'))
+    match(0xb6a8dd, bytes.fromhex('8d6e54518bcde8f844ffff8bcde87198fcff'))
+    match(0xb6a8f4, bytes.fromhex('8b46588b48048b168b5218518bceffd2'))
+    match(0x11e2228, bytes.fromhex('c6400801894010'))
+    match(0x11e7687, bytes.fromhex('8bf9806708fee8fefeffff'))
+
     # Later operation writes the candidate BEFORE dispatching SAVE data work.
     # A matching candidate is not evidence that the requested load succeeded.
     match(0x1973444 + 4, struct.pack('<I', 0xb407f0))
@@ -201,6 +216,10 @@ def audit(path):
                 lua_save_ticket_counter='01aabaa0',
                 lua_save_ticket_is_completion=False,
                 lua_save_durable_completion_verified=False,
+                save_queue_update_method='00b6a6d0',
+                save_queue_notification_branch='00b6a8bd',
+                save_queue_notify_method='011e7680',
+                save_queue_notification_is_disk_success=False,
                 loaded_mission_confirmation=False,
                 cgame_restore_callback='005977a0',
                 cgame_restore_virtual_slot=0x30,

@@ -502,3 +502,19 @@ Read-only EXE audit matched. No tests, game, live process reads, input or socket
 were run; Cyberpunk hold remains. Next: queued-save consumer at main vtable+0x18
 and returned object's completion/failure protocol, then actual file commit.
 Do not use tickets as shared world/checkpoint IDs or saved-progress proof.
+
+## 2026-11-19 — queued save notification and next-request dispatch
+
+Mapped installed main update 0xb6a6d0 and state-9 branch 0xb6a8bd. After
+operation processing, that branch notifies the first record's managed object,
+calls a listener, erases the record and forwards the next record's numeric
+argument to main slot+0x18 -> 0xb2d070 -> operation 0x1973444. Notification
+0x11e7680 clears object+8 bit 0 and traverses waiters without an explicit
+success/error argument. Do not interpret this bit, queue removal or the
+operation's UI timing return as durable saved host progress.
+
+Pinned read-only exact-byte audit matched; no game/test/fixture/live memory/
+input/network execution. Cyberpunk hold continues. SAVE_RESTORE.md records
+main-versus-interface offsets and remaining limits. Next: backend global
+0x1ac0c50 slot+0x10 reached at 0xb40932, commit/error propagation, plus listener
+and waiter semantics. No runtime or two-PC acceptance is claimed.

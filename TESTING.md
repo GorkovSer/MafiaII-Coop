@@ -501,3 +501,18 @@ This is static evidence only. No game/Lua VM/DLL/fixture/suite execution, live
 memory, network or UI input. Completion-object semantics, queued-save consumer,
 actual disk commit and runtime/two-PC acceptance remain unverified. User test
 hold remains in force.
+
+## 2026-11-19 — static queue notification trace
+
+Read bounded pinned EXE disassembly/data and extended exact-byte audit for
+main update/dispatch slots, operation creation, state-9 target, managed-object
+notification, queue erase/next-record forwarding and object flag mutation.
+The audit matched the original EXE hash and new sites. No game/test suite/
+fixture execution, live process read, network or UI input was performed.
+
+The observed object flag transition and queue completion do not establish disk
+success. Backend commit/error, listener semantics and full waiter protocol
+remain unverified. Main offsets differ by four from interface offsets; the
+new SAVE_RESTORE.md section uses main offsets throughout. Runtime correlation
+and two-PC mission/failure/host-progress acceptance remain pending under the
+continuing user test hold.

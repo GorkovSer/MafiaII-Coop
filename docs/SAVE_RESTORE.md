@@ -182,3 +182,46 @@ copy and lookup matched the pinned file in scripts/audit_story_identity.py.
 No game API was called. Next static target: main vtable+0x18's queued-save
 consumer, managed object's completion/failure transitions, and the actual
 write/commit path. Live confirmation remains deferred by the user's test hold.
+
+## Queue notification and next request (2026-11-19)
+
+The installed main-object table 0x19746b8 maps slot +0x0c to update 0xb6a6d0
+and slot +0x18 to 0xb2d070. The latter creates operation table 0x1973444 with
+its supplied numeric argument at operation+8 and installs it via 0xb2c9c0.
+This connects the previously inspected Lua request to that concrete operation.
+All offsets in this section are relative to the main object, not main+4's
+save interface.
+
+Update first invokes operation+vtable+4 at 0xb6a7b7. If current main+0x10 still
+equals pending main+0x14 afterward, it returns. Otherwise it releases/replaces
+the operation and may run its replacement before reaching state dispatch.
+Thus one callback return or operation disappearance is not final success.
+
+At 0xb6a7e3, main+0x1c selects a 1..9 jump table; state 9 resolves to 0xb6a8bd.
+That branch:
+
+1. Loads the first queue record through main+0x58 and calls 0x11e7680 on its
+   third word (record+8).
+2. Calls a listener at main+0x0c, vtable+0x1c, passing main+0x18 as a byte.
+3. Erases that record through 0xb5ede0 using the container at main+0x54.
+4. If another record remains, takes its second word and calls main vtable+0x18
+   to start the next operation. Otherwise it clears main+0x1c.
+
+The object factory at 0x11e2200 initializes object+8 to 1 and installs table
+0x190cc0c. Notification 0x11e7680 clears bit 0 at object+8 before traversing
+its waiter structures. There is no explicit success/error argument at this
+notification call. This is evidence of a notification mechanism, not enough
+evidence to read that bit as durable host-save success. Full waiter resumption,
+listener semantics and backend error propagation remain unaudited.
+
+The save operation also has a UI/timing stage: 0xb40956 calls 0xb2c800 with
+mode 2 and interval 1000000; 0xb2c860 compares a time source with stored timing
+and may call UI routines. Its boolean return must not be interpreted as disk
+success. The earlier SAVE operation then reaches backend global 0x1ac0c50,
+vtable+0x10 at 0xb40932; that backend and its commit/error contract are the
+next static target.
+
+New exact-byte checks for both installed slots, operation creation, dispatch,
+state-9 branch, notification, next-record forwarding and object flag mutation
+matched the full pinned EXE. This work did not execute the game, test suites,
+fixtures or live memory reads. Runtime and two-PC acceptance remain pending.
