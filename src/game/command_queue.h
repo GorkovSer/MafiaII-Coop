@@ -20,6 +20,9 @@ typedef struct {
     CoopCommandSlot slots[8];
     int32_t heads[5], free_head;
     uint32_t free_count, used_count;
+    /* Separately retained by the dispatcher; may legitimately be outside all queues. */
+    uint32_t retained_command, retained_vtable, retained_references, retained_flags;
+    uint32_t retained_is_queued;
 } CoopCommandQueue;
 
 /* Caller must resolve registry identity and enforce pinned image/game-thread

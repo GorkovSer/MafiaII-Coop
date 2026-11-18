@@ -268,3 +268,23 @@ address overflow and changed-snapshot cases. Both observer and fixture compiled
 in the full pinned clang 23.1.5 warnings-as-errors build. The fixture was NOT
 executed, and no suite/game/input was run: the user's Cyberpunk test hold remains
 in force. Consequently no PASS/runtime queue result is claimed for this stage.
+
+## 2026-11-18 — command dispatcher and retained-reference observation
+
+Static read-only EXE analysis identified Human vtable+0xc8 -> 0x9818a0 calling
+0x94d9a0. Exact-byte command audit now covers descriptor dispatch, conditional
+pop/reference release/free-list recycling, separate retention at Human+0x1a0,
+ClearMove's cancellation/physics path and general clear's retained reset.
+It also confirms the SDK AI NewCommand payload dereferences a separate counter
+address; a raw MoveDir intrusive object is incompatible with that payload.
+The static report still leaves AI ownership and runtime control unverified.
+
+Extended production queue reading with retained header/membership, allowing a
+retained command no longer queued, and a second retained-pointer comparison.
+Opt-in Human logs add non-address retained presence/membership and raw dispatch
+skip flag. No engine command call, refcount change or memory write was added.
+The full pinned clang 23.1.5 build completed with warnings-as-errors. Fixture
+cases for retained membership, retained after dequeue, invalid retained count
+and changed retained pointer compiled but were NOT executed. No tests/game/UI
+input were run due to the continuing user hold. Physical stopping on disconnect,
+command cancellation, AI/script ownership and cleanup remain unverified.

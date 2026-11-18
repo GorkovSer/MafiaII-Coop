@@ -77,6 +77,9 @@ static void record_command_queue(void *human) {
     if (status == COOP_COMMAND_QUEUE_VALID) {
         record("command_queue_free", queue.free_count);
         record("command_queue_used", queue.used_count);
+        record("command_retained_present", queue.retained_command != 0);
+        record("command_retained_queued", queue.retained_is_queued);
+        record("command_dispatch_skip_flag", !!(*(uint32_t *)((char *)human + 0x20) & 0x200000u));
     }
 }
 static void poll_removal(void) {

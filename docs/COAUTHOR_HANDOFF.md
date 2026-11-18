@@ -269,3 +269,36 @@ checks, and inspect real -TestHuman queue/registry results. Reject inconsistent
 layouts rather than repairing raw lists. Continue static AI/script arbitration
 work without starting tests until authorized. Full two-PC Radmin mission/failure/
 save acceptance remains unachieved.
+
+## 2026-11-18 — dispatch/lifetime and retained movement reference
+
+Tests remain held for Cyberpunk. This stage used only static EXE reads and
+compilation; no game, fixture executable, test suite or UI input was run.
+
+Pinned static evidence now traces Human vtable+0xc8 -> 0x9818a0 -> dispatcher
+0x94d9a0. The dispatcher performs descriptor-based begin/update passes, pops
+completed heads, releases queue references and recycles slots. A surviving queue-0
+head is separately retained at Human+0x1a0. Getter 0x94d540 returns queue head,
+not that retained reference. ClearMove 0x94d8d0 drains queue 0 and calls physics
+slot +0x14 but does not clear +0x1a0; the general clear has an argument-dependent
+retained-reference reset. Do not equate empty queue with destroyed command,
+physical stop or AI ownership. Never manually zero/release the borrowed field.
+The dispatch skip bit 0x200000 also bypasses neighboring physics work and is not
+an audited AI-only disable switch. AI NewCommand(void*) dereferences its second
+payload word as a counter address, unlike the raw MoveDir numeric refcount;
+these contracts must not be mixed. Exact AI payload ownership is still unknown.
+
+CoopReadCommandQueue now observes the separate retained header and membership,
+allows a live retained-but-dequeued command without flag 0x400, and rereads the
+retained pointer to detect changes. It does not acquire references or authorize
+late pointer use. Opt-in Human logs add retained presence/membership and the
+observed dispatch skip flag. No queue mutation or new engine call was introduced.
+
+Full pinned build passed with warnings-as-errors in build/command-lifetime.
+New fixture cases for retained queued/dequeued refs, invalid counts and changed
+retained pointers were compiled only, not executed. Read-only command audit
+confirmed bounded exact-byte sites and still reports runtime/AI control false.
+After test resumption, run all required deferred fixtures/loader checks before
+real Human observations. Next static work is the producer/ownership/interrupt
+contract for AI/script tasks; disconnect stop and unload need separate runtime
+proof. No remote-avatar/two-PC Radmin mission acceptance is claimed.

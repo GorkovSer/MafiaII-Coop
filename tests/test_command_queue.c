@@ -7,7 +7,8 @@
 static unsigned char memory[0x10000];
 static const uint32_t human = 0x1000, command = 0x3000;
 static int missing_header, change_second_read;
-static unsigned int reads, queue_reads;
+static int change_retained_read;
+static unsigned int reads, queue_reads, retained_reads;
 static void u32(uint32_t at, uint32_t value) { memcpy(memory + at, &value, 4); }
 static void next(unsigned int slot, int32_t value) { u32(human + 0x13c + slot * 8, (uint32_t)value); }
 static void head(unsigned int queue, int32_t value) { u32(human + 0x178 + queue * 4, (uint32_t)value); }
@@ -25,25 +26,28 @@ static int read_memory(void *context, uint32_t at, void *out, size_t size) {
         ++queue_reads;
         if (change_second_read && queue_reads == 2) ((unsigned char *)out)[0x54] ^= 1;
     }
+    if (at == human + 0x1a0 && ++retained_reads == 2 && change_retained_read)
+        ((unsigned char *)out)[0] ^= 1;
     return 1;
 }
 static void empty(void) {
-    memset(memory, 0, sizeof(memory)); missing_header = change_second_read = 0;
+    memset(memory, 0, sizeof(memory)); missing_header = change_second_read = change_retained_read = 0;
     for (unsigned int i = 0; i < 8; ++i) next(i, i == 7 ? -1 : (int32_t)i + 1);
     for (unsigned int i = 0; i < 5; ++i) head(i, -1);
     free_head(0);
 }
 static void single(void) { empty(); reference(0); next(0, -1); head(0, 0); free_head(1); }
-static void check(uint32_t address, CoopCommandQueueStatus expected, unsigned int used, unsigned int free_slots) {
+static CoopCommandQueue check(uint32_t address, CoopCommandQueueStatus expected, unsigned int used, unsigned int free_slots) {
     CoopCommandQueue result, zero = {0}; memset(&result, 0xaa, sizeof(result));
-    reads = queue_reads = 0;
+    reads = queue_reads = retained_reads = 0;
     CoopCommandQueueStatus actual = CoopReadCommandQueue(read_memory, NULL, address, &result);
-    if (actual != expected || reads > 10 ||
+    if (actual != expected || reads > 13 ||
         (actual == COOP_COMMAND_QUEUE_VALID ? result.used_count != used || result.free_count != free_slots :
          memcmp(&result, &zero, sizeof(result)) != 0)) {
         fprintf(stderr, "queue status=%d expected=%d used=%u free=%u reads=%u\n",
             actual, expected, result.used_count, result.free_count, reads); exit(1);
     }
+    return result;
 }
 int main(void) {
     empty(); check(human, COOP_COMMAND_QUEUE_VALID, 0, 8);
@@ -61,6 +65,16 @@ int main(void) {
     single(); u32(human + 0x138, command + 1); check(human, COOP_COMMAND_QUEUE_BAD_REFERENCE, 0, 0);
     single(); missing_header = 1; check(human, COOP_COMMAND_QUEUE_UNREADABLE, 0, 0);
     single(); change_second_read = 1; check(human, COOP_COMMAND_QUEUE_CHANGED, 0, 0);
+    single(); u32(human + 0x1a0, command);
+    CoopCommandQueue result = check(human, COOP_COMMAND_QUEUE_VALID, 1, 7);
+    if (!result.retained_is_queued || result.retained_command != command) return 1;
+    empty(); u32(human + 0x1a0, command);
+    u32(command, 0x18f14b0); u32(command + 4, 1); u32(command + 0x0c, 1);
+    result = check(human, COOP_COMMAND_QUEUE_VALID, 0, 8); /* retained after dequeue */
+    if (result.retained_is_queued || result.retained_command != command) return 1;
+    u32(command + 4, 0); check(human, COOP_COMMAND_QUEUE_BAD_REFERENCE, 0, 0);
+    single(); u32(human + 0x1a0, command); change_retained_read = 1;
+    check(human, COOP_COMMAND_QUEUE_CHANGED, 0, 0);
     empty(); head(0, 0); free_head(-1);
     for (unsigned int i = 0; i < 8; ++i) reference(i);
     check(human, COOP_COMMAND_QUEUE_VALID, 8, 0); /* full is valid, no enqueue capacity */

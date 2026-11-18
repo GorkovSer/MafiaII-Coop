@@ -65,9 +65,29 @@ CoopCommandQueueStatus CoopReadCommandQueue(CoopCommandRead read, void *context,
     }
     if (seen != 0xffu || candidate.free_count + candidate.used_count != 8)
         return COOP_COMMAND_QUEUE_CORRUPT;
+    if (!take(read, context, (uint64_t)human + 0x1a0, &candidate.retained_command, 4))
+        return COOP_COMMAND_QUEUE_UNREADABLE;
+    if (candidate.retained_command) {
+        uint32_t header[4];
+        if (candidate.retained_command % 4) return COOP_COMMAND_QUEUE_BAD_REFERENCE;
+        if (!take(read, context, candidate.retained_command, header, sizeof(header)))
+            return COOP_COMMAND_QUEUE_UNREADABLE;
+        candidate.retained_vtable = header[0]; candidate.retained_references = header[1];
+        candidate.retained_flags = header[3];
+        if (!header[0] || header[0] % 4 || !header[1] || header[1] > INT32_MAX)
+            return COOP_COMMAND_QUEUE_BAD_REFERENCE;
+        /* Do not require flag 0x400: a retained command may already be dequeued. */
+        for (unsigned int i = 0; i < 8; ++i)
+            if (candidate.slots[i].queue < 5 && candidate.slots[i].command == candidate.retained_command)
+                candidate.retained_is_queued = 1;
+    }
     if (!take(read, context, (uint64_t)human + 0x138, again, sizeof(again)))
         return COOP_COMMAND_QUEUE_UNREADABLE;
     if (memcmp(raw, again, sizeof(raw))) return COOP_COMMAND_QUEUE_CHANGED;
+    uint32_t retained_again;
+    if (!take(read, context, (uint64_t)human + 0x1a0, &retained_again, 4))
+        return COOP_COMMAND_QUEUE_UNREADABLE;
+    if (retained_again != candidate.retained_command) return COOP_COMMAND_QUEUE_CHANGED;
     *out = candidate;
     return COOP_COMMAND_QUEUE_VALID;
 }

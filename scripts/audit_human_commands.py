@@ -68,6 +68,30 @@ def audit(path):
     match(0x429a40, '8906e8699dffff85ff7410834704ff750a8b178b026a018bcfffd0')
     match(0x422db0, '8b0985c9740e834104ff75088b018b106a01ffd2c3')
 
+    # Dispatch and lifetime are separate from queue membership / free capacity.
+    match(0x94d540, '8b81780100005683f8ff')
+    match(0x1967058 + 0xc8, 'a0189800')
+    match(0x9818a6, 'f7462000002000751e')
+    match(0x9818b7, 'e8e4c0fcff')
+    match(0x94d9a0, '83ec08535556578bf133ed')
+    match(0x94d9cb, '8d96a0010000')
+    match(0x94d9e0, '8b0f8b410cc1e809a801')
+    match(0x94d9ec, '8b41088b188b4004')
+    match(0x94da05, '8b0f8b510cc1ea0bf6c2017515')
+    match(0x94da55, '8b500850518b4a0cd91c248944241c8b420803ceffd0')
+    match(0x94da6b, '84c0756b')
+    match(0x94da7d, '81600cfffbffff')
+    match(0x94dab2, '898c9e780100008b968c0100008994fe3c01000089be8c010000')
+    match(0x94dade, '578d8ea0010000e846bfadff')
+    match(0x94d7aa, '8d8ea0010000e87bc2adff')
+    match(0x94d8f2, '81490c00010000')
+    match(0x94d8fb, '8b48088b51108b4914')
+    match(0x94d927, '81600cfffbffff')
+    match(0x94d98f, '8b118b421483c40cffe0')
+    # SDK's untyped AI NewCommand is a different payload contract, not MoveDir.
+    match(0xf9f880, '538bd98b430cf6400401')
+    match(0xf9f8c3, '8b41048b09894e1889461c85c97411ff00')
+
     return dict(schema=1, sha256=EXPECTED, game_api_calls=0, memory_writes=0,
                 create_enqueue_candidate='0095b0f0', movement_type=1,
                 movement_allocation_size=0x58, movement_vtable='018f14b0',
@@ -82,6 +106,13 @@ def audit(path):
                 add_command_consumes_argument_reference=True,
                 enqueue_retains_reference=True,
                 creator_returns_additional_owned_reference=True,
+                command_dispatcher='0094d9a0', dispatch_caller='009818a0',
+                dispatch_skip_mask=0x200000, retained_reference_offset=0x1a0,
+                retained_reference_may_outlive_queue_membership=True,
+                get_move_command_returns_queue_head=True,
+                clear_move_candidate='0094d8d0', clear_all_candidate='0094d6b0',
+                clear_move_does_not_clear_retained_reference=True,
+                ai_new_command_raw_movedir_compatible=False,
                 allocation_failure_recovery_verified=False,
                 ai_ownership_verified=False, runtime_control_verified=False,
                 required_policy='Do not copy upstream command vtable or overwrite queue/free-list fields')

@@ -70,6 +70,13 @@ reference headers and changed raw layout. It never creates/changes commands. Its
 fixture was compiled but not run during the test hold. No queue result from the
 real game has been established; see [HUMAN_CONTROL.md](HUMAN_CONTROL.md).
 
+Queue observations now distinguish the separate retained movement reference at
+Human+0x1a0 from queued membership. A retained command outside the queue is allowed
+if its header/reference is readable; it need not have queued flag 0x400. The test
+records presence/membership and the raw dispatcher-skip flag without changing any
+of them. This is not proof of physical stop or AI ownership. New fixture cases
+for retained/dequeued references were compiled only; tests are still on hold.
+
 Next: make creation/removal repeatable across mission reloads, establish AI
 ownership and controlled position updates, then connect the real received
 snapshot mailbox. Two-PC Radmin mission acceptance remains outstanding.
