@@ -64,3 +64,5 @@ Actual game verification: The Story opened; Down selected Load Chapter, Up retur
 Usage: coop_input inspect PID, then coop_input key PID CREATION up|down|left|right|enter. Use only our launcher's PID and inspect's creation value. Pinned clang warnings-as-errors build passed; wrong creation, invalid key and zero PID refused input.
 
 User requested faster entry. Next runs should omit the completed diagnostic Down/Up detour and rebuilds when code is unchanged. Use lifecycle logs to wait for loading, screenshots at Continue selection and ready scene, and never retry Enter when its outcome is unknown. A fresh end-to-end timing measurement remains pending.
+
+Native arrow hold now accepts optional hold_ms 50..2000 (default 100), checking foreground/live process every 5 ms. Actual one-second Up moved Vito and produced changing real network coordinates; see TESTING.md. Invalid durations were refused. Pause through sky Escape did not work.

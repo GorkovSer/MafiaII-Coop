@@ -87,3 +87,8 @@ A second negative finding: StartGame's new-game path copies its mission-name arg
 On the rehashed pinned GOG EXE, CGame vtable +0x14 is 0x5cd760. Its Open formats /games/%s.bin and stores the resident buffer at CGame+0x2c. Parser 0x5c9090 assigns four strings from GMP-v6 chunk 0xe001 to +0x0c/+0x10/+0x14/+0x18. A local read-only resource inspection confirms these are asset roots, not chapter names. The SDS wrapper/metadata was read through the existing zlib-licensed Gibbed-based local adapter; extracted game data and adapter changes remain ignored, not distributed.
 
 The native save/load path supplies another candidate: 0xb2d230 returns interface address 0x1cc395c, and 0xb2c690 returns its +0x68 DWORD (direct interface call at 0xb4058f). The read-only inspector records it for later comparison with the save catalogue, without treating it as an accepted current checkpoint. Different this/subobject offsets must not be mixed. See docs/STORY_IDENTITY.md; no runtime mission-identity validation or game calls were performed in this stage.
+
+
+## 2026-11-18 — concrete Human deleting destructor
+
+Human constructor installs vtable 0x1967058, slot zero 0x999160. This calls body 0x990770 and conditionally routes the same pointer to allocator dispatch 0x4019f0 for argument bit 1. Release immediate path invokes that slot with argument 1; its alternate path hands the pointer to manager slot +0x4c. See docs/REMOTE_AVATAR.md and the pinned exact-byte audit. No creation/removal call has been made; manager queue and model ownership remain open.

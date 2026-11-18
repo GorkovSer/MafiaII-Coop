@@ -45,15 +45,16 @@ static int focused(DWORD pid, HANDLE process) {
     return foreground == pid && WaitForSingleObject(process, 0) == WAIT_TIMEOUT;
 }
 int wmain(int argc, wchar_t **argv) {
-    unsigned long long pid64, expected_creation = 0;
+    unsigned long long pid64, expected_creation = 0, hold_ms = 100;
     int inspect = argc == 3 && !wcscmp(argv[1], L"inspect");
-    if ((!inspect && (argc != 5 || wcscmp(argv[1], L"key"))) ||
+    if ((!inspect && ((argc != 5 && argc != 6) || wcscmp(argv[1], L"key"))) ||
         !number(argv[2], &pid64) || !pid64 || pid64 > MAXDWORD) {
-        fputs("usage: coop_input inspect PID | key PID CREATION up|down|left|right|enter\n", stderr); return 2;
+        fputs("usage: coop_input inspect PID | key PID CREATION up|down|left|right|enter [hold_ms:50..2000]\n", stderr); return 2;
     }
     WORD scan = 0; DWORD flags = KEYEVENTF_SCANCODE;
     if (!inspect) {
         if (!number(argv[3], &expected_creation)) return 2;
+        if (argc == 6 && (!number(argv[5], &hold_ms) || hold_ms < 50 || hold_ms > 2000)) return 2;
         if (!wcscmp(argv[4], L"enter")) scan = 0x1c;
         else {
             flags |= KEYEVENTF_EXTENDEDKEY;
@@ -78,7 +79,8 @@ int wmain(int argc, wchar_t **argv) {
     }
     INPUT input = {0}; input.type = INPUT_KEYBOARD; input.ki.wScan = scan; input.ki.dwFlags = flags;
     if (SendInput(1, &input, sizeof(input)) != 1) { CloseHandle(process); return 5; }
-    Sleep(100);
+    ULONGLONG started = GetTickCount64();
+    while (GetTickCount64() - started < hold_ms && focused((DWORD)pid64, process)) Sleep(5);
     /* Always release a pressed key, including after an intervening focus change. */
     int retained_focus = focused((DWORD)pid64, process);
     input.ki.dwFlags |= KEYEVENTF_KEYUP;
