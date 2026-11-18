@@ -12,6 +12,7 @@ import struct
 import math
 import time
 from audit_game import PE
+from factory_audit import inspect_factory
 
 
 def main():
@@ -57,6 +58,11 @@ def main():
         result = dict(schema=1, sha256=expected, pid=args.pid, memory_writes=0,
                       game_api_calls=0, interpretation='Candidate observations, not SDK validation',
                       candidates={})
+        # The pinned on-disk CreateEntity dispatch reads this linked registry.
+        # This records candidate constructors only; never call them here.
+        factory = inspect_factory(u32(0x1abe8cc), u32,
+            lambda target: bool(target and (pe.section_at_va(target) or {}).get('executable')))
+        result['entity_factory_candidate'] = factory
         for name, address in {'reborn_game': 0x1abfe14, 'rc4_game': 0x1aacd64,
                               'reborn_ticked_manager': 0x1abe8bc}.items():
             ptr = u32(address)
@@ -118,7 +124,13 @@ def main():
             result['position_samples'] = samples
         args.output.parent.mkdir(parents=True, exist_ok=True)
         args.output.write_text(json.dumps(result, indent=2) + '\n', encoding='utf-8')
-        print(json.dumps({k: v for k, v in result.items() if k not in ('local_player_candidate', 'position_samples')}, indent=2))
+        public = {k: v for k, v in result.items() if k not in (
+            'local_player_candidate', 'position_samples', 'entity_factory_candidate')}
+        public['entity_factory_candidate'] = {k: v for k, v in factory.items() if k != 'candidates'}
+        public['entity_factory_candidate']['types'] = {
+            name: dict(target_executable=item['target_executable'])
+            for name, item in factory['candidates'].items()}
+        print(json.dumps(public, indent=2))
         print('local_player_candidate_present=' + str(bool(player)))
         if args.sample_seconds:
             print('position_samples=' + str(len(samples)))
