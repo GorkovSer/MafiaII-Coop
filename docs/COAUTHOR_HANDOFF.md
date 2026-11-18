@@ -302,3 +302,37 @@ After test resumption, run all required deferred fixtures/loader checks before
 real Human observations. Next static work is the producer/ownership/interrupt
 contract for AI/script tasks; disconnect stop and unload need separate runtime
 proof. No remote-avatar/two-PC Radmin mission acceptance is claimed.
+
+## 2026-11-18 — receiver-side state expiry (compile only)
+
+Tests remain on the explicit Cyberpunk hold. No game, UI input, sockets/test
+executables or test suites were started in this stage. Full pinned compilation
+finished successfully in build/receiver-expiry; the initial fixture include-order
+conflict was fixed by removing the unnecessary Windows dependency from the
+mailbox header and including Windows explicitly in its implementation.
+
+Found and fixed a data-validity gap: outgoing producer state expired at two
+seconds, but accepted incoming active state could survive until the ten-second
+connection timeout. CoopSession now timestamps only accepted new STATE packets;
+duplicates/stale sequence/old epoch do not refresh it. At two seconds it clears
+remote activity/positions and logs remote_expired without forcing disconnect.
+New accepted state may restore activity with the existing sequence checks.
+
+The remote mailbox now includes accepted sequence, session ID, receiver-local
+connection generation and monotonic timestamps. CoopNetworkReadRemote applies
+a pure validity filter on every read: a stale worker/stop/no worker clears the
+whole output and returns false; stale/missing/inactive/invalid state within a
+live handshake clears active and coordinates. This covers frozen workers too.
+Never retain raw mailbox output across later frames without validity checks.
+Wire encoding/protocol did not change. These timestamps/counters are not story
+identity, source capture time or a shared world generation. Physical stop in a
+remote Human is not implemented by this data-only expiry.
+
+Prepared/compiled, NOT executed: pure receiver clock/expiry/inactive/recovery/
+rollover cases; two-process mode where a peer services ENet but ceases STATE;
+and output-zero assertion after network Stop. The updated test-network suite
+expects the rebuilt test_remote_snapshot.exe. Older green transport results do
+not verify this version. After user authorizes tests, run the complete required
+suites and real game acceptance. AI ownership/controlled movement, authoritative
+world identity, mission transitions and two-PC Radmin mission/failure/save proof
+remain outstanding.

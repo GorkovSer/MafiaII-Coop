@@ -4,6 +4,7 @@
 #include "../src/net/game_bridge.h"
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 int wmain(int argc,wchar_t **argv) {
     if(argc!=3) return 2;
     if(CoopNetworkStart(argv[1])) return 3;
@@ -28,5 +29,10 @@ int wmain(int argc,wchar_t **argv) {
     printf("bridge_fixture=1 ready=%d saw_active=%d saw_inactive=%d received=%lu\n",
         ready,saw_active,saw_inactive,(unsigned long)remote.received_states);
     CoopNetworkStop();
+    memset(&remote,0xaa,sizeof(remote));
+    CoopRemoteSnapshot zero={0};
+    int stopped_reset=!CoopNetworkReadRemote(&remote) && !memcmp(&remote,&zero,sizeof(remote));
+    printf("stopped_snapshot_zero=%d\n",stopped_reset);
+    if(!stopped_reset) return 4;
     return 0;
 }

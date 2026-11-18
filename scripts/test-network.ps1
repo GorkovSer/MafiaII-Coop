@@ -4,6 +4,8 @@ $root=Split-Path $PSScriptRoot -Parent
 $exe=Join-Path (Join-Path $root $BuildDirectory) 'session_peer.exe'
 & (Join-Path (Join-Path $root $BuildDirectory) 'test_wire.exe')
 if($LASTEXITCODE -ne 0) {throw 'Wire tests failed'}
+& (Join-Path (Join-Path $root $BuildDirectory) 'test_remote_snapshot.exe')
+if($LASTEXITCODE -ne 0) {throw 'Receiver validity tests failed'}
 $dir=Join-Path $root ('work/network-tests/'+[Guid]::NewGuid().ToString('N'))
 New-Item -ItemType Directory -Path $dir -Force | Out-Null
 function Start-Peer($name,$role,$port,$duration,$mode=0) {
@@ -27,6 +29,16 @@ foreach($log in @($hostLog,$guestLog)) {
        $log -notmatch 'event=remote_inactive' -or $log -notmatch 'received=[1-9]\d* ') {throw 'Bidirectional fixture failed'}
 }
 Write-Output 'PASS two processes handshake, assign IDs, exchange state and clear inactive state'
+$port++
+$hostPeer=Start-Peer silence-host host $port 6000
+Start-Sleep -Milliseconds 200
+$guestPeer=Start-Peer silence-guest guest $port 4500 4
+$guestLog=Finish-Peer $guestPeer silence-guest
+$hostLog=Finish-Peer $hostPeer silence-host
+if($hostLog -notmatch 'event=remote_expired' -or $hostLog -notmatch 'remote_expired_while_ready=1') {
+    throw 'Missing receiver expiry while ENet peer remained ready'
+}
+Write-Output 'PASS incoming state expires while peer still services ENet control traffic'
 foreach($mode in @(1,2,3)) {
     $port++
     $hostPeer=Start-Peer "reject-host-$mode" host $port 2500
@@ -72,7 +84,8 @@ foreach($role in @('host','guest')) {
 for($i=0;$i -lt 2;$i++) {
     $role=@('host','guest')[$i]
     $log=Finish-Peer $peers[$i] "bridge-$role"
-    if($log -notmatch 'ready=1 saw_active=1 saw_inactive=1 received=[1-9]\d*') {throw 'Worker/mailbox fixture failed'}
+    if($log -notmatch 'ready=1 saw_active=1 saw_inactive=1 received=[1-9]\d*' -or
+        $log -notmatch 'stopped_snapshot_zero=1') {throw 'Worker/mailbox fixture failed'}
 }
 Write-Output 'PASS network worker maintains session while producer stalls and expires stale position'
 Write-Output 'These are loopback transport fixtures, not two-PC Radmin or gameplay acceptance.'

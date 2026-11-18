@@ -14,10 +14,11 @@ $common = @('-std=c11', '-O2', '-Wall', '-Wextra', '-Werror', '-static')
 $netSources=@((Join-Path $root 'src/net/wire.c'),(Join-Path $root 'src/net/session.c'))
 $registrySource=Join-Path $root 'src/game/entity_registry.c'
 $commandSource=Join-Path $root 'src/game/command_queue.c'
+$remoteSource=Join-Path $root 'src/net/remote_snapshot.c'
 $netLink=@('-I',(Join-Path $root 'third_party/enet/include'),(Join-Path $out 'enet.a'),'-lws2_32','-lwinmm','-lbcrypt')
 & $cc @common -shared (Join-Path $root 'src/probe/probe.c') '-Wl,--kill-at' -o (Join-Path $out 'coop_probe.dll')
 if ($LASTEXITCODE -ne 0) { throw 'Probe DLL build failed' }
-& $cc @common -DCOOP_OBSERVER -shared (Join-Path $root 'src/probe/probe.c') (Join-Path $root 'src/probe/observer.c') (Join-Path $root 'src/probe/profile.c') (Join-Path $root 'src/game/telemetry.c') (Join-Path $root 'src/game/story_test.c') (Join-Path $root 'src/game/model_test.c') (Join-Path $root 'src/game/human_test.c') $registrySource $commandSource (Join-Path $root 'src/net/game_bridge.c') @netSources '-Wl,--kill-at' -o (Join-Path $out 'coop_observer.dll') -ladvapi32 @netLink
+& $cc @common -DCOOP_OBSERVER -shared (Join-Path $root 'src/probe/probe.c') (Join-Path $root 'src/probe/observer.c') (Join-Path $root 'src/probe/profile.c') (Join-Path $root 'src/game/telemetry.c') (Join-Path $root 'src/game/story_test.c') (Join-Path $root 'src/game/model_test.c') (Join-Path $root 'src/game/human_test.c') $registrySource $commandSource (Join-Path $root 'src/net/game_bridge.c') $remoteSource @netSources '-Wl,--kill-at' -o (Join-Path $out 'coop_observer.dll') -ladvapi32 @netLink
 if ($LASTEXITCODE -ne 0) { throw 'Event observer DLL build failed' }
 & $cc @common -DCOOP_PROFILE_TEST -shared (Join-Path $root 'src/probe/probe.c') (Join-Path $root 'src/probe/profile.c') '-Wl,--kill-at' -o (Join-Path $out 'coop_profile_probe.dll')
 if ($LASTEXITCODE -ne 0) { throw 'Profile redirect test DLL build failed' }
@@ -41,8 +42,10 @@ if ($LASTEXITCODE -ne 0) {throw 'Optional input diagnostic build failed'}
 if ($LASTEXITCODE -ne 0) {throw 'Native menu input helper build failed'}
 & $cc @common (Join-Path $root 'tests/session_peer.c') @netSources -o (Join-Path $out 'session_peer.exe') @netLink
 if ($LASTEXITCODE -ne 0) {throw 'Session fixture build failed'}
-& $cc @common -municode (Join-Path $root 'tests/network_bridge_host.c') (Join-Path $root 'src/net/game_bridge.c') @netSources -o (Join-Path $out 'network_bridge_host.exe') @netLink
+& $cc @common -municode (Join-Path $root 'tests/network_bridge_host.c') (Join-Path $root 'src/net/game_bridge.c') $remoteSource @netSources -o (Join-Path $out 'network_bridge_host.exe') @netLink
 if ($LASTEXITCODE -ne 0) {throw 'Network thread fixture build failed'}
+& $cc @common (Join-Path $root 'tests/test_remote_snapshot.c') $remoteSource @netSources -o (Join-Path $out 'test_remote_snapshot.exe') @netLink
+if ($LASTEXITCODE -ne 0) {throw 'Remote validity fixture build failed'}
 & $cc @common (Join-Path $root 'src/tools/netcheck.c') @netSources -o (Join-Path $out 'coop_netcheck.exe') @netLink
 if ($LASTEXITCODE -ne 0) {throw 'Passive network diagnostic build failed'}
 Get-FileHash -LiteralPath (Join-Path $out 'coop_probe.dll'),(Join-Path $out 'probe_launcher.exe'),(Join-Path $out 'probe_host.exe') | Format-Table

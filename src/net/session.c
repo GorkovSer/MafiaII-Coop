@@ -34,6 +34,7 @@ static int send_message(CoopSession *s, CoopMessage *message, unsigned char chan
 static void reset_peer(CoopSession *s) {
     s->peer = NULL; s->ready = s->remote_active = s->have_sequence = 0;
     memset(&s->remote, 0, sizeof(s->remote));
+    s->remote_received_at = 0;
     if (s->role == COOP_GUEST) { s->session = 0; s->player_id = 0; }
 }
 static void reject(CoopSession *s, ENetPeer *peer, const char *reason) {
@@ -108,10 +109,14 @@ static void receive(CoopSession *s, ENetEvent *event, uint32_t now) {
             ++s->stale; return;
         }
         s->remote = message; s->rx_sequence = message.sequence; s->have_sequence = 1;
+        s->remote_received_at = now; /* Only accepted new state refreshes validity. */
         if (s->remote_active != (int)message.active) record(s, message.active ? "remote_active" : "remote_inactive");
         s->remote_active = (int)message.active; ++s->received_states;
     } else { reject(s, event->peer, "reject_phase"); return; }
     s->deadline = now + 10000;
+}
+uint32_t CoopSessionRemoteAge(const CoopSession *s, uint32_t now) {
+    return s && s->have_sequence ? now - s->remote_received_at : UINT32_MAX;
 }
 void CoopSessionTick(CoopSession *s) {
     if (!s->host) return;
@@ -140,6 +145,11 @@ void CoopSessionTick(CoopSession *s) {
     }
     if (s->peer && (int32_t)(now - s->deadline) >= 0) {
         enet_peer_disconnect_now(s->peer, 2); reset_peer(s); record(s, "timeout");
+    }
+    if (s->remote_active && CoopSessionRemoteAge(s, now) >= COOP_STATE_MAX_AGE_MS) {
+        s->remote_active = 0; s->remote.active = 0;
+        memset(s->remote.position, 0, sizeof(s->remote.position));
+        record(s, "remote_expired");
     }
     if (s->ready && (int32_t)(now - s->next_send) >= 0) {
         CoopMessage state = s->local; state.type = COOP_STATE; state.player_id = s->player_id;

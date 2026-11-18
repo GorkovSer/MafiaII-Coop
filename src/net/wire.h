@@ -7,6 +7,7 @@
 #define COOP_MODULE_VERSION 3u /* diagnostic 0.0.3; exact compatibility */
 #define COOP_CAP_TELEMETRY 1u
 #define COOP_WIRE_MAX 64
+#define COOP_STATE_MAX_AGE_MS 2000u /* Receiver-local validity; not a wire timestamp. */
 enum { COOP_HELLO = 1, COOP_WELCOME = 2, COOP_STATE = 3 };
 typedef struct {
     uint16_t type;

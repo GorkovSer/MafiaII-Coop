@@ -288,3 +288,30 @@ cases for retained membership, retained after dequeue, invalid retained count
 and changed retained pointer compiled but were NOT executed. No tests/game/UI
 input were run due to the continuing user hold. Physical stopping on disconnect,
 command cancellation, AI/script ownership and cleanup remain unverified.
+
+## 2026-11-18 — incoming expiry and consumer validity (no execution)
+
+Code review found that only the local producer had two-second expiry, while
+incoming remote_active relied on the ten-second peer deadline. Added receiver
+accepted-state time after identity/sequence/epoch acceptance; remote activity
+and positions are invalidated at COOP_STATE_MAX_AGE_MS=2000 without clearing
+sequence/epoch or forcing disconnect. Invalid/stale packets cannot renew this
+validity. Unsigned ENet-clock subtraction handles normal uint32 rollover.
+
+The mailbox adds receiver-local timestamps and connection/accepted-sequence
+metadata. CoopRemoteSnapshotAt filters each consumer copy for stale worker,
+stale state, no accepted state, inactive state and invalid coordinates/metadata.
+CoopNetworkReadRemote now zeros outputs on no worker/stop and rejects stale
+mailbox data even if the worker itself is frozen. Wire encoding stays unchanged;
+this does not establish world identity or physically stop a Human.
+
+Pinned full clang 23.1.5 warnings-as-errors build succeeded. The first build
+exposed a Windows/Winsock include-order conflict in the new fixture; the mailbox
+header now uses stddef/stdint only and the implementation includes Windows itself.
+Prepared fixtures cover 1999/2000-ms boundaries, live-worker/stale-state versus
+stale-worker, accepted-state recovery, inactivity, missing identity, nonfinite
+coordinates, future clocks, aliasing, no state and uint32 clock rollover. Added
+future loopback silent-STATE/ENet-service scenario and post-Stop zero-output check.
+These fixtures were compiled only. No test suite, networking fixture, game, DLL
+or UI input was executed due to the user's continuing test hold. This stage has
+no runtime PASS; prior transport/game results do not validate the new logic.

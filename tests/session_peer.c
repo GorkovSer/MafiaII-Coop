@@ -30,16 +30,25 @@ int main(int argc,char **argv) {
     CoopSessionPublish(&session,1,xyz);
     ULONGLONG start=GetTickCount64(), duration=(ULONGLONG)strtoul(argv[4],NULL,10);
     if(duration>30000) {CoopSessionStop(&session);return 2;}
-    int cleared=0, remote_fixture_seen=0;
+    int cleared=0, remote_fixture_seen=0, expired_while_ready=0;
     while(GetTickCount64()-start<duration) {
-        if(!cleared && GetTickCount64()-start>duration/2) {CoopSessionPublish(&session,1,NULL);cleared=1;}
+        ULONGLONG elapsed = GetTickCount64()-start;
+        if(mode==4 && elapsed>1000) {
+            /* Service ENet/control traffic but deliberately send no more app state. */
+            session.next_send=enet_time_get()+60000;
+        } else if(!cleared && elapsed>duration/2) {CoopSessionPublish(&session,1,NULL);cleared=1;}
         CoopSessionTick(&session);
         if(session.remote_active && session.remote.position[0]==(config.role==COOP_HOST?-4.0f:10.25f)) remote_fixture_seen=1;
+        if(remote_fixture_seen && session.ready && !session.remote_active && session.have_sequence &&
+            CoopSessionRemoteAge(&session,enet_time_get())>=COOP_STATE_MAX_AGE_MS &&
+            !session.remote.active && !session.remote.position[0] && !session.remote.position[1] && !session.remote.position[2])
+            expired_while_ready=1;
         Sleep(5);
     }
     printf("transport_fixture=1 connections=%lu sent=%lu received=%lu rejected=%lu remote_fixture_seen=%d remote_active=%d\n",
         (unsigned long)session.connections,(unsigned long)session.sent_states,(unsigned long)session.received_states,
         (unsigned long)session.rejected,remote_fixture_seen,session.remote_active);
     CoopSessionStop(&session);
+    printf("remote_expired_while_ready=%d\n",expired_while_ready);
     return 0;
 }

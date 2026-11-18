@@ -1,4 +1,5 @@
 #define WIN32_LEAN_AND_MEAN
+#include <windows.h>
 #include "game_bridge.h"
 #include "session.h"
 #include <stdio.h>
@@ -28,17 +29,25 @@ static DWORD WINAPI network_worker(void *context) {
     while (WaitForSingleObject(stop_event, 5) == WAIT_TIMEOUT) {
         AcquireSRWLockExclusive(&mailbox_lock);
         uint32_t epoch = latest.epoch;
-        int active = latest.active && GetTickCount64()-latest.published < 2000;
+        int active = latest.active && GetTickCount64()-latest.published < COOP_STATE_MAX_AGE_MS;
         float xyz[3]; memcpy(xyz, latest.xyz, sizeof(xyz));
         ReleaseSRWLockExclusive(&mailbox_lock);
         CoopSessionPublish(&session, epoch, active ? xyz : NULL);
         CoopSessionTick(&session);
+        uint64_t published = GetTickCount64();
+        uint32_t age = CoopSessionRemoteAge(&session, enet_time_get());
         AcquireSRWLockExclusive(&mailbox_lock);
         remote.ready = (uint32_t)session.ready;
         remote.player_id = session.remote.player_id; remote.epoch = session.remote.epoch;
         remote.active = (uint32_t)session.remote_active;
         remote.rtt_ms = session.peer ? session.peer->roundTripTime : 0;
         remote.received_states = session.received_states;
+        remote.have_state = (uint32_t)(session.have_sequence && age <= published);
+        remote.received_sequence = session.rx_sequence;
+        remote.connection_generation = session.connections;
+        remote.session_id = session.session;
+        remote.state_received_ms = remote.have_state ? published - age : 0;
+        remote.mailbox_published_ms = published;
         memcpy(remote.position, session.remote.position, sizeof(remote.position));
         ReleaseSRWLockExclusive(&mailbox_lock);
     }
@@ -82,9 +91,12 @@ int CoopNetworkStart(const wchar_t *log_path) {
     return 0;
 }
 int CoopNetworkReadRemote(CoopRemoteSnapshot *out) {
-    if (!worker || !out) return 0;
-    AcquireSRWLockShared(&mailbox_lock); *out=remote; ReleaseSRWLockShared(&mailbox_lock);
-    return out->ready != 0;
+    if (!out) return 0;
+    memset(out, 0, sizeof(*out));
+    if (!worker || !stop_event || WaitForSingleObject(stop_event, 0) != WAIT_TIMEOUT) return 0;
+    CoopRemoteSnapshot snapshot;
+    AcquireSRWLockShared(&mailbox_lock); snapshot=remote; ReleaseSRWLockShared(&mailbox_lock);
+    return CoopRemoteSnapshotAt(&snapshot, GetTickCount64(), out);
 }
 void CoopNetworkPublish(uint32_t epoch, const float *position) {
     if (!worker) return;
