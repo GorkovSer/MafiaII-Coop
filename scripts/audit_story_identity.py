@@ -111,6 +111,21 @@ def audit(path):
     match(0x11e2228, bytes.fromhex('c6400801894010'))
     match(0x11e7687, bytes.fromhex('8bf9806708fee8fefeffff'))
 
+    # Concrete backend writer, reached after SAVE serialization. Its zero
+    # result is checked by the operation but is not proven durable storage.
+    match(0x11cb783, bytes.fromhex('c700b4c69001a3500cac01'))
+    match(0x190c6b4 + 0x10, struct.pack('<I', 0x11ca700))
+    match(0xb40932, bytes.fromhex('8b0d500cac018b018b56088b401068e840970152ffd085c00f8575ffffff'))
+    match(0x190c68c, b'%s/%s.dat\0')
+    match(0x11ca760, bytes.fromhex('5fb8feffffff5d81c40c040000c20800'))
+    match(0x11ca811, bytes.fromhex('8bcdffd28bf03bf37529'))
+    match(0x11ca86a, bytes.fromhex('8bceffd08b4f048954241c8b118bd88b4238ffd033c93bd87506394c241c7415'))
+    match(0x11ca8b2, bytes.fromhex('ffd28b4c241433db3bc1751f3bd3751b'))
+    match(0x11ca8d2, bytes.fromhex('ffd283f804750485d27435'))
+    match(0x11ca905, bytes.fromhex('83c8ff5d81c40c040000c20800'))
+    match(0x11ca912, bytes.fromhex('8b55008b82b4000000568bcdffd0'))
+    match(0x11ca9a6, bytes.fromhex('8b55008b421c8bcdffd05e5b5f33c05d81c40c040000c20800'))
+
     # Later operation writes the candidate BEFORE dispatching SAVE data work.
     # A matching candidate is not evidence that the requested load succeeded.
     match(0x1973444 + 4, struct.pack('<I', 0xb407f0))
@@ -220,6 +235,12 @@ def audit(path):
                 save_queue_notification_branch='00b6a8bd',
                 save_queue_notify_method='011e7680',
                 save_queue_notification_is_disk_success=False,
+                save_backend_vtable='0190c6b4',
+                save_backend_write_method='011ca700',
+                save_backend_return_codes={'0': 'normal path', '-1': 'write count mismatch',
+                                           '-2': 'setup/open/preflight failure'},
+                save_backend_close_result_verified=False,
+                save_backend_durability_verified=False,
                 loaded_mission_confirmation=False,
                 cgame_restore_callback='005977a0',
                 cgame_restore_virtual_slot=0x30,

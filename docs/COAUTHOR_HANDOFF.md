@@ -518,3 +518,19 @@ input/network execution. Cyberpunk hold continues. SAVE_RESTORE.md records
 main-versus-interface offsets and remaining limits. Next: backend global
 0x1ac0c50 slot+0x10 reached at 0xb40932, commit/error propagation, plus listener
 and waiter semantics. No runtime or two-PC acceptance is claimed.
+
+## 2026-11-19 — backend write result boundary
+
+Resolved global 0x1ac0c50 factory/table -> writer 0x11ca700. It writes a .dat
+stream, checks three returned byte counts, returns -2 on setup/open/preflight
+failure, -1 on count mismatch and 0 on the normal path after close/release and
+catalogue update. The save operation branches on nonzero at 0xb40948. This
+is a useful local result boundary; concrete close/flush and full error delivery
+remain unaudited, so durable host progress and shared checkpoint remain false.
+
+Static exact-byte audit matched the pinned EXE. An initial evidence-span start
+was corrected to the instruction boundary before the successful final audit.
+Source compilation only otherwise; no game, tests/fixtures, live memory, input
+or network execution. Cyberpunk hold remains active. Next: concrete filesystem
+behind 0x695b70 and close slot+0xb4, fallback operation and final listener result.
+Keep raw assets local. Runtime/two-PC mission/failure/save acceptance is pending.

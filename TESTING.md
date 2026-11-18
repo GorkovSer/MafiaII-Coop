@@ -516,3 +516,19 @@ remain unverified. Main offsets differ by four from interface offsets; the
 new SAVE_RESTORE.md section uses main offsets throughout. Runtime correlation
 and two-PC mission/failure/host-progress acceptance remain pending under the
 continuing user test hold.
+
+## 2026-11-19 — backend stream writes and error returns
+
+Pinned static analysis identified factory/table 0x11cb760/0x190c6b4 for global
+0x1ac0c50 and writer 0x11ca700. Three stream-write byte counts are checked;
+observed returns are -2 for setup/open/preflight failure, -1 for count mismatch,
+and 0 on the normal close/catalogue-update path. Operation 0xb40948 branches
+on nonzero. Detailed addresses/limitations are in SAVE_RESTORE.md.
+
+New exact-byte audit initially refused one span whose start was specified
+inside an instruction; corrected to 0x11ca811, then the complete pinned-file
+audit matched. Python source compilation completed. No game, fixture/suite,
+live process read, input or network was executed. No runtime PASS is claimed.
+Concrete filesystem close/flush, trailer meaning, catalogue contract and final
+error delivery are unverified; durable completion flags remain false. The user
+hold continues and two-PC mission/failure/saved-progress acceptance is pending.

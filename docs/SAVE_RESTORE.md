@@ -225,3 +225,45 @@ New exact-byte checks for both installed slots, operation creation, dispatch,
 state-9 branch, notification, next-record forwarding and object flag mutation
 matched the full pinned EXE. This work did not execute the game, test suites,
 fixtures or live memory reads. Runtime and two-PC acceptance remain pending.
+
+## Backend stream writer and error branches (2026-11-19)
+
+Factory 0x11cb760 creates the object stored at global 0x1ac0c50, installs
+vtable 0x190c6b4 and initializes its +0x18 field to 1. Slot +0x10 resolves
+to 0x11ca700, the concrete method called at 0xb40946. The operation tests its
+32-bit result at 0xb40948 and takes the existing fallback branch on nonzero.
+This is a stronger result boundary than queue removal or Lua result count.
+It is still not an audited durable-storage contract.
+
+Observed writer behavior:
+
+- Uses the path component at global 0x1ac0c54 +0x28 and filesystem object
+  returned by 0x695b70. Empty path or failed setup/open/preflight returns -2.
+- Builds the save name with 0x11bcca0 and formats `%s/%s.dat` (0x190c68c).
+  Opens through filesystem vtable+0x94 with mode argument 1. This is the game's
+  filesystem abstraction; concrete OS file/flush behavior is not established.
+- The backend's buffer object at +4 provides data/length through slots
+  +0x38/+0x3c. Stream slot+4 writes the first block at 0x11ca86c and its
+  returned low/high words are compared with the expected count at 0x11ca880.
+- Writes another buffer/count at 0x11ca8b2 and compares both result words;
+  then writes a four-byte trailer at 0x11ca8d2 and requires EAX=4, EDX=0.
+  A mismatch in any of these writes closes/releases the stream through
+  filesystem slot+0xb4, frees the temporary buffer and returns -1.
+- On the normal path, the same slot+0xb4 is called at 0x11ca91e, the temporary
+  buffer is freed and catalogue data is created/updated through 0x11c3650,
+  0x11c1890 and 0x11bfb60/0x11c9890. It leaves the filesystem scope through
+  slot+0x1c and returns 0 at 0x11ca9b3.
+
+No close-result check is visible at that call site; the concrete close/flush
+implementation has not been traced. The normal return therefore proves only
+this method's successful control path with checked stream byte counts. It
+must not be advertised as power-loss durability, cross-client checkpoint
+agreement or completed host-progress acceptance. Trailer contents and the
+full catalogue update contract are also unverified.
+
+Pinned exact-byte audit now covers factory/global/vtable, operation result
+branch, path format, write-count checks, close call and returns 0/-1/-2.
+The static audit matched after correcting one evidence span's start to an
+instruction boundary; no production behavior changed. No test suite or game
+was run. Next static work: concrete filesystem implementation behind 0x695b70,
+stream/close slot+0xb4, fallback error operation and final listener result.
