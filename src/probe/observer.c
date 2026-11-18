@@ -82,14 +82,11 @@ static void __attribute__((thiscall, force_align_arg_pointer)) on_event(void *se
     observation *item = (observation *)self;
     CoopTelemetryEvent(item->id);
     LONG count = InterlockedIncrement(&item->count);
-    /* Tick/render only log their first invocation; no disk I/O every frame. */
-    if (count == 1) record(item->name, (unsigned long)count, 0);
-    if (!strcmp(item->name, "game_init") || !strcmp(item->name, "mission_open") ||
-        !strcmp(item->name, "load_started") || !strcmp(item->name, "load_finished") ||
-        !strcmp(item->name, "game_done") || !strcmp(item->name, "game_save") ||
-        !strcmp(item->name, "mission_close") || !strcmp(item->name, "game_restore")) {
-        if (count > 1) record(item->name, (unsigned long)count, 0);
-    }
+    /* Every lifecycle transition matters, including later menu returns and
+       pauses. Frame callbacks still log only once; no per-frame disk I/O. */
+    int frame = item->id == 3 || item->id == 4 || item->id == 5 || item->id == 7 ||
+        item->id == 22 || item->id == 23 || item->id == 24;
+    if (count == 1 || !frame) record(item->name, (unsigned long)count, 0);
 }
 
 #define EVENT(id, name) {id, {name, 0, id}}
