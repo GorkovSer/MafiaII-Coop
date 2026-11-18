@@ -2,6 +2,8 @@
 
 User-authorized destination: `https://github.com/GorkovSer/MafiaII-Coop.git`, branch `development`.
 
+Shared handoff: read `docs/COAUTHOR_HANDOFF.md` before starting work and before EVERY commit. The user explicitly requires keeping coauthor instructions current. In the same commit, update that file whenever the task, ownership, behavior, verified results, limitations or next action changes. If nothing relevant changed, review it without inventing a status update. Keep `TESTING.md` as the detailed evidence record; the handoff is the concise current state. Fetch before integration, preserve the other author's commits and never overwrite concurrent work.
+
 After each substantive completed change/stage, inspect the diff, run appropriate checks, review the exact staged file set, commit with an accurate message, push without force, and verify that `refs/heads/development` on origin equals the local commit. Do not request confirmation for each commit/push. Do not change repository visibility/access. Use existing authorization without printing credentials. See `docs/GITHUB.md`.
 
 Never add original game assets/executables, saves/backups, private logs/dumps, credentials, temporary clones, build products, or materials without redistribution permission. Keep these in ignored `work/` or other ignored local directories. Review tracked files too; .gitignore cannot protect an already tracked secret.
