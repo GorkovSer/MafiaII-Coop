@@ -40,4 +40,6 @@ Future remote-avatar consumers must read through `CoopNetworkReadRemote` each up
 
 Save/load candidate at 0x1cc39c4 is written from an operation input before SAVE data result checks (0xb40835). Neither a catalogue match nor an observed load request confirms a loaded mission/checkpoint. Keep world authorization closed until a separate loaded-state producer and lifetime are verified; see `docs/STORY_IDENTITY.md`.
 
+Static chapter-3 script analysis separates missionPart selection, story event ID and SaveGame slot. Do not assume missionNumber/missionPart uniquely identifies a checkpoint; see `docs/SCRIPT_CHECKPOINTS.md`. Runtime reachability and campaign-wide mapping remain unverified.
+
 The user has explicitly delegated all further control AND tests while asleep. Do not wait for manual game/menu steps; use the computer-use skill for observed Windows UI actions when available, or continue independent implementation and report unverified runtime work accurately. This does not authorize claiming a loopback fixture/passive telemetry peer is a second game client or a two-PC Radmin test. `--user` lowers only the launcher's own child token; do not change OS security settings or raise the computer-use helper's privileges.

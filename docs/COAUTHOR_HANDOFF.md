@@ -470,3 +470,20 @@ No wire/position publication behavior changed. After test authorization, run
 deferred C/Python/loader/network checks before ordinary Continue/checkpoint/
 failure/reload/chapter/menu correlation. The pair's lifecycle and checkpoint
 coverage, remote Human control and two-PC Radmin mission acceptance are pending.
+
+## 2026-11-19 — chapter script checkpoint separation
+
+Added bounded static Lua 5.1 chunk reader and SCRIPT_CHECKPOINTS.md. In inspected
+M03 bytecode, missionPart selects six parts, while the saves table describes
+11 story events and progress branches call SaveGame(1). Treat part, story event
+and save slot separately; uniqueness of missionNumber/missionPart as checkpoint
+is unproven. Static references do not establish runtime reachability or a
+campaign-wide mapping. Original archives/chunks/extractor remain ignored.
+
+Read six original chunks as data; final key reports retain executed=false and
+reachability_verified=false. Python source compilation completed. No game, Lua
+VM, fixture/suite, live memory, input or network execution; Cyberpunk test hold
+continues. Next static work: native SaveGame binding and save-event story ID
+producer. After explicit test resumption, correlate real checkpoint/failure/
+reload with script pair and host transition generation. Two-PC mission
+acceptance and remote Human control remain outstanding.

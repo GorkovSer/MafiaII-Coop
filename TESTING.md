@@ -471,3 +471,19 @@ authorized runs; it was NOT invoked. The existing Python reader cases also
 remain deferred. Rechecked static exact-byte EXE audit; evidence matched.
 No game, DLL/fixture execution, test suite, live process read, sockets or input
 was performed. Full in-game correlation and two-PC acceptance remain unverified.
+
+## 2026-11-19 — static chapter-3 Lua inspection
+
+Added scripts/read_lua51.py and docs/SCRIPT_CHECKPOINTS.md. Parsed six local
+original Lua chunks as data: four from m03_main and one each from m01part2 and
+m02_mission_end. Manually inspected bounded prototype instructions for chapter-3
+part selection, five setters, 11 save event entries, SaveGame branches and the
+message-field forwarding call. Hashes and precise prototype/PC evidence are in
+the new document. Final reference reports for M03Parts/M03Saves retained false
+execution/reachability flags. Python source compilation completed.
+
+This was static asset research, not a test suite or runtime acceptance. No Lua
+VM/game/DLL/fixture execution, live process read, UI input or networking. No
+original assets or extracted chunks are published. The Cyberpunk test hold
+remains active. Checkpoint uniqueness, runtime reachability, other chapters and
+two-PC mission/failure/saved-progress acceptance remain unverified.
