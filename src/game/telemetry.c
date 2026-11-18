@@ -79,7 +79,11 @@ void CoopTelemetryEvent(unsigned int event_id) {
     if (event_id == 32) loaded = 0;
     if (event_id == 33) loaded = 1;
     if (event_id == 11 || event_id == 12 || event_id == 14 || event_id == 39) initialized = loaded = 0;
-    if (!initialized || !loaded) CoopNetworkPublish(epoch, NULL);
+    /* A pause can stop ordinary ticks completely. Invalidate the published
+       position at the pause callback instead of retaining it for the worker's
+       two-second producer-stall timeout. The next loaded tick can republish. */
+    if (!initialized || !loaded || event_id == 34 || event_id == 4)
+        CoopNetworkPublish(epoch, NULL);
     if (event_id == 39) CoopNetworkStop();
     if (event_id != 3 || !initialized || !loaded || !evidence_path[0]) return;
     ULONGLONG now = GetTickCount64();
