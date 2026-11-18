@@ -3,7 +3,7 @@ param([Parameter(Mandatory=$true)][string]$GameDirectory, [switch]$WaitForExit,
       [ValidateSet('off','host','guest')][string]$NetworkRole='off',
       [string]$Address='127.0.0.1', [ValidateRange(1,65535)][int]$Port=28960,
       [ValidatePattern('^\d{8}-\d{6}-\d{3}$')][string]$TestProfileFrom,
-      [switch]$ContinueMainStory, [switch]$TestModelClone)
+      [switch]$ContinueMainStory, [switch]$TestModelClone, [switch]$TestHuman)
 $ErrorActionPreference = 'Stop'
 $root = Split-Path $PSScriptRoot -Parent
 . (Join-Path $PSScriptRoot 'launch-result.ps1')
@@ -16,6 +16,10 @@ if (Get-Process mafia2 -ErrorAction SilentlyContinue) { throw 'Close existing Ma
 $stamp = Get-Date -Format 'yyyyMMdd-HHmmss-fff'
 $local = Join-Path $root "work/probe-sessions/$stamp"
 New-Item -ItemType Directory -Path $local -Force | Out-Null
+if($TestHuman) {
+    if(!$Observer -or !$TestProfileFrom -or $TestModelClone){throw 'Human test requires observer, isolated profile and no simultaneous model-only test'}
+    [IO.File]::WriteAllText((Join-Path $local 'human-test.ini'),"[test]`r`nhuman_once=1`r`n",[Text.Encoding]::ASCII)
+}
 if($TestModelClone) {
     if(!$Observer -or !$TestProfileFrom){throw 'Model clone test requires observer and an explicit isolated test profile'}
     [IO.File]::WriteAllText((Join-Path $local 'model-test.ini'),"[test]`r`nclone_once=1`r`n",[Text.Encoding]::ASCII)

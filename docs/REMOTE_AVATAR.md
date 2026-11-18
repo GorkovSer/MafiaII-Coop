@@ -1,7 +1,8 @@
 # Remote Human: ownership evidence
 
-Status: no remote avatar has been created. Ordinary Human remains the intended
-candidate; a second Player may affect story ownership. All addresses below
+Status: a local opt-in Human has been visibly created and removed from the
+registry; see [HUMAN_TEST.md](HUMAN_TEST.md). A network-controlled avatar is
+not implemented. A second Player may affect story ownership. All addresses below
 apply only to the pinned GOG EXE identified in AGENTS.md.
 
 ## Concrete destruction path
@@ -93,4 +94,5 @@ It publishes no game binary, memory dump, save or private runtime log.
 
 The standalone audit remains read-only. The separate explicitly enabled test
 now executes the validated model factory, clone and single-reference release;
-no entity factory/Setup/Activate or remote-state application is implemented.
+the model-only test creates no entity. The separate Human test now exercises
+factory/Setup/Activate/removal. Remote-state application is not implemented.

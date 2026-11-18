@@ -14,6 +14,7 @@ import time
 from audit_game import PE
 from factory_audit import inspect_factory
 from story_audit import inspect_story
+from entity_audit import inspect_entity
 
 
 def main():
@@ -21,6 +22,7 @@ def main():
     parser.add_argument('pid', type=int)
     parser.add_argument('--output', type=Path, required=True)
     parser.add_argument('--sample-seconds', type=float, default=0)
+    parser.add_argument('--entity-guid', type=lambda value: int(value, 0), action='append', default=[])
     args = parser.parse_args()
     k = c.WinDLL('kernel32', use_last_error=True)
     k.OpenProcess.argtypes = [w.DWORD, w.BOOL, w.DWORD]
@@ -70,6 +72,11 @@ def main():
             pointer=removal_manager, vtable=removal_vtable,
             targets={f'{offset:02x}': u32(removal_vtable + offset) if removal_vtable else None
                      for offset in (0, 0x2c, 0x4c)}, ownership_verified=False)
+        entity_manager = u32(0x1abe8d8)
+        entity_vtable = u32(entity_manager) if entity_manager else None
+        result['entity_manager_candidate'] = dict(pointer=entity_manager, vtable=entity_vtable,
+            lookup_guid=u32(entity_vtable + 0x1c) if entity_vtable else None)
+        result['entity_lookups'] = [inspect_entity(entity_manager, guid, read) for guid in args.entity_guid]
         for name, address in {'reborn_game': 0x1abfe14, 'rc4_game': 0x1aacd64,
                               'reborn_ticked_manager': 0x1abe8bc}.items():
             ptr = u32(address)
@@ -135,7 +142,9 @@ def main():
         args.output.write_text(json.dumps(result, indent=2) + '\n', encoding='utf-8')
         public = {k: v for k, v in result.items() if k not in (
             'local_player_candidate', 'position_samples', 'entity_factory_candidate',
-            'story_context_candidates', 'release_context_candidate')}
+            'story_context_candidates', 'release_context_candidate', 'entity_manager_candidate', 'entity_lookups')}
+        public['entity_lookups'] = [dict(status=item['status']) for item in result['entity_lookups']]
+        public['entity_manager_candidate'] = dict(present=bool(entity_manager))
         public['release_context_candidate'] = dict(
             present=bool(removal_manager), ownership_verified=False,
             executable_slots={slot: bool(target and (pe.section_at_va(target) or {}).get('executable'))

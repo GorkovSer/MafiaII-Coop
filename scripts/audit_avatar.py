@@ -63,6 +63,14 @@ def audit(path):
     match(0x145158e, 'b90100000066894810')  # initial single reference
     match(0x14e5c05, '66ff4e100fb746106685c07f53')
     match(0x14e5c56, '6a00ffd050e890bdf1fe83c40433c0')
+    match(0x999d60, '6820020000e8c67aa6ff83c40485c0')
+    match(0x99f400, '83ec50535556578be9')
+    match(0x99f63a, '83c450c3')  # Setup: no stack arguments
+    match(0x1967058 + 0x7c, '60e99400')
+    match(0x94e960, '568bf183be9001000000')
+    match(0x94e9b6, '5ec20400')
+    match(0x11a7cd3, 'f74620000800007408e8dfde3300')
+    match(0x1192170, '568bf1f6462020')
     return dict(schema=1, sha256=EXPECTED, memory_writes=0, game_api_calls=0,
                 human_vtable='01967058', deleting_destructor='00999160',
                 destructor_body='00990770', deallocator='004019f0',

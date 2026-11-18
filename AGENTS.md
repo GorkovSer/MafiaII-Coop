@@ -14,6 +14,8 @@ Target currently audited: GOG EXE SHA256 `16c79a3be483e582719e43d7b451e887e89414
 
 Current code is a diagnostic x86 DLL/launcher with read-only telemetry and an ENet prototype. Build: `scripts/build-probe.ps1 -Toolchain <pinned LLVM-MinGW directory>`. Verify: `python tests/test_audit_game.py`, `scripts/test-probe.ps1`, and `scripts/test-network.ps1`. Run loopback tests outside the network-isolated sandbox. Runtime evidence remains local; publish only a sanitized test report.
 
+Explicit diagnostic switches now include `-TestModelClone` and `-TestHuman`, both disabled by default and requiring observer plus an earlier isolated test profile. Human creation/removal is documented in `docs/HUMAN_TEST.md`; it is a local lifecycle test, not a network avatar. Never call it two-client gameplay. Use registry GUID resolution to establish removal rather than reading a freed pointer or relying on camera position.
+
 User requires all Mafia II test launches in windowed mode on the second display. Use `scripts/start-probe.ps1 -Observer -SecondScreen -WaitForExit` with the intended build directory; video settings are changed only in the isolated profile. Do not run a fullscreen or primary-display game test. Never force-close an existing user game to make a new test possible.
 
 Latest explicit user override (2026-11-18): fullscreen testing is now authorized to investigate the separate game/system cursor. Keep video changes inside the isolated profile. The user specifically requires loading the save through the normal menu using arrows and Enter; do not substitute the opt-in internal Continue backend for this test. Fullscreen authorization overrides the older window-only instruction above; it does not authorize changing the original profile.
