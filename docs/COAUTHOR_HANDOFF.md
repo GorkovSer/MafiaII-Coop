@@ -1,7 +1,7 @@
 # Указания соавторам и текущее состояние
 
 Проверено: 18 ноября 2026 года. Последняя проверенная кодовая основа:
-`4b17c554cdfcffa141d5f1d6beb662f0ac22e1ce` в `development`.
+`aeaa613fbcaf309465fbfc01a0ab5f801f44074b` в `development`.
 Этот хеш обозначает проверенную основу, а не будущий HEAD документа.
 
 ## Обязательно перед работой и каждым коммитом
@@ -95,6 +95,9 @@ scripts/inspect_runtime.py, scripts/story_audit.py и tests/test_story_audit.py.
 
 ## 2026-11-18 — authorized native menu input
 
+Historical stage notes follow. Current UI workflow and save installation are in
+the final section; old open-session/pending statements describe their stage only.
+
 User explicitly authorized a separate native scan-code helper for arrows and Enter in our diagnostic Mafia II. coop_input validates full EXE SHA256, explicit PID, process creation time, live process and foreground owner. It holds one key for 100 ms by default (optional 50..2000 ms), polls foreground every 5 ms and always releases it. SendInput is system input: foreground checking is not atomic with focus changes; stop and reobserve after any focus/error. No parallel senders, arbitrary text, hooks or OS changes.
 
 Actual game verification: The Story opened; Down selected Load Chapter, Up returned to Continue Story; Enter on Continue Story loaded the isolated save to a visible snowy street with Vito. Internal Continue was not enabled. The observer produced active player samples. A passive ENet loopback receiver received 190 active samples in 10 seconds, all axis ranges zero. Autonomous arrow-driven movement is now verified below; a remote avatar, two game clients and Radmin gameplay remain unverified. The game remains open; native exit and final original-profile comparison are pending.
@@ -136,3 +139,38 @@ Added bounded read-only GUID lookup (scripts/entity_audit.py; inspect_runtime.py
 Pinned exact-byte audit passed for Human factory, Setup, SetPosition slot +0x7c, ownership destructor and Activate. Full builds passed with warnings-as-errors; the native telemetry fixture and all nine loader/profile checks passed. A passive peer received 380 active local-player snapshots over 20 seconds during this session; this does not prove remote control. All three game sessions exited normally with native child_exit=0 and original_profile_changed_files=0. No test game remains running.
 
 Next primary work: promote the local lifecycle into a controlled adapter with registry-validated handles, establish AI ownership and repeat creation/removal across mission reloads, then apply real remote snapshots and test with a second game client. See docs/HUMAN_TEST.md. No two-PC Radmin mission acceptance or full campaign completion is claimed.
+
+## 2026-11-18 — быстрый интерфейс и обязательный контрольный сейв
+
+Перед игровым тестом прочитать [GAME_UI.md](GAME_UI.md). Пользователь прямо
+потребовал повторять Enter со старта до загрузки, а для выхода — **Enter сразу
+после Alt+F4**, без промежуточного снимка. Основные команды теперь
+scripts/enter-story.ps1 и scripts/exit-game.ps1; последняя вызывает native
+coop_input quit, где Alt+F4 и Enter идут в одном процессе. Сохраняются SHA256,
+PID/creation/foreground проверки; вход прекращает ввод при load_started, выход
+прекращает при завершении процесса/потере фокуса. Не возвращаться к покадровым
+ожиданиям меню без причины. Непредвиденный результат сначала наблюдать.
+
+**Соавтору: скачать и установить пользовательский контрольный сейв** по
+[TEST_SAVE.md](TEST_SAVE.md), затем использовать выданный TestProfileFrom.
+Пользователь явно разрешил публикацию именно этого комплекта:
+testdata/story-save.zip + manifest. Это исключение из прежнего запрета на сейвы;
+другие профили/логи/бэкапы не публиковать, доступы репозитория не менять.
+Установщик создаёт новый изолированный профиль без перезаписи личного прогресса.
+Комплект включает необходимые метаданные профиля и видеоконфигурацию.
+
+Проверено в реальной игре: серия Enter дошла до загрузки за 1,404–3,818 с,
+первые player_sample появились через 3,100–5,355 с от начала серии (не от запуска
+EXE). Сцены с нужным сейвом визуально подтверждены. Нативный немедленный выход
+из сюжета занял 2,765 и 3,141 с, native exit 0. В последнем тесте сейв сначала
+установлен из подготовленного архива, затем реально загружен; оригинальный
+профиль не изменился. Неверный creation и чужой PID отказали без ввода, повтор
+enter-story в загруженной сессии отказал без ввода. В native quit исправлена
+гонка: исчезновение окна может опередить сигнал process handle, после него до
+секунды ждём завершения без новых клавиш. Сборка helper warnings-as-errors прошла.
+
+Новая цель соавтора по UI — пользоваться этими скриптами, не тратить время на
+повторную диагностику уже проверенных клавиш. Следующая основная разработка
+остаётся прежней: registry-validated Human handles, владение AI/управлением,
+реальные remote snapshots, reload lifecycle и затем два игровых клиента.
+Удалённый управляемый аватар, две машины/Radmin и прохождение миссии не проверены.

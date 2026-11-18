@@ -32,6 +32,7 @@ node_modules/
 *.asi
 *.exe
 *.zip
+!/testdata/story-save.zip
 *.7z
 *.dmp
 *.log

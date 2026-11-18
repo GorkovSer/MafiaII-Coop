@@ -168,3 +168,37 @@ Added bounded read-only GUID lookup (scripts/entity_audit.py; inspect_runtime.py
 Pinned exact-byte audit passed for Human factory, Setup, SetPosition slot +0x7c, ownership destructor and Activate. Full builds passed with warnings-as-errors; the native telemetry fixture and all nine loader/profile checks passed. A passive peer received 380 active local-player snapshots over 20 seconds during this session; this does not prove remote control. All three game sessions exited normally with native child_exit=0 and original_profile_changed_files=0. No test game remains running.
 
 Next primary work: promote the local lifecycle into a controlled adapter with registry-validated handles, establish AI ownership and repeat creation/removal across mission reloads, then apply real remote snapshots and test with a second game client. See docs/HUMAN_TEST.md. No two-PC Radmin mission acceptance or full campaign completion is claimed.
+## 2026-11-18 — быстрые Enter-вход/выход и распространяемый сейв
+
+User explicitly authorized repeated Enter from startup until loading and immediate
+Enter after Alt+F4. Added enter-story.ps1: owned isolated session/PID checks,
+helper SHA256+creation+foreground checks per key, 100 ms Enter, 200 ms gap with
+50 ms loading-event polling, 30-second menu and 60-second telemetry deadlines.
+It stops sending keys on load_started/mission-open before awaiting loaded player
+telemetry. Already-loaded and wrong-PID calls refused input. Native quit validates
+before Alt+F4, then starts repeated Enter immediately inside the same invocation;
+it stops on focus/process loss or five-second deadline and releases keys.
+The window-disappearance/process-signal race was reproduced and fixed with a
+bounded no-input native-handle wait. No force termination is used.
+
+Real repeated-Enter runs (loading detected ms / first player sample ms / key count):
+2167 / 4295 / 6; 1821 / 3256 / 5; 3818 / 5355 / 10; 1404 / 4168 / 4;
+1584 / 3100 / 4. These measure script-loop time, excluding EXE startup/tool overhead.
+Screenshots confirmed the snowy-street Vito save. Native immediate quit from story
+completed in 2765 ms (12 Enter keys) and 3141 ms (15 keys), exit 0; launcher native
+wait independently confirmed exit 0 and zero original-profile changed files.
+An intermediate launch spanning an environment restart lacks final launcher
+result; do not infer its exit code. Other quoted evidence comes from completed runs.
+
+The user separately authorized publishing their tested save. Packaged only seven
+profile files into testdata/story-save.zip (868438 bytes), SHA256 recorded in the
+adjacent manifest; no EXE/DLL/game resources/logs/backups included. Profile metadata
+and isolated video configuration are intentionally retained. install-test-save.ps1
+verified the archive and installed a new isolated seed. The final real launch used
+that newly installed seed: correct scene, loading at 1584 ms, player at 3100 ms,
+normal immediate quit at 3141 ms and original profile unchanged. Wrong native quit
+creation was rejected before input. Pinned clang 23.1.5 helper build passed with
+-Wall -Wextra -Werror. No production DLL/network code changed in this stage.
+
+See docs/GAME_UI.md and docs/TEST_SAVE.md for the coauthor's mandatory workflow.
+This is local tooling/save acceptance, not two-client/Radmin/campaign acceptance.

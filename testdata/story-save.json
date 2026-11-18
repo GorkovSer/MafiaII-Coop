@@ -1,0 +1,9 @@
+{
+  "schema": 1,
+  "file": "story-save.zip",
+  "sha256": "797401b89ee1156aa32d48de177dff596537bcb660477fba7a1fd2cf597bf82a",
+  "purpose": "User-authorized isolated Mafia II Classic story test save",
+  "file_count": 7,
+  "includes_profile_metadata": true,
+  "includes_video_config": true
+}

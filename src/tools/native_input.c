@@ -1,4 +1,4 @@
-/* User-authorized menu input for an explicitly selected diagnostic game.
+/* User-authorized menu input/quit for an explicitly selected diagnostic game.
    No global hooks, arbitrary text, focus stealing or process memory writes. */
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
@@ -47,13 +47,16 @@ static int focused(DWORD pid, HANDLE process) {
 int wmain(int argc, wchar_t **argv) {
     unsigned long long pid64, expected_creation = 0, hold_ms = 100;
     int inspect = argc == 3 && !wcscmp(argv[1], L"inspect");
-    if ((!inspect && ((argc != 5 && argc != 6) || wcscmp(argv[1], L"key"))) ||
+    int quit = argc == 4 && !wcscmp(argv[1], L"quit");
+    if ((!inspect && !quit && ((argc != 5 && argc != 6) || wcscmp(argv[1], L"key"))) ||
         !number(argv[2], &pid64) || !pid64 || pid64 > MAXDWORD) {
-        fputs("usage: coop_input inspect PID | key PID CREATION up|down|left|right|enter [hold_ms:50..2000]\n", stderr); return 2;
+        fputs("usage: coop_input inspect PID | quit PID CREATION | key PID CREATION up|down|left|right|enter [hold_ms:50..2000]\n", stderr); return 2;
     }
     WORD scan = 0; DWORD flags = KEYEVENTF_SCANCODE;
     if (!inspect) {
         if (!number(argv[3], &expected_creation)) return 2;
+    }
+    if (!inspect && !quit) {
         if (argc == 6 && (!number(argv[5], &hold_ms) || hold_ms < 50 || hold_ms > 2000)) return 2;
         if (!wcscmp(argv[4], L"enter")) scan = 0x1c;
         else {
@@ -76,6 +79,43 @@ int wmain(int argc, wchar_t **argv) {
     if (inspect) { printf("pid=%lu creation=%llu image_verified=1\n", (DWORD)pid64, creation); CloseHandle(process); return 0; }
     if (creation != expected_creation || !focused((DWORD)pid64, process)) {
         CloseHandle(process); fputs("creation/focus validation failed; no input sent\n", stderr); return 4;
+    }
+    if (quit) {
+        /* User requested Enter immediately after Alt+F4, without a screenshot/tool
+           round trip. Validate once before the chord, never steal focus. */
+        ULONGLONG begin = GetTickCount64();
+        INPUT chord[4] = {0};
+        for (int i = 0; i < 4; ++i) {
+            chord[i].type = INPUT_KEYBOARD;
+            chord[i].ki.dwFlags = KEYEVENTF_SCANCODE | (i >= 2 ? KEYEVENTF_KEYUP : 0);
+        }
+        chord[0].ki.wScan = chord[3].ki.wScan = 0x38; /* left Alt */
+        chord[1].ki.wScan = chord[2].ki.wScan = 0x3e; /* F4 */
+        if (SendInput(4, chord, sizeof(INPUT)) != 4) {
+            SendInput(2, &chord[2], sizeof(INPUT));
+            CloseHandle(process); return 5;
+        }
+        unsigned int keys = 0;
+        while (WaitForSingleObject(process, 0) == WAIT_TIMEOUT && GetTickCount64() - begin < 5000) {
+            if (!focused((DWORD)pid64, process)) break;
+            INPUT enter = {0}; enter.type = INPUT_KEYBOARD;
+            enter.ki.wScan = 0x1c; enter.ki.dwFlags = KEYEVENTF_SCANCODE;
+            if (SendInput(1, &enter, sizeof(enter)) != 1) break;
+            ++keys;
+            ULONGLONG down = GetTickCount64();
+            while (GetTickCount64() - down < 100 && focused((DWORD)pid64, process)) Sleep(5);
+            enter.ki.dwFlags |= KEYEVENTF_KEYUP;
+            if (SendInput(1, &enter, sizeof(enter)) != 1) { CloseHandle(process); return 5; }
+            if (WaitForSingleObject(process, 50) == WAIT_OBJECT_0) break;
+        }
+        /* The window can disappear before the process handle signals. Send no more keys. */
+        int exited_ok = WaitForSingleObject(process, 1000) == WAIT_OBJECT_0;
+        DWORD exit_code = STILL_ACTIVE;
+        GetExitCodeProcess(process, &exit_code);
+        printf("quit_enter_keys=%u elapsed_ms=%llu process_exited=%d exit_code=%lu\n",
+            keys, (unsigned long long)(GetTickCount64() - begin), exited_ok, exit_code);
+        CloseHandle(process);
+        return exited_ok && exit_code == 0 ? 0 : 5;
     }
     INPUT input = {0}; input.type = INPUT_KEYBOARD; input.ki.wScan = scan; input.ki.dwFlags = flags;
     if (SendInput(1, &input, sizeof(input)) != 1) { CloseHandle(process); return 5; }

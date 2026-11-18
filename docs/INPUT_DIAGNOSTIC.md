@@ -48,14 +48,15 @@ Alt+F4; нативный код выхода фиксирует launcher.
 press_key нельзя считать игровым нажатием. Полный экран был проверен отдельно и
 сам по себе не подтвердил работоспособность этого пути клавиш.
 
-Для требуемой загрузки через стрелки/Enter нужен разрешённый способ, реально
-поставляющий игровые клавиатурные события. Текущий документированный интерфейс
-sky.press_key не предоставляет параметров scan code или удержания. Не заменять
-эту приёмку внутренним Continue и не заявлять, что сохранение загружено через
-меню. До появления рабочего пути ввода можно независимо продолжать разработку
-жизненного цикла аватара и согласования сюжетного состояния.
+Исторический вывод до разрешения native helper: sky.press_key не предоставлял
+нужные scan codes. Это ограничение обойдено разрешённым пользователем нативным
+вводом ниже. **Актуальная инструкция: [GAME_UI.md](GAME_UI.md)** — повтор Enter
+до загрузки и Alt+F4 с немедленным Enter для выхода. Внутренний Continue не нужен.
 
 ## 2026-11-18 — authorized native menu input
+
+Historical evidence follows; later movement, normal exits and automated entry/quit
+supersede the pending/open-session statements below. See GAME_UI.md and TESTING.md.
 
 User explicitly authorized a separate native scan-code helper for arrows and Enter in our diagnostic Mafia II. coop_input validates full EXE SHA256, explicit PID, process creation time, live process and foreground owner. It holds one key for 100 ms and always releases it. SendInput is system input: foreground checking is not atomic with focus changes; stop and reobserve after any focus/error. No parallel senders, arbitrary text, hooks or OS changes.
 
