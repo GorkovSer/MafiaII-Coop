@@ -57,6 +57,12 @@ def audit(path):
     match(0x1164d00, '8b5424048b4160895160c20400')  # raw SetModel exchange
     match(0x14ec8fc, '5fb81efcffff5ec20400')  # null source: negative status
     match(0x14ec929, 'e852f9ffff83c40c5f5ec20400')  # forwards clone status
+    match(0x14ec940, '8b4c240468a0000000')  # concrete model factory, allocator arg
+    match(0x14ec969, 'c20400')  # callee pops its single allocator argument
+    match(0x14ec3e4, 'e87751f6ff')  # calls common frame constructor
+    match(0x145158e, 'b90100000066894810')  # initial single reference
+    match(0x14e5c05, '66ff4e100fb746106685c07f53')
+    match(0x14e5c56, '6a00ffd050e890bdf1fe83c40433c0')
     return dict(schema=1, sha256=EXPECTED, memory_writes=0, game_api_calls=0,
                 human_vtable='01967058', deleting_destructor='00999160',
                 destructor_body='00990770', deallocator='004019f0',

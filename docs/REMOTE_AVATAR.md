@@ -41,8 +41,32 @@ CloneHierarchy 0x14ec8f0 returns a status, despite the upstream void wrapper.
 Null source returns 0xfffffc1e. Otherwise it resets destination state through
 0x14e97f0 and forwards the result of 0x14ec280, whose failure path propagates
 a negative result. Check the signed result before Setup/Activate; non-null
-allocation alone does not establish a usable clone. Failure cleanup and the
-reference count path 0x14e5bc0 still need tracing.
+allocation alone does not establish a usable clone.
+
+## Opt-in model lifecycle test
+
+`start-probe.ps1 -Observer -TestModelClone -TestProfileFrom <earlier-test-id>`
+enables one model-only allocation/clone/release after game_init, load_finished
+and an unpaused game-thread tick. The default is disabled. It requires actual
+profile redirection and the pinned concrete source model class. It never
+creates Human/Player, activates an entity or replaces the player's model.
+
+The concrete factory 0x14ec940 accepts one allocator argument, popped by the
+callee; NULL uses the default allocator and constructs a 0xa0-byte model.
+Its base constructor initializes a single reference at +0x10. Release
+0x14e5bc0 decrements that reference and destroys/deallocates at zero.
+The test calls this release exactly once for its own clone, on clone success
+or error; it never appends an explicit destructor/Free or reads the released
+pointer. An unexpected allocation class/refcount refuses further calls and
+reports an incomplete test; it cannot be treated as a cleanup success.
+
+Actual pinned-game result: allocation succeeded, clone_status=0,
+release_remaining=0, source_reference_intact=1 and completed=1 on the game
+thread. Vito remained visible and movable afterwards; a passive receiver
+received 57 active snapshots with changing coordinates. Normal exit returned
+0 and original_profile_changed_files=0. This proves one successful model
+resource lifecycle, not visible clone placement, error-path cleanup, repeated
+mission transitions, a remote avatar or two-client gameplay.
 
 Reproduce the bounded, exact-byte checks without executing game functions:
 
@@ -63,9 +87,10 @@ It publishes no game binary, memory dump, save or private runtime log.
   bookkeeping. Validate the intended engine removal entry and its thread.
 - Validate model clone ownership, SetModel and Human Setup before adding
   creation. A loaded local player's model cannot be adopted as owned storage.
-- Next audit: sweep timing, model clone failure cleanup and the
-  mission-before-close boundary. Runtime proof
+- Next audit: Human Setup/Activate, model transfer and clone failure cleanup,
+  sweep timing and the mission-before-close boundary. Runtime proof
   must include one creation, one removal, mission unload and repeat load.
 
-These are ownership requirements for the future adapter. No game-memory
-write, factory call, cleanup call or native patch was added by this audit.
+The standalone audit remains read-only. The separate explicitly enabled test
+now executes the validated model factory, clone and single-reference release;
+no entity factory/Setup/Activate or remote-state application is implemented.

@@ -3,7 +3,7 @@ param([Parameter(Mandatory=$true)][string]$GameDirectory, [switch]$WaitForExit,
       [ValidateSet('off','host','guest')][string]$NetworkRole='off',
       [string]$Address='127.0.0.1', [ValidateRange(1,65535)][int]$Port=28960,
       [ValidatePattern('^\d{8}-\d{6}-\d{3}$')][string]$TestProfileFrom,
-      [switch]$ContinueMainStory)
+      [switch]$ContinueMainStory, [switch]$TestModelClone)
 $ErrorActionPreference = 'Stop'
 $root = Split-Path $PSScriptRoot -Parent
 . (Join-Path $PSScriptRoot 'launch-result.ps1')
@@ -16,6 +16,10 @@ if (Get-Process mafia2 -ErrorAction SilentlyContinue) { throw 'Close existing Ma
 $stamp = Get-Date -Format 'yyyyMMdd-HHmmss-fff'
 $local = Join-Path $root "work/probe-sessions/$stamp"
 New-Item -ItemType Directory -Path $local -Force | Out-Null
+if($TestModelClone) {
+    if(!$Observer -or !$TestProfileFrom){throw 'Model clone test requires observer and an explicit isolated test profile'}
+    [IO.File]::WriteAllText((Join-Path $local 'model-test.ini'),"[test]`r`nclone_once=1`r`n",[Text.Encoding]::ASCII)
+}
 if($ContinueMainStory) {
     if(!$Observer -or !$TestProfileFrom){throw 'Continue test requires observer and an explicit earlier test profile'}
     [IO.File]::WriteAllText((Join-Path $local 'story-test.ini'),"[test]`r`ncontinue_main_story=1`r`n",[Text.Encoding]::ASCII)
