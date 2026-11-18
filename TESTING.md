@@ -112,3 +112,9 @@ This strict diagnostic result still does not establish two-PC gameplay, NPC sync
 - The actual adapter now retains its paused state until game_unpaused. An ordinary tick cannot republish position during pause. This adds no new engine calls or game-memory writes; fresh Mafia II runtime verification remains pending.
 - The original native fixture intermittently failed at fixed-address allocation and at a real-time Sleep-based expectation. The fixture now supplies owned singleton storage and controlled time only in its separate test build. The production DLL retains the audited address and Windows clock; its symbol table contains no fixture substitution functions.
 - Build passed with warnings treated as errors. Python evidence, factory and four PE checks passed, as did all nine loader/profile checks and the network fixture suite. The deterministic production-adapter fixture passed 100 consecutive process runs. This is regression evidence, not automated movement, a second avatar, a second game client or Radmin gameplay.
+
+## 2026-11-18 — window messages versus buffered DirectInput
+
+- Added an optional standalone input_host, separate from Mafia II and not launched by automated loader tests. It monitors only Enter/Up/Down in its own foreground window, with no input generation, global hook or text capture.
+- A real medium-token process initialized DirectInput successfully and reported a ready event buffer. sky.press_key Down and Return produced WM_KEYDOWN/WM_KEYUP with scan=0 but no matching buffered DirectInput events. Buffering rules out loss solely between GetDeviceState polling intervals. The earlier polling-only diagnostic agreed.
+- Both owned input diagnostic processes closed normally through Alt+F4 with native child_exit=0. This does not prove autonomous menu navigation, gameplay, or a successful save load. It identifies a limitation of the tested automation path; see docs/INPUT_DIAGNOSTIC.md and the updated coauthor handoff.

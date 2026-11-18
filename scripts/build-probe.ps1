@@ -29,6 +29,8 @@ if ($LASTEXITCODE -ne 0) { throw 'Probe test host build failed' }
 if ($LASTEXITCODE -ne 0) {throw 'Wire test build failed'}
 & $cc @common -DCOOP_TELEMETRY_TEST (Join-Path $root 'tests/telemetry_host.c') (Join-Path $root 'src/game/telemetry.c') -o (Join-Path $out 'telemetry_host.exe')
 if ($LASTEXITCODE -ne 0) {throw 'Telemetry fixture build failed'}
+& $cc @common -mwindows (Join-Path $root 'tests/input_host.c') -o (Join-Path $out 'input_host.exe') -ldinput8 -ldxguid -luser32
+if ($LASTEXITCODE -ne 0) {throw 'Optional input diagnostic build failed'}
 & $cc @common (Join-Path $root 'tests/session_peer.c') @netSources -o (Join-Path $out 'session_peer.exe') @netLink
 if ($LASTEXITCODE -ne 0) {throw 'Session fixture build failed'}
 & $cc @common -municode (Join-Path $root 'tests/network_bridge_host.c') (Join-Path $root 'src/net/game_bridge.c') @netSources -o (Join-Path $out 'network_bridge_host.exe') @netLink
