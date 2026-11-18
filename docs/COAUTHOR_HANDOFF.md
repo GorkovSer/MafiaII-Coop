@@ -406,3 +406,21 @@ only otherwise. No game/test/suite/live-memory/input/network execution; hold
 remains active. Continue at the actual SAVE data consumer behind interface
 0x1ac0c48 and restoration callbacks. A world ID is still not established,
 and the two-PC Radmin mission/failure/save acceptance remains outstanding.
+
+## 2026-11-18 — SAVE read-layer dispatcher identified
+
+Static work resolved SAVE service global 0x1ac0c48 -> constructor 0x11cafd0 ->
+vtable 0x190c70c. Read slot+0x10 -> 0x11c59a0 validates version 24/25 and ID,
+then looks up stream layers and invokes 0x11c4600. The latter invokes each
+registered callback object's vtable+4. The new SAVE_RESTORE.md maps layer IDs
+0..10, POSTLOAD=8 and LAST=11 end marker, and records exact next research sites.
+Do not interpret these indices, a header match or callback AL as current world
+identity. Concrete story callbacks, restored fields and their lifetime are
+still unverified. Static audit reports save_layer_callbacks_verified=false.
+
+Exact-byte file audit matched; source compilation only otherwise. No game,
+live-memory read, engine calls, test/suite/input/network execution. Hold remains
+active. Next work: identify registered story-data callbacks in those layers
+and trace their read methods to mission/checkpoint storage plus overall load
+completion. Existing deferred checks still need execution after user resumes
+tests; no two-PC Radmin mission/failure/progress acceptance is claimed.

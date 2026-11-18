@@ -108,6 +108,43 @@ def audit(path):
     match(0x190af18 + 0x30, struct.pack('<I', 0x58a740))
     match(0x58a740, bytes.fromhex('c20400'))
 
+    # Resolve the actual SAVE service and its read-side layer dispatcher.
+    match(0x11cb73e, bytes.fromhex('8bc8e88bf8ffffa3480cac01'))
+    match(0x11cafdb, bytes.fromhex('c7060cc79001'))
+    match(0x190c70c + 0x0c, struct.pack('<I', 0x11c55f0))
+    match(0x190c70c + 0x10, struct.pack('<I', 0x11c59a0))
+    match(0x11c5a2f, bytes.fromhex('8b44242483f819740583f8187574'))
+    match(0x11c5a3d, bytes.fromhex('397c2428756e'))
+    match(0x11c5b70, bytes.fromhex('8d4c2414518d542424528d4e08e82ee0ffff'))
+    match(0x11c5b8f, bytes.fromhex('8b48108b511c83fa097d3983fa087517'))
+    match(0x11c5bc4, bytes.fromhex('e837eaffff8ad8885c241c84db7464'))
+    match(0x11c468b, bytes.fromhex('8b48108b018b40048d54241052ffd0'))
+    match(0x11c4615, bytes.fromhex('bec59d1c81b9e83e8f01b04c69f693010001'))
+    match(0x18f3ee8, b'LAST\0')
+    match(0x11ca364, bytes.fromhex('4783ff0b7ca6'))
+    # IDs 0..10 are initialized layers; 11 is the stream end marker, not
+    # an additional active chapter/checkpoint layer. Preserve engine spelling.
+    layers = (
+        (0x11bc8f4, 0x190c0e4, 'LAYER_PREINIT'),
+        (0x11bc8ff, 0x190c0d8, 'LAYER_INIT'),
+        (0x11bc90a, 0x190c0c8, 'LAYER_CLEANUP'),
+        (0x11bc915, 0x190c0b0, 'LAYER_DATA_DEPENDENT'),
+        (0x11bc920, 0x190c098, 'LAYER_PREREQUISITIES'),
+        (0x11bc92b, 0x190c08c, 'LAYER_DATA'),
+        (0x11bc936, 0x190c078, 'LAYER_DEPENDENCIES'),
+        (0x11bc941, 0x190c06c, 'LAYER_DONE'),
+        (0x11bc94c, 0x190c05c, 'LAYER_POSTLOAD'),
+        (0x11bc957, 0x190c048, 'LAYER_LOAD_FAILED'),
+        (0x11bc962, 0x190c02c, 'LAYER_CHECK_SAVE_ENABLED'),
+        (0x11bc96d, 0x190c020, 'LAYER_LAST'),
+    )
+    for instruction, address, name in layers:
+        match(instruction, b'\xb8' + struct.pack('<I', address) + b'\xc3')
+        match(address, name.encode('ascii') + b'\0')
+    match(0x11bc8f0, bytes.fromhex('85c07506'))
+    for index, (instruction, _, _) in enumerate(layers[1:], 1):
+        match(instruction - 5, b'\x83\xf8' + bytes([index]) + b'\x75\x06')
+
     return dict(schema=1, sha256=EXPECTED, game_api_calls=0, memory_writes=0,
                 mode_values={name: value for _, _, name, _, value in modes},
                 playing_chapter_is_chapter_number=False,
@@ -126,6 +163,11 @@ def audit(path):
                 cgame_restore_handler='0058a740',
                 cgame_restore_handler_is_empty=True,
                 restore_event_context_type_verified=False,
+                save_service_vtable='0190c70c',
+                save_service_read_method='011c59a0',
+                save_layer_read_dispatcher='011c4600',
+                save_layers={str(i): name for i, (_, _, name) in enumerate(layers)},
+                save_layer_callbacks_verified=False,
                 candidate_meaning_verified=False,
                 candidate_lifetime_verified=False, world_identity_verified=False)
 

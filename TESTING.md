@@ -398,3 +398,24 @@ dereference event context, call engine functions or change observer behavior.
 No game, DLL, live process reads, suites/fixtures, sockets or input were run.
 The Cyberpunk test hold remains active. Next static work targets the SAVE data
 consumer and actual restoration rather than this empty CGame notification.
+
+## 2026-11-18 — SAVE service and read-layer dispatch (static only)
+
+Resolved the object behind global 0x1ac0c48 through allocation/constructor
+0x11cafd0 and installed vtable 0x190c70c. Slots +0x0c/+0x10 resolve to
+0x11c55f0/0x11c59a0 respectively. Read-side 0x11c59a0 checks parsed header
+version 24/25 and requested ID, then processes stream layers. This is only
+part of the path, not proof of restored/current mission or checkpoint.
+
+Mapped layer names from 0x11bc8f0 and the 11-layer initialization loop: indices
+0..10 plus LAYER_LAST=11 marker. Layer lookup selects node+0x10, reads layer+0x1c
+and calls 0x11c4600. That dispatcher selects a registered callback object and
+invokes vtable+4 with a stack context. Concrete callback registrations, field
+restoration, ownership/lifetime and overall completion remain unaudited.
+
+Extended pinned exact-byte file audit covers factory/vtable, read validation,
+lookup/dispatch sites and all enum branches/strings; it matched the local EXE.
+Python source compilation only otherwise. No game, live process inspection,
+DLL/API calls, test fixture/suite, networking or UI input were executed. The
+user's test hold continues. SAVE_RESTORE.md records the next source-level
+reverse-engineering targets without claiming runtime/two-PC acceptance.
