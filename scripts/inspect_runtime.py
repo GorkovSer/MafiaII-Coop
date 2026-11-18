@@ -64,6 +64,12 @@ def main():
         factory = inspect_factory(u32(0x1abe8cc), u32,
             lambda target: bool(target and (pe.section_at_va(target) or {}).get('executable')))
         result['entity_factory_candidate'] = factory
+        removal_manager = u32(0x1abe8dc)
+        removal_vtable = u32(removal_manager) if removal_manager else None
+        result['release_context_candidate'] = dict(
+            pointer=removal_manager, vtable=removal_vtable,
+            targets={f'{offset:02x}': u32(removal_vtable + offset) if removal_vtable else None
+                     for offset in (0, 0x2c, 0x4c)}, ownership_verified=False)
         for name, address in {'reborn_game': 0x1abfe14, 'rc4_game': 0x1aacd64,
                               'reborn_ticked_manager': 0x1abe8bc}.items():
             ptr = u32(address)
@@ -129,7 +135,11 @@ def main():
         args.output.write_text(json.dumps(result, indent=2) + '\n', encoding='utf-8')
         public = {k: v for k, v in result.items() if k not in (
             'local_player_candidate', 'position_samples', 'entity_factory_candidate',
-            'story_context_candidates')}
+            'story_context_candidates', 'release_context_candidate')}
+        public['release_context_candidate'] = dict(
+            present=bool(removal_manager), ownership_verified=False,
+            executable_slots={slot: bool(target and (pe.section_at_va(target) or {}).get('executable'))
+                              for slot, target in result['release_context_candidate']['targets'].items()})
         story = result['story_context_candidates']
         public['story_context_candidates'] = {key: story[key] for key in (
             'identity_verified', 'candidate_matches_catalogue', 'game_open', 'map_header_status')}

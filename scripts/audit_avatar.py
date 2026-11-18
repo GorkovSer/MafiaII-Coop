@@ -43,15 +43,28 @@ def audit(path):
     match(0x4019f0, '8b44240485c0740e8b0dbc1aad018b11508b4210ffd0c3')
     # Release immediate path invokes vtable[0](this, 1).
     match(0x119de53, '8b168b026a018bceffd0')
-    # Other Release path marks flags and hands this to manager slot +0x4c,
-    # then returns; do not infer synchronous destruction from Release return.
+    # Other Release path marks the entity and requests a later CGame sweep.
     match(0x119de08, '8b462083e0bf0d00040000894620')
     match(0x119de16, '8b0ddce8ab018b118b424c56ffd033c05ec3')
+    match(0x190af18 + 0x4c, '905b5b00')
+    match(0x5b5b90, '83490410c20400')  # only marks CGame, ignores stack pointer
+    match(0x5c2530, '8b410483ec14a810')
+    match(0x5c253f, '83e0ef55894104')  # consumes CGame sweep flag
+    match(0x5c257e, 'f7402000040000')  # collects entities marked 0x400
+    match(0x5c2614, '8b118b026a01ffd0')  # concrete deleting-destructor dispatch
+    match(0x5c9d92, '6830255c005168102700006a03')
+    match(0x5c9dc1, '6830255c005168102700006a04')
+    match(0x1164d00, '8b5424048b4160895160c20400')  # raw SetModel exchange
+    match(0x14ec8fc, '5fb81efcffff5ec20400')  # null source: negative status
+    match(0x14ec929, 'e852f9ffff83c40c5f5ec20400')  # forwards clone status
     return dict(schema=1, sha256=EXPECTED, memory_writes=0, game_api_calls=0,
                 human_vtable='01967058', deleting_destructor='00999160',
                 destructor_body='00990770', deallocator='004019f0',
                 release='0119ddd0', immediate_path_deallocates=True,
-                alternate_path_hands_off_to_manager=True,
+                alternate_path_requests_cgame_sweep=True,
+                sweep='005c2530', sweep_flag=16, entity_removal_flag=1024,
+                sweep_event_ids=[3, 4], sweep_priority=10000,
+                set_model_adds_reference=False, clone_status_must_be_checked=True,
                 safe_spawn_or_removal_verified=False,
                 required_policy='Never append explicit destructor/Free after Release')
 

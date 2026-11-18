@@ -92,3 +92,11 @@ The native save/load path supplies another candidate: 0xb2d230 returns interface
 ## 2026-11-18 — concrete Human deleting destructor
 
 Human constructor installs vtable 0x1967058, slot zero 0x999160. This calls body 0x990770 and conditionally routes the same pointer to allocator dispatch 0x4019f0 for argument bit 1. Release immediate path invokes that slot with argument 1; its alternate path hands the pointer to manager slot +0x4c. See docs/REMOTE_AVATAR.md and the pinned exact-byte audit. No creation/removal call has been made; manager queue and model ownership remain open.
+
+## 2026-11-18 — Release sweep and model status traced
+
+Read-only inspection of our still-live story game resolved global 0x1abe8dc to vtable 0x190af18, slots +0x2c=0x5b5b50 and +0x4c=0x5b5b90. Correction to earlier interpretation: +0x4c does not enqueue/store the passed pointer. It only sets CGame flag +4 |= 0x10. Sweep 0x5c2530 consumes that flag, enumerates entities through global 0x1abfe20, collects entities marked +0x20 & 0x400 and invokes deleting destructors. CGame registers this sweep for events 3 and 4 with priority 10000. Actual timing relative to our callbacks and mission teardown remains unverified.
+
+Human SetModel 0x1164d00 is a raw +0x60 exchange returning the old pointer, with no reference increment or prior release. CloneHierarchy 0x14ec8f0 returns signed status: null source gives 0xfffffc1e, otherwise it forwards cloning status. The upstream void declaration must not hide clone failure in our adapter. The pinned exact-byte audit now verifies these paths and always leaves safe_spawn_or_removal_verified=false.
+
+Added read-only release_context_candidate resolution to inspect_runtime.py; raw targets remain in private JSON while console reports only presence/executable slots. Exact-byte audit passed on the installed pinned EXE and refused an unknown image. Factory/story audit regressions and inspector syntax passed. No creation/removal/model call, game-memory write or new game DLL was introduced. Next work is clone ownership/failure cleanup, Setup/Activate validation and runtime sweep ordering; actual avatar creation remains pending.

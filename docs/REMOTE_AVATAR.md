@@ -16,9 +16,33 @@ Read-only disassembly establishes the following chain:
    generic Release interpretation borrowed from an SDK.
 3. Release 0x119ddd0 has an immediate branch at 0x119de53 invoking slot zero
    with argument 1. The object can therefore be freed inside Release.
-4. Another branch at 0x119de08 updates flags (clear 0x40, set 0x400), passes the
-   object to manager 0x1abe8dc slot +0x4c, and returns. Its eventual lifetime
-   and queue processing still need tracing; return does not prove destruction.
+4. Another branch at 0x119de08 updates entity flags (clear 0x40, set 0x400),
+   calls 0x1abe8dc slot +0x4c, and returns. Live read-only inspection resolved
+   its vtable to 0x190af18 and slot +0x4c to 0x5b5b90. That function ONLY sets
+   CGame flag +4 |= 0x10, ignoring its stack argument. Earlier wording that
+   it hands the object to a manager queue was too strong: this is a sweep
+   request, not pointer enqueueing.
+5. Sweep 0x5c2530 consumes the CGame 0x10 flag, enumerates entities through
+   0x1abfe20 slots +0x14/+0x18 and collects those with flags +0x20 & 0x400.
+   It then processes that temporary list backwards, conditionally calls
+   slot +0x10, invokes 0x11998e0, and dispatches slot zero with argument 1
+   at 0x5c2614. CGame code registers 0x5c2530 as a callback at 0x5c9d92 and
+   0x5c9dc1: event IDs 3 (tick) and 4 (tick_paused), priority 10000. It also
+   calls the sweep directly at 0x5cfe47. Actual ordering relative to our
+   observer and mission teardown still needs runtime validation.
+
+## Model attachment and failure handling
+
+Human vtable +0xb0 resolves to SetModel 0x1164d00: it exchanges +0x60 and
+returns the previous pointer. It does not increment a reference or release
+the previous model. Do not pass a borrowed local-player model as owned data.
+
+CloneHierarchy 0x14ec8f0 returns a status, despite the upstream void wrapper.
+Null source returns 0xfffffc1e. Otherwise it resets destination state through
+0x14e97f0 and forwards the result of 0x14ec280, whose failure path propagates
+a negative result. Check the signed result before Setup/Activate; non-null
+allocation alone does not establish a usable clone. Failure cleanup and the
+reference count path 0x14e5bc0 still need tracing.
 
 Reproduce the bounded, exact-byte checks without executing game functions:
 
@@ -39,8 +63,8 @@ It publishes no game binary, memory dump, save or private runtime log.
   bookkeeping. Validate the intended engine removal entry and its thread.
 - Validate model clone ownership, SetModel and Human Setup before adding
   creation. A loaded local player's model cannot be adopted as owned storage.
-- Next audit: manager slot +0x4c implementation/queue drain, then model clone,
-  setup failure cleanup and the mission-before-close boundary. Runtime proof
+- Next audit: sweep timing, model clone failure cleanup and the
+  mission-before-close boundary. Runtime proof
   must include one creation, one removal, mission unload and repeat load.
 
 These are ownership requirements for the future adapter. No game-memory
