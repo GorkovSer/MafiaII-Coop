@@ -124,3 +124,13 @@ This strict diagnostic result still does not establish two-PC gameplay, NPC sync
 - Rehashed the installed EXE; it matches the pinned GOG SHA256. Static CGame Open/parser analysis plus local read-only GMP resource headers identified four CGame strings as asset roots, excluding another false mission-ID interpretation. Original archives were not changed or published.
 - Added bounded read-only inspection of resident GMP roots and the native save/load interface's +0x68 value, with a save-catalogue comparison. The console omits raw roots, values and addresses; the private result always marks identity_verified=false. No candidate is sent as a network mission ID.
 - Synthetic memory tests passed valid roots, missing memory, menu/not-open, mismatched pointers, wrong version, invalid sizes, invalid root text, extra data, missing NUL, address overflow and absent singleton/value cases. Factory tests and four PE checks passed. Inspector syntax/import integration was checked. No game-memory write or new game API call was added; actual current chapter/checkpoint interpretation remains unverified.
+
+## 2026-11-18 — authorized native menu input
+
+User explicitly authorized a separate native scan-code helper for arrows and Enter in our diagnostic Mafia II. coop_input validates full EXE SHA256, explicit PID, process creation time, live process and foreground owner. It holds one key for 100 ms and always releases it. SendInput is system input: foreground checking is not atomic with focus changes; stop and reobserve after any focus/error. No parallel senders, arbitrary text, hooks or OS changes.
+
+Actual game verification: The Story opened; Down selected Load Chapter, Up returned to Continue Story; Enter on Continue Story loaded the isolated save to a visible snowy street with Vito. Internal Continue was not enabled. The observer produced active player samples. A passive ENet loopback receiver received 190 active samples in 10 seconds, all axis ranges zero. Autonomous movement, a remote avatar, two game clients and Radmin gameplay remain unverified. The game remains open; native exit and final original-profile comparison are pending.
+
+Usage: coop_input inspect PID, then coop_input key PID CREATION up|down|left|right|enter. Use only our launcher's PID and inspect's creation value. Pinned clang warnings-as-errors build passed; wrong creation, invalid key and zero PID refused input.
+
+User requested faster entry. Next runs should omit the completed diagnostic Down/Up detour and rebuilds when code is unchanged. Use lifecycle logs to wait for loading, screenshots at Continue selection and ready scene, and never retry Enter when its outcome is unknown. A fresh end-to-end timing measurement remains pending.

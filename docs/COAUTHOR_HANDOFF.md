@@ -51,7 +51,7 @@ Radmin VPN: игроки, бой, транспорт, NPC, сюжетные со
   sky.press_key передаёт Down/Return как сообщения Windows с scan=0, но готовый
   буфер DirectInput не получает соответствующих событий. Это конкретное
   ограничение проверенного пути автоматизации; не повторять те же попытки и
-  не считать их входом в сюжет. Нужен разрешённый путь игровых клавиш.
+  не считать их входом в сюжет. Теперь разрешён и проверен native scan-code путь, см. актуальный раздел ниже.
 
 ## Ближайшая работа
 
@@ -64,7 +64,7 @@ Radmin VPN: игроки, бой, транспорт, NPC, сюжетные со
 Перед одновременным изменением одних файлов указать здесь взятое направление,
 ветку и фактический статус. Текущий основной участок — игровая проверка и ввод;
 соавтор может независимо продолжать исследование жизненного цикла удалённого
-Human. Из-за подтверждённого ограничения ввода основной агент сейчас ведёт
+Human. После устранения ограничения ввода основной агент завершил
 read-only аудит сюжетного контекста в `codex/story-context-audit`: изменения
 scripts/inspect_runtime.py, scripts/story_audit.py и tests/test_story_audit.py.
 Согласовывать пересекающиеся изменения через этот файл и Git-историю.
@@ -92,3 +92,13 @@ scripts/inspect_runtime.py, scripts/story_audit.py и tests/test_story_audit.py.
 - Не отключать сюжетные системы, сохранения или ambient NPC ради простого демо.
 - Не объявлять fixture/loopback вторым игровым клиентом или Radmin-прохождением.
 - Не выпускать Release до фактического выполнения критериев этапа.
+
+## 2026-11-18 — authorized native menu input
+
+User explicitly authorized a separate native scan-code helper for arrows and Enter in our diagnostic Mafia II. coop_input validates full EXE SHA256, explicit PID, process creation time, live process and foreground owner. It holds one key for 100 ms and always releases it. SendInput is system input: foreground checking is not atomic with focus changes; stop and reobserve after any focus/error. No parallel senders, arbitrary text, hooks or OS changes.
+
+Actual game verification: The Story opened; Down selected Load Chapter, Up returned to Continue Story; Enter on Continue Story loaded the isolated save to a visible snowy street with Vito. Internal Continue was not enabled. The observer produced active player samples. A passive ENet loopback receiver received 190 active samples in 10 seconds, all axis ranges zero. Autonomous movement, a remote avatar, two game clients and Radmin gameplay remain unverified. The game remains open; native exit and final original-profile comparison are pending.
+
+Usage: coop_input inspect PID, then coop_input key PID CREATION up|down|left|right|enter. Use only our launcher's PID and inspect's creation value. Pinned clang warnings-as-errors build passed; wrong creation, invalid key and zero PID refused input.
+
+User requested faster entry. Next runs should omit the completed diagnostic Down/Up detour and rebuilds when code is unchanged. Use lifecycle logs to wait for loading, screenshots at Continue selection and ready scene, and never retry Enter when its outcome is unknown. A fresh end-to-end timing measurement remains pending.

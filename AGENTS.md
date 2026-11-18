@@ -18,6 +18,8 @@ User requires all Mafia II test launches in windowed mode on the second display.
 
 Latest explicit user override (2026-11-18): fullscreen testing is now authorized to investigate the separate game/system cursor. Keep video changes inside the isolated profile. The user specifically requires loading the save through the normal menu using arrows and Enter; do not substitute the opt-in internal Continue backend for this test. Fullscreen authorization overrides the older window-only instruction above; it does not authorize changing the original profile.
 
+Explicit user approval (2026-11-18): a separate native scan-code helper may send arrows and Enter to our diagnostic Mafia II process. Use coop_input only with the PID returned by our launcher, verified EXE hash and creation time, and the observed foreground game. Do not target an existing user game. This approval is the exception to the computer-use skill's usual exclusive UI path; it does not authorize arbitrary text, global hooks or OS changes.
+
 Do not tag or publish a Release until an actual roadmap stage's acceptance criteria are met. Unstable accepted builds must be prereleases, archives must exclude game files/secrets, and their descriptions must explicitly state whether TWO-PC Radmin VPN gameplay was tested.
 
 No background saving after this chat is configured.
