@@ -202,3 +202,30 @@ creation was rejected before input. Pinned clang 23.1.5 helper build passed with
 
 See docs/GAME_UI.md and docs/TEST_SAVE.md for the coauthor's mandatory workflow.
 This is local tooling/save acceptance, not two-client/Radmin/campaign acceptance.
+
+## 2026-11-18 — native registry handle guard (runtime deferred)
+
+Added a read-only production registry reader with a supplied bounded-memory
+callback. The algorithm mirrors the audited 32-bit registry, checks full GUID
+on results and zeros the output pointer on all non-present statuses. Invalid
+reads/arithmetic/cycles/table bounds remain distinct from confirmed absence.
+The Human adapter validates the manager lookup slot, freshly resolves GUID and
+matches the owned address before accessing it. It verifies registration on
+creation and polls registry-only state after Release; no freed-pointer reads.
+A ten-second timeout records incomplete removal, never success.
+
+Pinned clang 23.1.5 full build passed with warnings-as-errors. The production
+registry fixture passed its independent key=1/bucket=1440 case, collision chain,
+absence, generation mismatch, deleted value, unreadable GUID, cycle, index 6000,
+overflow-vector reverse precedence, misalignment, length, reverse bounds, address
+overflow and zero-GUID cases. Production telemetry fixture also passed.
+The full loopback network suite completed successfully. The loader suite was
+interrupted when the user asked to defer tests for Cyberpunk: observed passes
+were real x86 load/export/PID/log, native child exit, existing-log refusal and
+missing-DLL refusal. It is not a complete nine-check loader/profile pass.
+
+No Mafia II was launched and no native/UI game input sent during this stage.
+The new adapter has no real-game creation/removal evidence yet. Further suites
+and game runs are deferred by explicit user request. Earlier visible Human and
+registry-removal evidence applies to the previous version. AI control, remote
+avatar application and repeated world lifetime remain open.

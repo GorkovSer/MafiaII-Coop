@@ -2,6 +2,7 @@
    Called below the observer's EXE hash gate, only on game callbacks. */
 #define WIN32_LEAN_AND_MEAN
 #include "human_test.h"
+#include "entity_registry.h"
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
@@ -16,6 +17,9 @@ static uint32_t owned_guid;
 static ULONGLONG remove_at;
 static ULONGLONG ready_after;
 static int position_reported;
+static uint32_t pending_removal;
+static ULONGLONG removal_deadline;
+static int removal_status = -1;
 typedef void *(__attribute__((stdcall)) *model_factory_type)(void *);
 typedef void *(__attribute__((cdecl)) *entity_factory_type)(unsigned int);
 typedef int (__attribute__((thiscall)) *clone_type)(void *, void *);
@@ -44,9 +48,38 @@ static void record(const char *stage, unsigned int value) {
 static int signature(uintptr_t at, const unsigned char *bytes, size_t size) {
     return readable((void *)at, size) && !memcmp((void *)at, bytes, size);
 }
+static int registry_read(void *context, uint32_t at, void *out, size_t size) {
+    (void)context;
+    if (!readable((void *)(uintptr_t)at, size)) return 0;
+    memcpy(out, (void *)(uintptr_t)at, size); return 1;
+}
+static CoopEntityStatus resolve_guid(uint32_t guid, uint32_t *pointer) {
+    uint32_t manager, table, lookup;
+    *pointer = 0;
+    if (!registry_read(NULL, 0x1abe8d8, &manager, 4) || !manager ||
+        !registry_read(NULL, manager, &table, 4) || !table || table > UINT32_MAX - 0x1c ||
+        !registry_read(NULL, table + 0x1c, &lookup, 4) || lookup != 0x5a0c70)
+        return COOP_ENTITY_INVALID;
+    return CoopEntityLookup(registry_read, NULL, manager, guid, pointer);
+}
 static int human_valid(void *human) {
-    return readable(human, 0x220) && *(uintptr_t *)human == 0x1967058 &&
+    uint32_t current;
+    return resolve_guid(owned_guid, &current) == COOP_ENTITY_PRESENT &&
+        (uintptr_t)human == current && readable(human, 0x220) && *(uintptr_t *)human == 0x1967058 &&
         *(uint32_t *)((char *)human + 0x1c) == owned_guid;
+}
+static void poll_removal(void) {
+    if (!pending_removal) return;
+    uint32_t current;
+    CoopEntityStatus status = resolve_guid(pending_removal, &current);
+    if ((int)status != removal_status) {
+        removal_status = (int)status; record("removal_registry_status", (unsigned int)status);
+    }
+    if (status == COOP_ENTITY_ABSENT) {
+        pending_removal = 0; record("removal_registry_confirmed", 1);
+    } else if (GetTickCount64() >= removal_deadline) {
+        pending_removal = 0; record("removal_registry_timeout_incomplete", 1);
+    }
 }
 static void record_position(void *human) {
     if (!human_valid(human)) return;
@@ -72,10 +105,14 @@ static void remove_owned(void) {
     owned = NULL; /* Engine may delete immediately: abandon handle BEFORE call. */
     if (!human) return;
     if (!human_valid(human)) { record("lost_handle_no_release", 1); return; }
+    pending_removal = owned_guid;
+    removal_deadline = GetTickCount64() + 10000;
+    removal_status = -1;
     record("release_requested", 1);
     ((entity_call_type)(uintptr_t)0x119ddd0)(human);
     /* No read of human or its model after Release, no second destructor/free. */
     record("release_returned", 1);
+    poll_removal();
 }
 int CoopHumanTestStart(const wchar_t *path) {
     if (!path || wcslen(path) >= MAX_PATH) return 1;
@@ -99,6 +136,7 @@ int CoopHumanTestStart(const wchar_t *path) {
 }
 void CoopHumanTestEvent(unsigned int id) {
     if (!enabled) return;
+    poll_removal();
     if (id == 11 || id == 14 || id == 32 || id == 39) remove_owned();
     if (id == 10 || id == 11 || id == 12 || id == 14 || id == 39) initialized = loaded = 0;
     if (id == 13) initialized = 1;
@@ -149,9 +187,16 @@ void CoopHumanTestEvent(unsigned int id) {
     }
     if (!readable(human, 0x220) || *(uintptr_t *)human != 0x1967058 ||
         *(void **)((char *)human + 0x60) != NULL) {
+        ((release_model_type)(uintptr_t)0x14e5bc0)(model);
         record("unexpected_entity_contract", 0); return;
     }
     owned = human; owned_guid = *(uint32_t *)((char *)human + 0x1c);
+    if (!human_valid(human)) {
+        owned = NULL;
+        ((release_model_type)(uintptr_t)0x14e5bc0)(model);
+        record("unregistered_entity_incomplete", 1); return;
+    }
+    record("creation_registry_confirmed", 1);
     record("created", owned_guid);
     void *transferred_model = model; /* Address comparison only after transfer. */
     ((set_model_type)(uintptr_t)0x1164d00)(human, model);

@@ -30,4 +30,6 @@ Do not tag or publish a Release until an actual roadmap stage's acceptance crite
 
 No background saving after this chat is configured.
 
+Current user hold (2026-11-18): defer tests while the user plays Cyberpunk. Do not launch Mafia II, send any game/UI input, or start additional test suites until the user authorizes resuming tests. Code/documentation and Git work may continue. The currently built registry-guarded Human adapter has not received in-game acceptance; the loader suite was interrupted on this request, not passed in full.
+
 The user has explicitly delegated all further control AND tests while asleep. Do not wait for manual game/menu steps; use the computer-use skill for observed Windows UI actions when available, or continue independent implementation and report unverified runtime work accurately. This does not authorize claiming a loopback fixture/passive telemetry peer is a second game client or a two-PC Radmin test. `--user` lowers only the launcher's own child token; do not change OS security settings or raise the computer-use helper's privileges.

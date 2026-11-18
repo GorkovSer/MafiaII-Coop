@@ -174,3 +174,34 @@ enter-story в загруженной сессии отказал без вво�
 остаётся прежней: registry-validated Human handles, владение AI/управлением,
 реальные remote snapshots, reload lifecycle и затем два игровых клиента.
 Удалённый управляемый аватар, две машины/Radmin и прохождение миссии не проверены.
+
+## 2026-11-18 — registry guard built; tests on user hold
+
+The user explicitly asked to defer tests while playing Cyberpunk. Do not launch
+Mafia II, send UI/game input or start more suites until the user authorizes tests
+again. No game was launched in this stage. Code/docs/Git work can continue.
+
+Added src/game/entity_registry.c/h, a bounded read-only native implementation of
+the previously audited GUID lookup. Human validation now resolves the full GUID
+from the actual manager, requires the same address, then checks the concrete
+vtable before touching the saved pointer. Creation requires registry presence.
+Release still clears ownership first; subsequent callbacks poll only registry
+state, logging confirmed absence or a ten-second incomplete timeout. Invalid
+memory, cycles and generation mismatch are never treated as confirmed absence.
+An unexpected allocation contract releases the still-owned model clone but does
+not speculate about unknown entity cleanup. This does not implement AI control,
+remote snapshots or repeated mission creation.
+
+Pinned full build passed. Production registry fixture passed hash/collision,
+absence, generation reuse, missing-memory, cycle, fixed-index, overflow ordering,
+misalignment and range cases. Production telemetry fixture passed. Network suite
+finished all existing loopback checks. The loader/profile suite was interrupted
+on the user's request after load/export/PID/native-exit/log-refusal/missing-DLL
+checks; do not call it a complete pass. Registry-guarded Human runtime checks
+remain pending; earlier visible-Human results apply to the prior version only.
+
+Next after explicit test resumption: finish required loader checks, run the new
+-TestHuman build, establish creation_registry_confirmed and independent removal
+confirmation on the game thread. Then continue AI ownership/real remote-state
+application and mission reload coverage. Keep the full two-PC Radmin campaign
+goal unchanged; no two-game-client mission acceptance is claimed.

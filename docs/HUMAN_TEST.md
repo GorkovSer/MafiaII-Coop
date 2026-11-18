@@ -18,11 +18,19 @@ mask. The semantic name of that bit and its independent visual effect have
 not been established; do not invent a flag name from this experiment.
 
 After 60 seconds, or an earlier done/unload/shutdown callback, the test drops
-its owned handle before one Release call. It validates concrete vtable and
-GUID before calling; it never reads the freed entity afterwards or appends
-destructor/Free. Registry-based ownership checks must replace this limited
-pointer guard before general network/world use. Unexpected allocation
-contracts are incomplete diagnostics, not cleanup acceptance.
+its owned handle before one Release call. The current implementation first
+resolves its GUID through the bounded native registry reader and requires the
+returned address to equal its owned handle, then validates the concrete vtable
+and full GUID. No read of the stored entity pointer precedes registry validation.
+It never reads the freed entity afterwards or appends destructor/Free.
+After Release it polls the registry for confirmed absence, with a ten-second
+deadline; unreadable/corrupt memory and GUID mismatch are not confirmed removal.
+The lookup has no game API calls or writes and checks the actual manager slot
+against the pinned 0x5a0c70 lookup before interpreting its container.
+Unexpected allocation contracts are incomplete diagnostics, not cleanup acceptance.
+If the fresh entity cannot be validated, the still-owned clone is released but
+no speculative entity destructor is called. Successful creation/removal of this
+new registry-guarded version remains unverified in the game.
 
 ## Actual results
 
@@ -45,6 +53,15 @@ The read-only lookup is implemented in `scripts/entity_audit.py`, based on
 storage, distinguishes invalid memory from absence, and verifies the full
 GUID on a returned entity. `inspect_runtime.py --entity-guid <id>` stores
 private pointers only in the ignored JSON report and prints status summaries.
+
+The same audited layout is now implemented by `src/game/entity_registry.c` for
+game-thread handle validation. Its production-code fixture verifies the pinned
+hash bucket, collision chain, full-GUID generation mismatch, empty/deleted values,
+unreadable memory, cycle, index and arithmetic bounds, reverse-order overflow
+fallback and malformed vectors. A full pinned build passed; this fixture and
+the production telemetry fixture passed. The loader/profile suite was interrupted
+at the user's request to play Cyberpunk; remaining checks and the real-game test
+are deferred. Do not launch or inject game input until testing is authorized again.
 
 Next: make creation/removal repeatable across mission reloads, establish AI
 ownership and controlled position updates, then connect the real received
