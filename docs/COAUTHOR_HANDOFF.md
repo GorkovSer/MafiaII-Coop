@@ -679,3 +679,25 @@ passed, no game/tests/fixtures/live memory/input/network/native calls executed.
 Hold continues. Next: actual per-actor AI ownership mechanism preserving physics
 and lifecycle, then native movement/confirmed stop and loaded-world producer.
 No two-PC mission/failure/restart/save or full campaign acceptance is claimed.
+
+## 2026-11-21 — new scripted movement route, not enabled
+
+Read SCRIPT_MOVE.md. Mafia2-Online's inspected network path creates Human and
+moves via ScrMoveV; Player creation/keyboard filtering is separate. Pinned EXE
+0x9910b0 constructs a proper AI command and submits its two-word handle to
+NewCommand, returning an owned intrusive Sync ref. This offers a route through
+the AI scheduler rather than direct MoveDir competing underneath it.
+
+Added script_move.c/.h guarded/reentry-protected Start and caller-ref Release,
+compiled into observer with NO callbacks/callers. HANDLE_CREATED proves only
+Sync header, not accepted command/motion. INCOMPLETE can preserve a ref; never
+reset it. Release drops our ref only, NOT cancellation or physical stop. Guard
+must verify image/base/thread, and START needs current mod-owned registry Human
+plus fresh agreed world. This does not open direct MoveDir AI-ownership gates.
+
+Full pinned warnings-as-errors build/script-move and exact-byte audit passed;
+emitted PE checked for thiscall/five arguments/ret-20 cleanup. No game/tests/
+fixtures/native calls/live memory/input/network ran; user hold remains. Next:
+trace native script-command cancellation/supersession and verify stop/ref balance
+when tests resume, then choose/wire actual backend and loaded-world producer.
+No two-PC mission/failure/restart/save or full campaign acceptance is claimed.

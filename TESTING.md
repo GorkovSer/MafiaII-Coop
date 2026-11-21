@@ -665,3 +665,22 @@ Source/error paths reviewed; no new or existing fixture/suite executed. No game,
 live memory, input, network or native binding was run. No live result is claimed
 for these new observations. User hold remains; actual Human backend, loaded-world
 producer and two-PC story/failure/restart/host-save acceptance are outstanding.
+
+## 2026-11-21 — scripted AI movement candidate
+
+Compared local Mafia2-Online network spawn/movement sources and m2o-reborn's
+ScrMoveV binding with pinned EXE disassembly. Confirmed Human network path,
+five-argument thiscall/ret-20, 0x8c AI command creation, correct two-word command
+submission through NewCommand, Sync user data and separate intrusive Sync ref.
+Extended full-SHA read-only byte audit passed; JSON stays ignored at
+work/story-metadata/script-move-audit.json. No upstream implementation copied.
+
+Added script_move.c/.h Start and caller-ref Release candidate, guarded and
+reentry-protected, compiled into observer without any callback/caller. Full
+pinned x86 clang 23.1.5 warnings-as-errors build completed in build/script-move.
+Generated PE inspection confirms ECX=script and five native argument pushes
+with callee cleanup. No game, suite/fixture, native call, live memory, input or
+network execution. Handle creation does not prove AI acceptance or movement;
+Release is not cancellation/stop. OOM, supersession, arbitration, cancellation,
+ref balance, physical stop and teardown still need acceptance. User hold remains;
+two-PC story/failure/restart/host-save and full campaign are unverified.

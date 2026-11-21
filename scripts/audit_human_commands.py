@@ -131,6 +131,27 @@ def audit(path):
     match(0x1967058 + 0x170, struct.pack('<I', 0x91aac0).hex())
     match(0x91aac0, '32c0c20400')
 
+    # Scripted movement uses the AI scheduler's proper command handle and
+    # returns a separately retained Sync object, not a raw MoveDir.
+    match(0x9910b0, '558bec83e4f883ec34')
+    match(0x9910d5, '8b0f39b1a80000007512')
+    match(0x99114b, '688c000000')
+    match(0x99117c, '8b4d106aff5153568bc8e805542a00')
+    match(0x9911b0, '8b4c24208d44240c50e872bf5c00')
+    match(0x9911be, '8b4d18518b4c2424e8c5d92700')
+    match(0x9911ef, '8d44242850c744241401000000e8af562a00')
+    match(0x9912e9, '8b078b88a80000008d54242852e885e56000')
+    match(0x991304, '8b0f8b89a8000000e85fb45a00')
+    match(0x99131f, '8b75088bcee8f784a9ff')
+    match(0x99133a, 'c21400')
+    match(0x11e2210, '895004c7000ccc9001')
+    match(0x11e2235, '8b44240489083bca7403ff4104c20400')
+    match(0x429820, '8b442404568bf18b08890e8bcee81e9fffff')
+    match(0x422d40, '8b0985c9740e834104ff75088b018b106a01ffd2c3')
+    match(0xf9f883, '8b430cf64004017464')
+    match(0xc368b6, 'c70094bd9701')
+    match(0xc368ca, '8b4a048b1289500489480885d27402ff01c20400')
+
     # MoveDir descriptor lives in zero-initialized storage; its function
     # pointers are installed by this static initializer, not file data.
     match(0xef5ad0, '33c0a3c0ebcb01b8a007980033c9a3b0ebcb01b850709300')
@@ -184,6 +205,12 @@ def audit(path):
                 human_ai_activate='009960b0', human_ai_deactivate='0099d860',
                 human_deactivate_also_deactivates_physics=True,
                 human_control_style_string_slot_is_stub=True,
+                script_move_candidate='009910b0', script_move_callee_pop_bytes=20,
+                script_move_ai_allocation_size=0x8c,
+                script_move_sync_vtable='0190cc0c',
+                script_move_sync_ref_copy='00429820', script_move_sync_ref_release='00422d40',
+                script_move_ai_user_data_vtable='0197bd94',
+                script_move_cancellation_verified=False,
                 human_ai_teardown_requires_nonnull_pointer=True,
                 human_ai_null_pointer_is_disable_switch=False,
                 ai_ownership_verified=False, runtime_control_verified=False,
