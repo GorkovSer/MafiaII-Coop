@@ -573,3 +573,25 @@ No game, test program, live process read, socket session or UI input was run.
 There is no new runtime PASS. World identity provenance, guest load, actual
 Human control and all two-PC mission/failure/saved-progress acceptance remain
 unverified. User's Cyberpunk test hold remains active.
+
+## 2026-11-21 — remote actor controller and MoveDir field provenance
+
+Implemented backend-driven remote_actor lifecycle/motion controller and compiled
+it into observer. No game callback attachment or native engine backend is present.
+Authored/compiled test_remote_actor with owned callback data for world gating,
+velocity cap/hysteresis, far-target refusal, retirement on identity replacement,
+delayed removal without repeated release, refused stop, invalid/stale source and
+creation retry interval. Wired it into the deferred test-probe suite. It was
+NOT executed. Controller status does not prove native motion or physical stop.
+
+Pinned static EXE inspection resolved BSS descriptor 0x1cbebb0's initializer
+0xef5ad0, start 0x9807a0 and tick 0x937050, plus vector/multiplier/mode-byte
+transfers and the separate 0x300 control mask. Expanded audit_human_commands.py
+matched the installed full EXE hash and all new bytes; runtime_control_verified
+and ai_ownership_verified remain false. Full pinned i686 clang 23.1.5 build
+with -Wall -Wextra -Werror completed in build/remote-actor. A final source comment
+clarifies velocity units; no executable behavior changed afterward.
+
+No game, fixture/suite, engine call, live process read, input or network session
+was run. Safe native backend, actual loaded-world producer and two-PC Radmin
+mission/failure/host-save acceptance are still unverified under the test hold.

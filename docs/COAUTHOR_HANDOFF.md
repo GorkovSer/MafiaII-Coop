@@ -581,3 +581,27 @@ fixture/suite, live memory, network session or input ran; user hold continues.
 Next: verified game-world identity/load producer, guest transition and actual
 Human movement/stop/AI control behind this gate. Read WORLD_AGREEMENT.md and
 HUMAN_CONTROL.md before integrating; two-PC mission/failure/save remains pending.
+
+## 2026-11-21 — remote actor controller, engine backend still pending
+
+Added remote_actor.c/.h, compiled into the observer without attaching it to game
+callbacks. It consumes only fresh agreed-world snapshots, owns one backend
+handle, retires it on session/connection/world/epoch/player change or stale data,
+stops before removal, begins removal once and waits for registry-confirmed
+absence before replacement. Bounded XY velocity requests, arrival hysteresis,
+far/vertical stop and creation retry interval are implemented. There is NO
+native backend, movement call, AI suppression or running network avatar yet.
+
+The backend contract requires pinned image/game thread/registry guards and
+proven AI exclusion; handle/reference ownership remains in that backend.
+Read HUMAN_CONTROL.md's new section before wiring it. No direct queue/free-list
+writes, raw command delete, unsafe CreateSimpleCommand call or AI payload reuse.
+Static analysis additionally traced descriptor initialization 0xef5ad0 and
+MoveDir start/tick field transfers. Extended exact-byte audit matched pinned EXE.
+
+Pinned full x86 warnings-as-errors build completed in build/remote-actor.
+Authored and compiled callback-only lifecycle/motion fixture; NOT executed.
+No game/test/suite/live memory/input/network session ran. User test hold remains.
+Next: native backend's safe allocation/reference handling, AI ownership and
+confirmed stop/removal, plus verified loaded-world producer. Two-PC story
+mission/failure/host-save acceptance remains outstanding.

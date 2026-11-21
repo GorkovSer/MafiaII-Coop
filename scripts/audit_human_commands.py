@@ -92,6 +92,19 @@ def audit(path):
     match(0xf9f880, '538bd98b430cf6400401')
     match(0xf9f8c3, '8b41048b09894e1889461c85c97411ff00')
 
+    # MoveDir descriptor lives in zero-initialized storage; its function
+    # pointers are installed by this static initializer, not file data.
+    match(0xef5ad0, '33c0a3c0ebcb01b8a007980033c9a3b0ebcb01b850709300')
+    match(0xef5ae8, '890dc4ebcb01890db4ebcb01a3b8ebcb01890dbcebcb01c3')
+    match(0x937055, '8b7c24388b470cc1e809')
+    match(0x9370b6, '8b8b900100008b118b47548b523c5650ffd2')
+    match(0x9370c8, 'f30f1047280f57c98bf0')
+    match(0x9370fe, '8a4750884654d9473c8b4e54d95e48')
+    match(0x937503, 'f30f104730dd0568188f01')
+    match(0x937514, 'f30f1047348b4c242c816654ffffffef')
+    match(0x9375c1, '8b4750c1e80883e0035d83f801')
+    match(0x9375d7, '8b475025fffeffff0d00020000894750')
+
     return dict(schema=1, sha256=EXPECTED, game_api_calls=0, memory_writes=0,
                 create_enqueue_candidate='0095b0f0', movement_type=1,
                 movement_allocation_size=0x58, movement_vtable='018f14b0',
@@ -113,6 +126,12 @@ def audit(path):
                 clear_move_candidate='0094d8d0', clear_all_candidate='0094d6b0',
                 clear_move_does_not_clear_retained_reference=True,
                 ai_new_command_raw_movedir_compatible=False,
+                movedir_descriptor='01cbebb0',
+                movedir_descriptor_initializer='00ef5ad0',
+                movedir_start_callback='009807a0', movedir_tick_callback='00937050',
+                movedir_facing_offset=0x28, movedir_motion_offset=0x30,
+                movedir_multiplier_offset=0x3c, movedir_mode_byte_offset=0x50,
+                movedir_control_mask=0x300,
                 allocation_failure_recovery_verified=False,
                 ai_ownership_verified=False, runtime_control_verified=False,
                 required_policy='Do not copy upstream command vtable or overwrite queue/free-list fields')

@@ -1,0 +1,84 @@
+/* Owned callback fixture only. Does not access Mafia or execute engine code. */
+#include "../src/game/remote_actor.h"
+#include <assert.h>
+#include <math.h>
+#include <stdio.h>
+#include <string.h>
+typedef struct {
+    unsigned int created, moved, stopped, removed;
+    int gone, refuse_stop, fail_create;
+    float position[3], velocity[2];
+} Backend;
+static uint32_t create(void *context, const float p[3]) {
+    Backend *b = context; ++b->created;
+    if (b->fail_create) return 0;
+    memcpy(b->position, p, sizeof(b->position)); return 123;
+}
+static int position(void *context, uint32_t handle, float p[3]) {
+    Backend *b = context; assert(handle == 123);
+    memcpy(p, b->position, sizeof(b->position)); return 1;
+}
+static int move(void *context, uint32_t handle, const float v[2]) {
+    Backend *b = context; assert(handle == 123); ++b->moved;
+    memcpy(b->velocity, v, sizeof(b->velocity)); return 1;
+}
+static int stop(void *context, uint32_t handle) {
+    Backend *b = context; assert(handle == 123); ++b->stopped; return !b->refuse_stop;
+}
+static int remove_actor(void *context, uint32_t handle) {
+    Backend *b = context; assert(handle == 123); ++b->removed; return 1;
+}
+static int gone(void *context, uint32_t handle) {
+    Backend *b = context; assert(handle == 123); return b->gone;
+}
+static CoopRemoteSnapshot snapshot(void) {
+    CoopRemoteSnapshot s = {0};
+    s.ready = s.active = s.have_state = s.world_authorized = 1;
+    s.player_id = 2; s.epoch = s.connection_generation = s.world_generation = 1;
+    s.session_id = 9; s.state_received_ms = s.mailbox_published_ms = s.world_observed_ms = 1000;
+    return s;
+}
+int main(void) {
+    Backend b = {0}; CoopRemoteActor a;
+    CoopRemoteActorOps ops = {create, position, move, stop, remove_actor, gone};
+    CoopRemoteSnapshot s = snapshot();
+    CoopRemoteActorInit(&a, NULL, NULL);
+    assert(CoopRemoteActorTick(&a, &s, 1000) == COOP_ACTOR_DISABLED);
+    CoopRemoteActorInit(&a, &ops, &b);
+    s.world_authorized = 0;
+    assert(CoopRemoteActorTick(&a, &s, 1000) == COOP_ACTOR_WAIT_WORLD && !b.created);
+    s.world_authorized = 1;
+    assert(CoopRemoteActorTick(&a, &s, 1000) == COOP_ACTOR_CREATING && b.created == 1 && !b.moved);
+    s.position[0] = 2;
+    assert(CoopRemoteActorTick(&a, &s, 1001) == COOP_ACTOR_MOVING);
+    assert(fabsf(b.velocity[0] - 4) < 0.001f && b.velocity[1] == 0);
+    s.position[0] = 0;
+    assert(CoopRemoteActorTick(&a, &s, 1002) == COOP_ACTOR_STANDING && b.stopped == 1);
+    s.position[0] = 0.15f;
+    assert(CoopRemoteActorTick(&a, &s, 1003) == COOP_ACTOR_STANDING && b.stopped == 1);
+    s.position[0] = 30;
+    assert(CoopRemoteActorTick(&a, &s, 1004) == COOP_ACTOR_TOO_FAR && b.created == 1);
+    ++s.world_generation;
+    assert(CoopRemoteActorTick(&a, &s, 1005) == COOP_ACTOR_REMOVING && b.removed == 1);
+    assert(CoopRemoteActorTick(&a, &s, 1006) == COOP_ACTOR_REMOVING && b.removed == 1 && b.created == 1);
+    b.gone = 1;
+    assert(CoopRemoteActorTick(&a, &s, 1500) == COOP_ACTOR_WAIT_WORLD && !a.handle);
+    s.position[0] = 0;
+    assert(CoopRemoteActorTick(&a, &s, 1501) == COOP_ACTOR_CREATING && b.created == 2);
+    b.refuse_stop = 1;
+    assert(CoopRemoteActorTick(&a, NULL, 1502) == COOP_ACTOR_BACKEND_REFUSED && b.removed == 1);
+    b.refuse_stop = 0; b.gone = 0;
+    assert(CoopRemoteActorTick(&a, NULL, 1503) == COOP_ACTOR_REMOVING && b.removed == 2);
+    b.gone = 1; CoopRemoteActorTick(&a, NULL, 1504); assert(!a.handle);
+    s = snapshot(); s.position[0] = NAN;
+    assert(CoopRemoteActorTick(&a, &s, 1600) == COOP_ACTOR_WAIT_WORLD && b.created == 2);
+    s = snapshot();
+    assert(CoopRemoteActorTick(&a, &s, 3000) == COOP_ACTOR_WAIT_WORLD && b.created == 2);
+    b.fail_create = 1;
+    s.mailbox_published_ms = s.state_received_ms = s.world_observed_ms = 3500;
+    assert(CoopRemoteActorTick(&a, &s, 3500) == COOP_ACTOR_BACKEND_REFUSED);
+    unsigned int attempts = b.created;
+    assert(CoopRemoteActorTick(&a, &s, 3501) == COOP_ACTOR_CREATING && b.created == attempts);
+    puts("PASS actor ownership retirement, fresh-world gating and bounded motion requests");
+    return 0;
+}
