@@ -95,6 +95,27 @@ def audit(path):
     match(0xf9f880, '538bd98b430cf6400401')
     match(0xf9f8c3, '8b41048b09894e1889461c85c97411ff00')
 
+    # Human's controller is allocated inside the base constructor's 0x714
+    # component block. Its early null store is overwritten before return.
+    match(0x998cc8, '33dbc706f06e9601')
+    match(0x998d35, '6814070000')
+    match(0x998d46, '899ea8000000')
+    match(0x998f0b, '536aff568bcfe80ad0ffff')
+    match(0x998f1a, '81c7840100008986a8000000')
+    match(0x995f27, '8b7c2410506a01578bf1e81a6c6100')
+    match(0x995f36, '578d4e44c70628729601e82b97fcff')
+    match(0xfacb59, '8b44240c33ff6a0cc70668d98f01897e04894608')
+    match(0x99f3e1, '8b8e80000000518b8ea8000000e8adfcffff')
+    match(0x99a928, '8b8ea8000000d91c2483c144e847f2ffff')
+    match(0x95f763, '8b442414')
+    match(0x95f779, '8986a0000000')
+    match(0x999b88, '8b86a000000080781c10')
+    match(0x9858b7, '8b8ea80000008b018b106a00ffd2')
+    match(0x9858cb, 'c786a800000000000000')
+    match(0x1967228, struct.pack('<I', 0x99f640).hex())
+    match(0x1967228 + 0x14, struct.pack('<I', 0x99d860).hex())
+    match(0x99d8b2, '8d4e44e896f8ffff')
+
     # MoveDir descriptor lives in zero-initialized storage; its function
     # pointers are installed by this static initializer, not file data.
     match(0xef5ad0, '33c0a3c0ebcb01b8a007980033c9a3b0ebcb01b850709300')
@@ -139,6 +160,14 @@ def audit(path):
                 movedir_multiplier_offset=0x3c, movedir_mode_byte_offset=0x50,
                 movedir_control_mask=0x300,
                 allocation_failure_recovery_verified=False,
+                human_ai_pointer_offset=0xa8,
+                human_ai_constructor='00995f20', human_ai_reserved_span=0x184,
+                human_ai_vtable='01967228', human_ai_owner_offset=8,
+                human_ai_embedded_update_offset=0x44,
+                human_ai_update_caller='0099a890',
+                human_ai_update='00999b80',
+                human_ai_teardown_requires_nonnull_pointer=True,
+                human_ai_null_pointer_is_disable_switch=False,
                 ai_ownership_verified=False, runtime_control_verified=False,
                 required_policy='Do not copy upstream command vtable or overwrite queue/free-list fields')
 

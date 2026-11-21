@@ -615,3 +615,18 @@ ownership, cancellation/physical stop and unload remain unverified. Cancel and
 caller ref release are explicitly not destruction/stop evidence. There were no
 live process reads, game/input/network sessions. Cyberpunk hold remains active;
 full campaign and two-PC mission/failure/save acceptance are not achieved.
+# 2026-11-21 — Human AI lifetime/update static evidence
+
+Extended scripts/audit_human_commands.py with constructor population of +0xa8,
+controller owner/vtable, preparation, embedded update and unconditional teardown
+dereference sites. Read-only full-SHA audit succeeded on the pinned original
+EXE; output remains ignored at work/story-metadata/human-ai-audit.json. Bounded
+disassembly identified the controller+0x44 update and vtable+0x14 subsystem path.
+This rules out nulling +0xa8 as an ownership policy, but does not establish a
+safe native AI pause, exclusive movement ownership or physical stop.
+
+Only Python static file inspection/disassembly ran. No game, suite, fixture,
+native binding, live process read, input or network session executed; Cyberpunk
+hold continues. No production actor/AI behavior changed. Existing native build
+was not rebuilt because changes are audit/documentation only. Two-PC story,
+failure/restart and host-progress persistence acceptance remain outstanding.

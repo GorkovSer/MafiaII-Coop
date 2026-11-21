@@ -283,3 +283,36 @@ type=1/reference для AddCommand и callee cleanup без добавочног
 live memory, сеть и ввод не запускались. Следующие обязательные проверки после
 возобновления тестов: null allocation/неполная вставка, фактический баланс refs,
 AI exclusion, движение, отмена, retained reference, physical stop и unload.
+# AI controller lifetime and update path (2026-11-21, static only)
+
+The pinned EXE contradicts interpreting the early null store to Human+0xa8
+as an AI-free actor. Base constructor 0x998cb0 allocates a 0x714 component
+block; 0x998f0b calls controller constructor 0x995f20 with `(Human, -1, 0)`.
+At 0x998f20 the returned pointer replaces Human+0xa8; the component cursor
+advances by 0x184. This is a reserved span, not a separately observed allocation
+or a portable C++ sizeof. Constructor 0x995f20 calls base 0xfacb50, installs
+vtable 0x1967228 and constructs an embedded component at controller+0x44.
+Base construction stores the Human owner at controller+8.
+
+Preparation 0x99f390 loads Human+0x80 and calls 0x99f0a0 on Human+0xa8.
+The update function at 0x99a890 unconditionally loads Human+0xa8, adds 0x44
+and calls 0x999b80 with the frame float. That embedded update calls 0x955ee0
+before its later type-0x10 branch; skipping only that branch would not prove
+that all AI work stopped. Its Human back-pointer is at embedded+0xa0
+(controller+0xe4), separate from the base controller+8 owner.
+
+Teardown 0x985840 loads Human+0xa8 and invokes vtable slot 0 with argument 0
+without a null check, then zeroes the pointer. Therefore pointer replacement,
+manual freeing and nulling are not viable AI-disable policies. The native
+controller has its own lifecycle, unlike intrusive MoveDir references.
+Vtable+0x14 points to 0x99d860, which performs multiple subsystem calls and
+calls 0x99d150 on controller+0x44. Its meaning and reactivation contract remain
+unverified; do not call it as a guessed pause/disable operation.
+
+These sites are exact-byte checked by scripts/audit_human_commands.py against
+the full EXE SHA. No AI suppression is implemented or accepted. The next trace
+must establish controller registration/update eligibility and a reversible
+native ownership policy that preserves physics, command dispatch and teardown.
+Human+0x20 bit 0x200000 still cannot serve as an AI-only switch. The current
+MoveDir EDIT guard must remain closed until exclusive movement ownership is
+proved; the world-identity gate is independently still required.

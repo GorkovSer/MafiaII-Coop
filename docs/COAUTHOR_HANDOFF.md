@@ -629,3 +629,18 @@ no native/game/test/fixture/live memory/input/network execution. User hold stays
 Next: validate allocation/ref/AI/stop behavior when tests resume, provide the
 actual Human backend and verified loaded-world producer. Full story/two-PC
 Radmin mission/failure/host-save acceptance remains outstanding.
+
+## 2026-11-21 — AI controller lifetime traced; no disable API accepted
+
+Pinned full-SHA static audit now checks Human+0xa8 population by base constructor
+0x998cb0 through controller ctor 0x995f20, vtable 0x1967228, Human owner+8,
+preparation 0x99f0a0, embedded+0x44 update 0x999b80 and unconditional virtual
+teardown dereference at 0x9858b7. Earlier zero initialization is temporary:
+do not null/replace/free +0xa8 to exclude AI. Vtable+0x14 -> 0x99d860 invokes
+several subsystems; it is not an accepted pause/disable function.
+
+See HUMAN_CONTROL.md. Next trace: registration/update eligibility and reversible
+ownership while preserving physics/dispatch/teardown. MoveDir EDIT and agreed
+world gates remain closed; no native backend is attached. Read-only byte audit
+succeeded; no game/tests/fixtures/live memory/input/network ran. User hold still
+applies. No two-PC mission/failure/save acceptance or AI suppression claimed.
