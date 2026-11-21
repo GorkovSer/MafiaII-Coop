@@ -532,3 +532,18 @@ live process read, input or network was executed. No runtime PASS is claimed.
 Concrete filesystem close/flush, trailer meaning, catalogue contract and final
 error delivery are unverified; durable completion flags remain false. The user
 hold continues and two-PC mission/failure/saved-progress acceptance is pending.
+
+## 2026-11-21 — external coop-anything research (no execution)
+
+User requested review of cranebeaker/coop-anything. Read current web-served
+README/directory, effect-capture design, ownership README/header/implementation,
+flight README/header, chaos/hot-reload docs and upstream MIT license. Also read
+linked JustAddMP/MafiaDE README/developer notes and core README. No immutable
+upstream commit obtained. COOP_ANYTHING_REVIEW.md separates source inspection,
+documentation claims, unverified applicability and next integration steps.
+
+The escalated clone call expired during automatic approval review; retry in the
+sandbox failed DNS. Continued read-only using web sources. No installation,
+upstream code import, game/test suite/fixture/MCP execution, live memory or UI
+input. Compatibility with our pinned x86 build and two-PC Radmin acceptance
+remain unverified. Existing Cyberpunk hold remains active.

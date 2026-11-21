@@ -534,3 +534,23 @@ Source compilation only otherwise; no game, tests/fixtures, live memory, input
 or network execution. Cyberpunk hold remains active. Next: concrete filesystem
 behind 0x695b70 and close slot+0xb4, fallback operation and final listener result.
 Keep raw assets local. Runtime/two-PC mission/failure/save acceptance is pending.
+
+## 2026-11-21 — user-requested coop-anything review
+
+Read upstream docs and selected ownership/flight C++ sources through the web.
+See COOP_ANYTHING_REVIEW.md for source links and evidence limits. Useful leads:
+host-owned story effects, actor authority epochs, cross-machine traces, UDP
+impairment and later hot reload. No tools/dependencies installed or imported;
+no upstream tests, MCP, game, live memory, input or sockets were run. The clone
+was unavailable (approval timeout, sandbox DNS failure), so no upstream SHA is
+pinned; obtain/review exact files before reuse.
+
+Important new related lead: JustAddMP/MafiaDE and its shared core. It targets
+Mafia: Definitive Edition x64, not our Mafia II Classic x86. Its authors report
+limited two-copy/one-PC checks, not two-PC acceptance. Study story/failure/save
+policies; don't copy bindings or assume the umbrella MIT license covers it.
+For our first story slice keep NPC authority on the host; map slot 0 upstream
+to our 1/2 IDs only through an explicit adapter if later adopting ownership.
+Prioritize remote-player control and shared-world transitions, then mission
+primitive capture/apply and correlated traces. Keep all testing deferred under
+the user's continuing hold; none of this research establishes campaign co-op.
