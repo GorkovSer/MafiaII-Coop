@@ -45,6 +45,15 @@ int main(void) {
     check(NULL, 10000, 0, 0);
     s = fresh(); if (!CoopRemoteSnapshotAt(&s, 10000, &s) || !s.active) return 1;
     if (CoopRemoteSnapshotAt(&s, 10000, NULL)) return 1;
+    s = fresh(); s.world_authorized = 1; s.world_generation = 8; s.world_observed_ms = 10000;
+    CoopRemoteSnapshot world;
+    if (!CoopRemoteSnapshotAt(&s, 10000, &world) || !world.world_authorized) return 1;
+    s.mailbox_published_ms = s.state_received_ms = 12000;
+    if (!CoopRemoteSnapshotAt(&s, 12000, &world) || world.world_authorized) return 1;
+    s.world_observed_ms = 12001;
+    if (!CoopRemoteSnapshotAt(&s, 12000, &world) || world.world_authorized) return 1;
+    s.world_observed_ms = 12000; s.world_generation = 0;
+    if (!CoopRemoteSnapshotAt(&s, 12000, &world) || world.world_authorized) return 1;
     CoopSession clock = {0};
     if (CoopSessionRemoteAge(&clock, 0) != UINT32_MAX) return 1;
     clock.have_sequence = 1; clock.remote_received_at = UINT32_MAX - 999;

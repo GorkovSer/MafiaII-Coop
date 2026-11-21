@@ -21,6 +21,7 @@ typedef struct {
     uint32_t sent_states, received_states, rejected, stale, connections;
     uint32_t remote_received_at;
     CoopMessage local, remote;
+    CoopWorldSync world;
     CoopSessionConfig config;
     char address[16];
     CoopSessionLog log;
@@ -28,6 +29,7 @@ typedef struct {
 } CoopSession;
 int CoopSessionStart(CoopSession *session, const CoopSessionConfig *config, CoopSessionLog log, void *context);
 void CoopSessionPublish(CoopSession *session, uint32_t epoch, const float *position);
+void CoopSessionWorld(CoopSession *session, uint32_t loaded_epoch, const unsigned char *verified_key);
 void CoopSessionTick(CoopSession *session);
 uint32_t CoopSessionRemoteAge(const CoopSession *session, uint32_t now);
 void CoopSessionStop(CoopSession *session);

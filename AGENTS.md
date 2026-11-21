@@ -36,7 +36,7 @@ No background saving after this chat is configured.
 
 Current user hold (2026-11-18): defer tests while the user plays Cyberpunk. Do not launch Mafia II, send any game/UI input, or start additional test suites until the user authorizes resuming tests. Code/documentation and Git work may continue. The currently built registry-guarded Human adapter has not received in-game acceptance; the loader suite was interrupted on this request, not passed in full.
 
-Future remote-avatar consumers must read through `CoopNetworkReadRemote` each update and require active freshness; ready alone is not authority to move. Receiver-local packet/worker validity is documented in `docs/NETWORK.md`. Session/connection metadata and local epoch do not establish a shared story world. New receiver-expiry code is compiled only while the test hold remains active.
+Future remote-avatar consumers must use `CoopNetworkReadRemoteWorld` each update; `CoopNetworkReadRemote` is telemetry-only. The new protocol-2/module-0.0.4 world offer/ack/commit gate requires a verified loaded-world producer, which is not implemented yet. Never supply a guessed key from missionNumber/missionPart or a save request. See `docs/WORLD_AGREEMENT.md`. Ready/active, session/connection metadata and local epoch alone do not authorize movement. World agreement and receiver-expiry code remain compile-only under the test hold.
 
 Save/load candidate at 0x1cc39c4 is written from an operation input before SAVE data result checks (0xb40835). Neither a catalogue match nor an observed load request confirms a loaded mission/checkpoint. Keep world authorization closed until a separate loaded-state producer and lifetime are verified; see `docs/STORY_IDENTITY.md`.
 

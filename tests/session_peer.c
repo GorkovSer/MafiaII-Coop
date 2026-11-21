@@ -31,13 +31,29 @@ int main(int argc,char **argv) {
     ULONGLONG start=GetTickCount64(), duration=(ULONGLONG)strtoul(argv[4],NULL,10);
     if(duration>30000) {CoopSessionStop(&session);return 2;}
     int cleared=0, remote_fixture_seen=0, expired_while_ready=0;
+    int world_seen=0, world_withdrawn=0, world_recovered=0;
     while(GetTickCount64()-start<duration) {
         ULONGLONG elapsed = GetTickCount64()-start;
-        if(mode==4 && elapsed>1000) {
+        if (mode == 5) {
+            /* Synthetic identities exist only in this fixture executable. */
+            unsigned char key[32] = {1};
+            uint32_t epoch = config.role == COOP_HOST ? 10 : 90;
+            if (elapsed > duration/3 && elapsed < 2*duration/3 && config.role == COOP_GUEST) {
+                key[0] = 2; epoch = 91;
+            } else if (elapsed >= 2*duration/3 && config.role == COOP_GUEST) epoch = 92;
+            CoopSessionWorld(&session, epoch, key);
+            CoopSessionPublish(&session, epoch, xyz);
+        } else if(mode==4 && elapsed>1000) {
             /* Service ENet/control traffic but deliberately send no more app state. */
             session.next_send=enet_time_get()+60000;
         } else if(!cleared && elapsed>duration/2) {CoopSessionPublish(&session,1,NULL);cleared=1;}
         CoopSessionTick(&session);
+        if (mode == 5) {
+            if (CoopWorldAccepts(&session.world, session.remote.world.generation, session.remote.epoch)) {
+                world_seen = 1;
+                if (world_withdrawn) world_recovered = 1;
+            } else if (world_seen) world_withdrawn = 1;
+        }
         if(session.remote_active && session.remote.position[0]==(config.role==COOP_HOST?-4.0f:10.25f)) remote_fixture_seen=1;
         if(remote_fixture_seen && session.ready && !session.remote_active && session.have_sequence &&
             CoopSessionRemoteAge(&session,enet_time_get())>=COOP_STATE_MAX_AGE_MS &&
@@ -50,5 +66,7 @@ int main(int argc,char **argv) {
         (unsigned long)session.rejected,remote_fixture_seen,session.remote_active);
     CoopSessionStop(&session);
     printf("remote_expired_while_ready=%d\n",expired_while_ready);
+    printf("world_fixture=1 world_seen=%d world_withdrawn=%d world_recovered=%d\n",
+        world_seen,world_withdrawn,world_recovered);
     return 0;
 }

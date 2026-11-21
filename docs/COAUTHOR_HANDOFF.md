@@ -1,8 +1,9 @@
 # Указания соавторам и текущее состояние
 
-Проверено: 18 ноября 2026 года. Последняя проверенная кодовая основа:
-`aeaa613fbcaf309465fbfc01a0ab5f801f44074b` в `development`.
-Этот хеш обозначает проверенную основу, а не будущий HEAD документа.
+Сводка обновлена: 21 ноября 2026 года. Основа текущего этапа:
+`4919005cf51842d4a408834de1b12892281a68f1` в `development`.
+Новый world agreement проверен только сборкой; игровые тесты отложены.
+Этот хеш обозначает основу этапа, а не будущий HEAD документа.
 
 ## Обязательно перед работой и каждым коммитом
 
@@ -554,3 +555,29 @@ to our 1/2 IDs only through an explicit adapter if later adopting ownership.
 Prioritize remote-player control and shared-world transitions, then mission
 primitive capture/apply and correlated traces. Keep all testing deferred under
 the user's continuing hold; none of this research establishes campaign co-op.
+
+## 2026-11-21 — implemented shared-world network agreement (compile only)
+
+Added production world_sync.c/.h and integrated OFFER/ACK/COMMIT into session,
+wire and worker mailboxes. Protocol is now 2, module 0.0.4; old builds cannot
+connect. STATE carries host world generation. Nonzero-generation states require
+matching agreement and acknowledged sender epoch. Reliable controls validate
+role/session/channel, old generations cannot restore authority, local-load races
+ignore obsolete COMMIT, generation exhaustion closes the gate. World mailbox
+revision preserves withdrawal across worker polls; current local activity and
+local/remote/worker freshness are rechecked by CoopNetworkReadRemoteWorld.
+
+IMPORTANT: CoopNetworkReadRemote remains telemetry-only. Future actor consumers
+must use CoopNetworkReadRemoteWorld. No verified Mafia loaded-world producer
+exists yet and no production code publishes a nonzero world key. Do not hash
+missionNumber/missionPart or save request IDs to bypass this missing producer.
+The gate therefore remains closed in the actual observer. No avatar movement,
+AI suppression, guest loading, story effects or host-save completion is claimed.
+
+Full pinned x86 warnings-as-errors build completed in build/world-agreement.
+Authored/compiled pure agreement, wire, snapshot and two-process synthetic world
+mismatch/recovery fixtures; NONE executed. Build script compiles only. No game,
+fixture/suite, live memory, network session or input ran; user hold continues.
+Next: verified game-world identity/load producer, guest transition and actual
+Human movement/stop/AI control behind this gate. Read WORLD_AGREEMENT.md and
+HUMAN_CONTROL.md before integrating; two-PC mission/failure/save remains pending.

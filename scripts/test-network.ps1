@@ -6,6 +6,8 @@ $exe=Join-Path (Join-Path $root $BuildDirectory) 'session_peer.exe'
 if($LASTEXITCODE -ne 0) {throw 'Wire tests failed'}
 & (Join-Path (Join-Path $root $BuildDirectory) 'test_remote_snapshot.exe')
 if($LASTEXITCODE -ne 0) {throw 'Receiver validity tests failed'}
+& (Join-Path (Join-Path $root $BuildDirectory) 'test_world_sync.exe')
+if($LASTEXITCODE -ne 0) {throw 'World agreement tests failed'}
 $dir=Join-Path $root ('work/network-tests/'+[Guid]::NewGuid().ToString('N'))
 New-Item -ItemType Directory -Path $dir -Force | Out-Null
 function Start-Peer($name,$role,$port,$duration,$mode=0) {
@@ -29,6 +31,17 @@ foreach($log in @($hostLog,$guestLog)) {
        $log -notmatch 'event=remote_inactive' -or $log -notmatch 'received=[1-9]\d* ') {throw 'Bidirectional fixture failed'}
 }
 Write-Output 'PASS two processes handshake, assign IDs, exchange state and clear inactive state'
+$port++
+$hostPeer=Start-Peer world-host host $port 6500 5
+Start-Sleep -Milliseconds 200
+$guestPeer=Start-Peer world-guest guest $port 6000 5
+$guestLog=Finish-Peer $guestPeer world-guest
+$hostLog=Finish-Peer $hostPeer world-host
+foreach($log in @($hostLog,$guestLog)) {
+    if($log -notmatch 'world_seen=1 world_withdrawn=1 world_recovered=1' -or
+       $log -notmatch 'rejected=0 ') {throw 'World barrier fixture failed'}
+}
+Write-Output 'PASS synthetic world agreement, mismatch withdrawal and recovery (not gameplay)'
 $port++
 $hostPeer=Start-Peer silence-host host $port 6000
 Start-Sleep -Milliseconds 200

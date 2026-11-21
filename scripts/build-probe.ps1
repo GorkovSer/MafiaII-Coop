@@ -11,7 +11,8 @@ $out = Join-Path $root $OutputDirectory
 New-Item -ItemType Directory -Path $out -Force | Out-Null
 $common = @('-std=c11', '-O2', '-Wall', '-Wextra', '-Werror', '-static')
 & (Join-Path $PSScriptRoot 'build-enet.ps1') -Toolchain $Toolchain -OutputDirectory $OutputDirectory
-$netSources=@((Join-Path $root 'src/net/wire.c'),(Join-Path $root 'src/net/session.c'))
+$worldSource=Join-Path $root 'src/net/world_sync.c'
+$netSources=@((Join-Path $root 'src/net/wire.c'),(Join-Path $root 'src/net/session.c'),$worldSource)
 $registrySource=Join-Path $root 'src/game/entity_registry.c'
 $commandSource=Join-Path $root 'src/game/command_queue.c'
 $progressSource=Join-Path $root 'src/game/script_progress.c'
@@ -29,8 +30,10 @@ if ($LASTEXITCODE -ne 0) { throw 'Profile test host build failed' }
 if ($LASTEXITCODE -ne 0) { throw 'Launcher build failed' }
 & $cc @common -mwindows (Join-Path $root 'tests/probe_host.c') -o (Join-Path $out 'probe_host.exe')
 if ($LASTEXITCODE -ne 0) { throw 'Probe test host build failed' }
-& $cc @common (Join-Path $root 'tests/test_wire.c') (Join-Path $root 'src/net/wire.c') -o (Join-Path $out 'test_wire.exe')
+& $cc @common (Join-Path $root 'tests/test_wire.c') (Join-Path $root 'src/net/wire.c') $worldSource -o (Join-Path $out 'test_wire.exe')
 if ($LASTEXITCODE -ne 0) {throw 'Wire test build failed'}
+& $cc @common (Join-Path $root 'tests/test_world_sync.c') $worldSource -o (Join-Path $out 'test_world_sync.exe')
+if ($LASTEXITCODE -ne 0) {throw 'World agreement fixture build failed'}
 & $cc @common -DCOOP_TELEMETRY_TEST (Join-Path $root 'tests/telemetry_host.c') (Join-Path $root 'src/game/telemetry.c') $progressSource -o (Join-Path $out 'telemetry_host.exe')
 if ($LASTEXITCODE -ne 0) {throw 'Telemetry fixture build failed'}
 & $cc @common (Join-Path $root 'tests/test_script_progress.c') $progressSource -o (Join-Path $out 'test_script_progress.exe')

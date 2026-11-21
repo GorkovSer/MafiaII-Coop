@@ -35,6 +35,7 @@ static void reset_peer(CoopSession *s) {
     s->peer = NULL; s->ready = s->remote_active = s->have_sequence = 0;
     memset(&s->remote, 0, sizeof(s->remote));
     s->remote_received_at = 0;
+    CoopWorldInit(&s->world, (uint32_t)s->role);
     if (s->role == COOP_GUEST) { s->session = 0; s->player_id = 0; }
 }
 static void reject(CoopSession *s, ENetPeer *peer, const char *reason) {
@@ -45,6 +46,7 @@ static void reject(CoopSession *s, ENetPeer *peer, const char *reason) {
 int CoopSessionStart(CoopSession *s, const CoopSessionConfig *config, CoopSessionLog log, void *context) {
     memset(s, 0, sizeof(*s));
     s->role = config->role; s->config = *config; s->log = log; s->log_context = context;
+    CoopWorldInit(&s->world, (uint32_t)s->role);
     ENetAddress address = {0}; address.port = config->port;
     if ((s->role != COOP_HOST && s->role != COOP_GUEST) || !address.port ||
         !ipv4(config->address, &address.host) || (s->role == COOP_GUEST && !address.host)) return 1;
@@ -74,6 +76,9 @@ void CoopSessionPublish(CoopSession *s, uint32_t epoch, const float *position) {
     s->local.type = COOP_STATE; s->local.epoch = epoch; s->local.active = position != NULL;
     if (position) memcpy(s->local.position, position, sizeof(s->local.position));
 }
+void CoopSessionWorld(CoopSession *s, uint32_t epoch, const unsigned char *key) {
+    CoopWorldSetLocal(&s->world, epoch, key);
+}
 static void receive(CoopSession *s, ENetEvent *event, uint32_t now) {
     CoopMessage message;
     if (!CoopWireDecode(event->packet->data, event->packet->dataLength, &message)) {
@@ -99,10 +104,19 @@ static void receive(CoopSession *s, ENetEvent *event, uint32_t now) {
         s->session = message.session; s->player_id = message.player_id;
         s->ready = 1; s->next_send = now;
         ++s->connections; record(s, "ready_guest");
+    } else if (message.type >= COOP_WORLD_OFFER && message.type <= COOP_WORLD_COMMIT &&
+               s->ready && event->channelID == 0) {
+        if (message.session != s->session || !CoopWorldReceive(&s->world, message.type, &message.world)) {
+            reject(s, event->peer, "reject_world"); return;
+        }
+        record(s, "world_control");
     } else if (message.type == COOP_STATE && s->ready && event->channelID == 1) {
         uint32_t remote_id = s->role == COOP_HOST ? 2 : 1;
         if (message.session != s->session || message.player_id != remote_id) {
             reject(s, event->peer, "reject_identity"); return;
+        }
+        if (message.world.generation && !CoopWorldAccepts(&s->world, message.world.generation, message.epoch)) {
+            ++s->stale; return;
         }
         if (s->have_sequence && !CoopSequenceNewer(message.sequence, s->rx_sequence)) { ++s->stale; return; }
         if (s->have_sequence && message.epoch != s->remote.epoch && !CoopSequenceNewer(message.epoch, s->remote.epoch)) {
@@ -151,8 +165,17 @@ void CoopSessionTick(CoopSession *s) {
         memset(s->remote.position, 0, sizeof(s->remote.position));
         record(s, "remote_expired");
     }
+    if (s->ready && s->world.pending_type) {
+        CoopMessage control = {0}; control.type = (uint16_t)s->world.pending_type;
+        control.world = s->world.pending;
+        if (send_message(s, &control, 0, 1)) {
+            CoopWorldSent(&s->world);
+            enet_host_flush(s->host);
+        }
+    }
     if (s->ready && (int32_t)(now - s->next_send) >= 0) {
         CoopMessage state = s->local; state.type = COOP_STATE; state.player_id = s->player_id;
+        state.world.generation = s->world.ready ? s->world.offer.generation : 0;
         if (send_message(s, &state, 1, 0)) ++s->sent_states;
         s->next_send = now + (state.active ? 50 : 500);
         enet_host_flush(s->host);

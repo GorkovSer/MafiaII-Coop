@@ -11,7 +11,7 @@ int main(void) {
     state.sequence=0xfffffffdu; state.player_id=2; state.epoch=7; state.active=1;
     state.position[0]=1.25f; state.position[1]=-32.5f; state.position[2]=3.0f;
     size_t size=CoopWireEncode(&state, bytes);
-    assert(size==48 && bytes[8]==1 && bytes[15]==8 && bytes[24]==0 && bytes[27]==2);
+    assert(size==52 && bytes[8]==1 && bytes[15]==8 && bytes[24]==0 && bytes[27]==2);
     assert(CoopWireDecode(bytes,size,&decoded) && decoded.session==state.session && decoded.position[1]==-32.5f);
     memcpy(original,bytes,sizeof(bytes));
     for(size_t i=0;i<size;++i) assert(!CoopWireDecode(bytes,i,&decoded));
@@ -22,13 +22,21 @@ int main(void) {
     bytes[36]=0x7f; bytes[37]=0xc0; bytes[38]=bytes[39]=0; assert(!CoopWireDecode(bytes,size,&decoded));
     state.position[0]=NAN; assert(!CoopWireEncode(&state,bytes));
     state.position[0]=0; state.active=0; assert(!CoopWireEncode(&state,bytes));
-    memset(state.position,0,sizeof(state.position)); assert(CoopWireEncode(&state,bytes)==48);
+    memset(state.position,0,sizeof(state.position)); assert(CoopWireEncode(&state,bytes)==52);
     assert(CoopSequenceNewer(0,0xffffffffu) && !CoopSequenceNewer(3,3) && !CoopSequenceNewer(2,3));
     assert(!CoopSequenceNewer(0x80000000u,0));
     CoopMessage hello={0}; hello.type=COOP_HELLO; hello.module_version=COOP_MODULE_VERSION;
     memcpy(hello.build,CoopGameBuild,32); hello.capabilities=COOP_CAP_TELEMETRY;
     assert(CoopWireEncode(&hello,bytes)==64 && CoopWireDecode(bytes,64,&decoded));
     assert(decoded.module_version==COOP_MODULE_VERSION && !memcmp(decoded.build,CoopGameBuild,32));
+    CoopMessage offer = {0}; offer.type = COOP_WORLD_OFFER;
+    offer.world.generation = 10; offer.world.epoch = 11; offer.world.key[31] = 7;
+    assert(CoopWireEncode(&offer, bytes) == 64 && CoopWireDecode(bytes, 64, &decoded));
+    assert(decoded.world.generation == 10 && decoded.world.epoch == 11 && decoded.world.key[31] == 7);
+    for (size_t i = 0; i < 64; ++i) assert(!CoopWireDecode(bytes, i, &decoded));
+    offer.world.epoch = 0; assert(!CoopWireEncode(&offer, bytes));
+    memset(offer.world.key, 0, 32); assert(CoopWireEncode(&offer, bytes) == 64);
+    offer.type = COOP_WORLD_COMMIT; assert(!CoopWireEncode(&offer, bytes));
     puts("PASS wire encoding, truncation, versions, invalid states and sequence wrap");
     return 0;
 }

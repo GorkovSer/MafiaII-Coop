@@ -547,3 +547,29 @@ sandbox failed DNS. Continued read-only using web sources. No installation,
 upstream code import, game/test suite/fixture/MCP execution, live memory or UI
 input. Compatibility with our pinned x86 build and two-PC Radmin acceptance
 remain unverified. Existing Cyberpunk hold remains active.
+
+## 2026-11-21 — world agreement implementation, compile only
+
+Implemented pure C OFFER/ACK/COMMIT state machine and integrated it into ENet
+session, fixed-width wire codec and worker/game mailboxes. Protocol 2/module
+0.0.4 is incompatible with old builds. Controls carry a host generation, local
+load epoch and 32-byte supplied identity; STATE carries host generation. Added
+strict read API for actor consumers and read-time world/local/remote freshness
+checks. Publication revision invalidates old worker reads and preserves a
+withdrawal/replacement coalesced between polls. No game-world producer is
+invented: actual observer cannot authorize actors until one is verified.
+
+Full build-probe with pinned LLVM-MinGW 20261104 / clang 23.1.5 i686, -Wall
+-Wextra -Werror completed in build/world-agreement after the final code change.
+New test_world_sync executable compiled; its cases cover handshake ordering,
+withdrawal, different world, stale generation, guest load between ACK/COMMIT,
+role/token errors and exhaustion. Wire fixtures cover 64-byte controls and
+52-byte STATE; remote snapshot fixtures include world TTL/future timestamps.
+Authored a two-process synthetic world scenario in session_peer mode 5 and
+wired it into test-network. NONE of these tests/suites/fixtures was executed.
+Reviewed diff and encoding/role/epoch/worker publication paths statically.
+
+No game, test program, live process read, socket session or UI input was run.
+There is no new runtime PASS. World identity provenance, guest load, actual
+Human control and all two-PC mission/failure/saved-progress acceptance remain
+unverified. User's Cyberpunk test hold remains active.

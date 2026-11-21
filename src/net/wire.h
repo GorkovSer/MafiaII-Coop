@@ -3,8 +3,9 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#define COOP_PROTOCOL 1
-#define COOP_MODULE_VERSION 3u /* diagnostic 0.0.3; exact compatibility */
+#include "world_sync.h"
+#define COOP_PROTOCOL 2
+#define COOP_MODULE_VERSION 4u /* diagnostic 0.0.4; exact compatibility */
 #define COOP_CAP_TELEMETRY 1u
 #define COOP_WIRE_MAX 64
 #define COOP_STATE_MAX_AGE_MS 2000u /* Receiver-local validity; not a wire timestamp. */
@@ -18,6 +19,7 @@ typedef struct {
     unsigned char build[32];
     uint32_t capabilities;
     uint32_t module_version;
+    CoopWorldToken world;
 } CoopMessage;
 
 extern const unsigned char CoopGameBuild[32];
