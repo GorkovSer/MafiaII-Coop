@@ -605,3 +605,27 @@ No game/test/suite/live memory/input/network session ran. User test hold remains
 Next: native backend's safe allocation/reference handling, AI ownership and
 confirmed stop/removal, plus verified loaded-world producer. Two-PC story
 mission/failure/host-save acceptance remains outstanding.
+
+## 2026-11-21 — native MoveDir owner candidate (not attached/executed)
+
+Added move_command.c/.h with pinned x86 allocator/ref/init/enqueue/input/cancel/
+release bindings. Guard is required for every action; EDIT needs verified world
+and exclusive AI movement ownership, cleanup/release must remain possible after
+network invalidation. No observer callback calls this module. It is not yet the
+remote actor backend and no network avatar moves in the actual observer.
+
+Candidate creation checks free capacity/empty movement queue/no retained ref,
+null-checks allocation separately, owns one ref and passes an extra consumed
+argument ref to AddCommand. It preserves queue/free-list ownership, high control
+bits and caller-owned refs on INCOMPLETE. Cancel is a request, not proof of stop;
+release drops only the caller ref. Never use cancellation as the actor backend's
+confirmed stop without retained/physics/AI checks. Zero initialization of
+reserved storage and duplicate pre-enqueue initialization need live acceptance.
+
+Full pinned warnings-as-errors build passed in build/native-move. Extended
+read-only EXE audit matched allocator dispatch/ref constructor/clear signatures.
+Generated PE inspection confirmed ECX=Human and two stack words for AddCommand;
+no native/game/test/fixture/live memory/input/network execution. User hold stays.
+Next: validate allocation/ref/AI/stop behavior when tests resume, provide the
+actual Human backend and verified loaded-world producer. Full story/two-PC
+Radmin mission/failure/host-save acceptance remains outstanding.

@@ -67,6 +67,9 @@ def audit(path):
     match(0x4237b0, '8b0185c07403ff4004c3')
     match(0x429a40, '8906e8699dffff85ff7410834704ff750a8b178b026a018bcfffd0')
     match(0x422db0, '8b0985c9740e834104ff75088b018b106a01ffd2c3')
+    match(0x429a10, '8b442404568bf18906e8929dffff8bc65ec20400')
+    match(0x40185a, '8b0dbc1aad018b018b5424048b400852ffd0c3')
+    match(0x94d8d0, '83ec0c566a008bf1e8d395fcff')
 
     # Dispatch and lifetime are separate from queue membership / free capacity.
     match(0x94d540, '8b81780100005683f8ff')
@@ -119,6 +122,9 @@ def audit(path):
                 add_command_consumes_argument_reference=True,
                 enqueue_retains_reference=True,
                 creator_returns_additional_owned_reference=True,
+                allocator_dispatch_global='01ad1abc',
+                allocator_failure_behavior_verified=False,
+                command_reference_constructor='00429a10',
                 command_dispatcher='0094d9a0', dispatch_caller='009818a0',
                 dispatch_skip_mask=0x200000, retained_reference_offset=0x1a0,
                 retained_reference_may_outlive_queue_membership=True,

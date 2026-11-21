@@ -595,3 +595,23 @@ clarifies velocity units; no executable behavior changed afterward.
 No game, fixture/suite, engine call, live process read, input or network session
 was run. Safe native backend, actual loaded-world producer and two-PC Radmin
 mission/failure/host-save acceptance are still unverified under the test hold.
+
+## 2026-11-21 — native command binding candidate, compile/static only
+
+Added guarded MoveDir owner with real pinned native bindings, separate null
+allocation check, explicit caller and consumed argument references, conservative
+queue guards, restricted field updates, cancel request and caller-only release.
+No game callback calls it. It is not an enabled remote actor backend.
+
+Full i686 clang 23.1.5 warnings-as-errors build completed in build/native-move.
+The full-hash read-only audit matched new allocator/ref constructor/ClearMove
+sites. Inspected emitted CoopMoveCommandCreate in the built PE: allocator cdecl
+caller cleanup, ref/init thiscall ECX, and AddCommand ECX=Human with reference
+then type pushes and callee cleanup. No program/DLL/fixture/suite was executed.
+
+Reserved-storage zero initialization, pre-initialization before AddCommand's
+initializer, OOM/exception behavior, actual reference balance, exclusive AI
+ownership, cancellation/physical stop and unload remain unverified. Cancel and
+caller ref release are explicitly not destruction/stop evidence. There were no
+live process reads, game/input/network sessions. Cyberpunk hold remains active;
+full campaign and two-PC mission/failure/save acceptance are not achieved.
