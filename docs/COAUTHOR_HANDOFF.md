@@ -661,3 +661,21 @@ were found statically but do not yet prove a reversible AI ownership API.
 Next: controller eligibility/ownership and confirmed stop, actual Human backend
 and verified loaded-world producer. Neither runtime avatar nor two-PC story/
 failure/restart/host-save acceptance is established.
+
+## 2026-11-21 — AI lifecycle pairing and observation module
+
+New human_ai.c/.h reader checks pinned Human/controller type, full GUID, both
+Human back-pointers, bounds and repeated relevant fields. It does not retain
+refs, mutate AI or establish ownership. Only -TestHuman logs it after Setup,
+after Activate and before release. No new event has in-game acceptance yet.
+agent presence and raw +0x170 mode flags are NOT AI suppression/stop evidence.
+
+Extended full-SHA audit matched activation -> controller slot+0x10 (0x9960b0)
+and deactivation -> slot+0x14 (0x99d860); whole-Human deactivation also disables
+physics. SDK ScriptSetControlStyleStr resolves to stub 0x91aac0 for Human.
+Neither is an AI-only ownership policy. Read HUMAN_CONTROL.md/HUMAN_TEST.md.
+Full pinned warnings-as-errors compilation passed in build/human-ai; byte audit
+passed, no game/tests/fixtures/live memory/input/network/native calls executed.
+Hold continues. Next: actual per-actor AI ownership mechanism preserving physics
+and lifecycle, then native movement/confirmed stop and loaded-world producer.
+No two-PC mission/failure/restart/save or full campaign acceptance is claimed.

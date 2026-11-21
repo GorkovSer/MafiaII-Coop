@@ -4,6 +4,7 @@
 #include "human_test.h"
 #include "entity_registry.h"
 #include "command_queue.h"
+#include "human_ai.h"
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
@@ -82,6 +83,17 @@ static void record_command_queue(void *human) {
         record("command_dispatch_skip_flag", !!(*(uint32_t *)((char *)human + 0x20) & 0x200000u));
     }
 }
+static void record_ai(void *human, const char *phase) {
+    if (!human_valid(human)) { record("ai_lost_handle", 1); return; }
+    CoopHumanAi ai;
+    CoopHumanAiStatus status = CoopReadHumanAi(registry_read, NULL,
+        (uint32_t)(uintptr_t)human, owned_guid, &ai);
+    record(phase, (unsigned int)status);
+    if (status == COOP_AI_VALID) {
+        record("ai_agent_present", ai.agent != 0);
+        record("ai_mode_flags_raw", ai.mode_flags);
+    }
+}
 static void poll_removal(void) {
     if (!pending_removal) return;
     uint32_t current;
@@ -122,6 +134,7 @@ static void remove_owned(void) {
     pending_removal = owned_guid;
     removal_deadline = GetTickCount64() + 10000;
     removal_status = -1;
+    record_ai(human, "ai_before_release");
     record("release_requested", 1);
     ((entity_call_type)(uintptr_t)0x119ddd0)(human);
     /* No read of human or its model after Release, no second destructor/free. */
@@ -227,11 +240,13 @@ void CoopHumanTestEvent(unsigned int id) {
     }
     ((set_position_type)(uintptr_t)0x94e960)(human, position);
     record("flags_after_setup", *(uint32_t *)((char *)human + 0x20));
+    record_ai(human, "ai_after_setup");
     /* Upstream Human/Player wrappers clear exactly this bit after Setup.
        Its semantic name is not established; this is a measured experiment. */
     *(uint32_t *)((char *)human + 0x20) &= ~0x40u;
     ((entity_call_type)(uintptr_t)0x1192170)(human);
     record("active", !!(*(uint32_t *)((char *)human + 0x20) & 1));
+    record_ai(human, "ai_after_activate");
     remove_at = GetTickCount64() + 60000;
     record_position(human);
     record_command_queue(human);

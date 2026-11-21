@@ -338,3 +338,33 @@ only refusing guards: it attempts all four recursive operations from each outer
 operation's guard and checks unchanged owner fields and subsequent barrier
 release. No engine call should be reached by that scenario. It is wired into
 test-probe.ps1 for after the hold; it has NOT been executed.
+
+# Controller activation and diagnostic reader (2026-11-21, compile/static only)
+
+Activation 0x1192170 reaches Human vtable+0x18 -> 0x981660. That calls
+0x94be10, whose 0x94be45 path calls controller vtable+0x10 -> 0x9960b0.
+The paired Human vtable+0x1c -> 0x987220 deactivates physics through its slot+8
+and calls 0x985910, which invokes controller vtable+0x14 -> 0x99d860.
+This identifies lifecycle context for that controller operation, not a safe
+standalone pause/resume contract. Do not deactivate the whole Human to stop AI:
+the remote player's physical movement needs to remain active.
+
+Another rejected shortcut: SDK ScriptSetControlStyleStr at 0x91de50 follows
+the Human's vtable+0x170. For concrete Human vtable 0x1967058 that slot is
+0x91aac0 (`xor al,al; ret 4`). It is a stub, not a controller ownership switch.
+Other classes/EXEs may differ; no SDK name overrides this pinned evidence.
+
+src/game/human_ai.c implements a read-only controller snapshot for this exact
+Human class. It validates the full requested GUID/type, Human/controller
+vtables, both Human back-pointers, address bounds and repeated relevant state.
+Output is cleared on refusal. The caller must first establish registry identity,
+game thread and full EXE hash; repeated reads do not pin an engine lifetime.
+No reference is retained. agent is the raw controller+0xc pointer; mode_flags
+is the raw byte at +0x170. Neither a zero agent nor any flag value proves AI
+disabled, physical stop, registration absence or exclusive movement ownership.
+
+Only opt-in -TestHuman records this snapshot after Setup, after activation and
+before release. No default observer/remote actor path calls it. No AI or command
+field is changed by the reader. Full pinned build and extended byte audit passed;
+reader statuses and these lifecycle observations still need in-game acceptance
+after the user resumes tests. Remote movement/world gates remain closed.

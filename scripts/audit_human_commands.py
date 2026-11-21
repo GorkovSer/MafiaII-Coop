@@ -115,6 +115,21 @@ def audit(path):
     match(0x1967228, struct.pack('<I', 0x99f640).hex())
     match(0x1967228 + 0x14, struct.pack('<I', 0x99d860).hex())
     match(0x99d8b2, '8d4e44e896f8ffff')
+    # Entity activation reaches Human initialization, which calls controller
+    # slot+0x10. Deactivation has a paired slot+0x14 AND shuts down physics.
+    match(0x1967058 + 0x18, struct.pack('<I', 0x981660).hex())
+    match(0x1967058 + 0x1c, struct.pack('<I', 0x987220).hex())
+    match(0x9816db, '8bcee82ea7fcff')
+    match(0x94be45, '8b8ea80000008b018b501083c404ffd2')
+    match(0x1967228 + 0x10, struct.pack('<I', 0x9960b0).hex())
+    match(0x98598f, '8b8ea80000008b118b4214ffd0')
+    match(0x9872b9, '8b8e900100008b118b4208ffd0')
+    match(0x9872d1, '8bcee838e6ffff')
+    # SDK ScriptSetControlStyleStr dispatches to a Human slot which is a stub
+    # for this concrete class. It cannot be assumed to disable Human AI.
+    match(0x91de50, '8b098b018b8070010000ffe0')
+    match(0x1967058 + 0x170, struct.pack('<I', 0x91aac0).hex())
+    match(0x91aac0, '32c0c20400')
 
     # MoveDir descriptor lives in zero-initialized storage; its function
     # pointers are installed by this static initializer, not file data.
@@ -166,6 +181,9 @@ def audit(path):
                 human_ai_embedded_update_offset=0x44,
                 human_ai_update_caller='0099a890',
                 human_ai_update='00999b80',
+                human_ai_activate='009960b0', human_ai_deactivate='0099d860',
+                human_deactivate_also_deactivates_physics=True,
+                human_control_style_string_slot_is_stub=True,
                 human_ai_teardown_requires_nonnull_pointer=True,
                 human_ai_null_pointer_is_disable_switch=False,
                 ai_ownership_verified=False, runtime_control_verified=False,

@@ -647,3 +647,21 @@ allocation, reference lifetime, AI exclusion and physical stop remain unverified
 Further static tracing found C_AIControlMessage/OnAIControl registration names,
 but no verified reversible AI disable operation; no guessed binding was added.
 Full campaign and two-PC mission/failure/host-save acceptance remain outstanding.
+
+## 2026-11-21 — AI lifecycle pairing and bounded reader
+
+Pinned read-only audit passed after adding Human activation -> controller+0x10,
+paired deactivation -> controller+0x14, adjacent physics deactivation and
+ScriptSetControlStyleStr -> concrete Human stub sites. Output is ignored at
+work/story-metadata/human-ai-lifecycle.json. Static evidence rules out whole-Human
+deactivation and this SDK control-style wrapper as AI-only movement policies.
+
+Added production human_ai.c/.h read-only snapshot with full GUID/type, vtable,
+two back-pointer, arithmetic/readability and repeated relevant-state checks;
+refused output clears. Opt-in -TestHuman logs statuses at Setup/Activate/release,
+agent presence and raw mode flags. These do not prove AI exclusion or stop.
+Full pinned x86 clang 23.1.5 warnings-as-errors build completed in build/human-ai.
+Source/error paths reviewed; no new or existing fixture/suite executed. No game,
+live memory, input, network or native binding was run. No live result is claimed
+for these new observations. User hold remains; actual Human backend, loaded-world
+producer and two-PC story/failure/restart/host-save acceptance are outstanding.

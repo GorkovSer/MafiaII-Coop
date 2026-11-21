@@ -26,6 +26,8 @@ Queue absence is not proof of movement stop or command deletion: Human+0x1a0 sep
 
 Human+0xa8 is populated during base construction with a controller (vtable 0x1967228), despite an earlier null store. Native update and teardown dereference it without null checks. Never zero/replace/free it as an AI-disable shortcut. Controller vtable+0x14 is not a verified pause API; read the lifetime/update evidence in HUMAN_CONTROL.md before implementing ownership.
 
+CoopReadHumanAi is read-only layout evidence; neither agent absence nor controller+0x170 flags authorize movement. Human ScriptSetControlStyleStr dispatches to a stub at 0x91aac0 for this concrete class. Human deactivation also deactivates physics; do not use it as AI-only suppression. New -TestHuman AI lifecycle observations are compile-only under the continuing test hold.
+
 User requires all Mafia II test launches in windowed mode on the second display. Use `scripts/start-probe.ps1 -Observer -SecondScreen -WaitForExit` with the intended build directory; video settings are changed only in the isolated profile. Do not run a fullscreen or primary-display game test. Never force-close an existing user game to make a new test possible.
 
 Latest explicit user override (2026-11-18): fullscreen testing is now authorized to investigate the separate game/system cursor. Keep video changes inside the isolated profile. The user specifically requires loading the save through the normal menu using arrows and Enter; do not substitute the opt-in internal Continue backend for this test. Fullscreen authorization overrides the older window-only instruction above; it does not authorize changing the original profile.

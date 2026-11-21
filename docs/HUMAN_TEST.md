@@ -80,3 +80,14 @@ for retained/dequeued references were compiled only; tests are still on hold.
 Next: make creation/removal repeatable across mission reloads, establish AI
 ownership and controlled position updates, then connect the real received
 snapshot mailbox. Two-PC Radmin mission acceptance remains outstanding.
+
+## AI observations prepared during test hold
+
+The opt-in diagnostic now records ai_after_setup, ai_after_activate and
+ai_before_release after resolving the owned GUID. Status values are 0 unreadable,
+1 layout/identity mismatch, 2 relevant state changed during reading, 3 valid
+layout. Only status 3 also records ai_agent_present and ai_mode_flags_raw.
+The reader checks controller type and both Human back-pointers without engine
+calls, reference changes or AI writes. These are compile-only additions: none
+of the new events has been observed in game. Agent absence and raw mode flags
+must not be interpreted as disabled AI or movement authority. See HUMAN_CONTROL.md.
