@@ -8,6 +8,7 @@
 typedef void *(__attribute__((thiscall)) *ScrMove)(void *, uint32_t *,
     const float *, unsigned int, const float *, int);
 typedef void (__attribute__((thiscall)) *ReleaseRef)(uint32_t *);
+typedef void (__attribute__((thiscall)) *ChangeState)(void *, unsigned int);
 _Static_assert(sizeof(void *) == 4, "Pinned engine requires x86");
 static int read_at(void *context, uint32_t at, void *out, size_t size) {
     (void)context;
@@ -88,5 +89,28 @@ CoopScriptStateStatus CoopScriptMoveObserve(CoopScriptMove *o, CoopScriptState *
     CoopScriptStateStatus result = COOP_SCRIPT_STATE_UNREADABLE;
     if (o->guard(o->context, o->guid, o->human, COOP_SCRIPT_MOVE_OBSERVE) && abi())
         result = CoopReadScriptMoveState(read_at, NULL, o->sync, out);
+    o->busy = 0; return result;
+}
+CoopScriptMoveResult CoopScriptMoveRequestEnd(CoopScriptMove *o) {
+    if (!o || o->busy || !o->sync || !o->guard) return COOP_SCRIPT_MOVE_REFUSED;
+    o->busy = 1;
+    CoopScriptMoveResult result = COOP_SCRIPT_MOVE_REFUSED;
+    static const unsigned char signature[] = {0x8b,0x41,8,0x8b,0x54,0x24,4,0x3b,0xc2,0x74,0x12};
+    unsigned char actual[sizeof(signature)];
+    CoopScriptState state;
+    if (o->guard(o->context, o->guid, o->human, COOP_SCRIPT_MOVE_END) && abi() &&
+        read_at(NULL, 0xf5d290, actual, sizeof(actual)) &&
+        !memcmp(actual, signature, sizeof(actual)) &&
+        CoopReadScriptMoveState(read_at, NULL, o->sync, &state) == COOP_SCRIPT_STATE_VALID) {
+        if (state.command_state) result = COOP_SCRIPT_MOVE_TERMINAL_OBSERVED;
+        else if (state.linked_to_sync) {
+            /* Native conditional transition; no queue/global-AI pointer writes.
+               Own Sync keeps userdata's command ref alive across notification.
+               State zero takes the native direct-state branch; task cleanup
+               and physical stop are still asynchronous/unverified. */
+            ((ChangeState)(uintptr_t)0xf5d290)((void *)(uintptr_t)state.command, 3);
+            result = COOP_SCRIPT_MOVE_END_REQUESTED;
+        }
+    }
     o->busy = 0; return result;
 }

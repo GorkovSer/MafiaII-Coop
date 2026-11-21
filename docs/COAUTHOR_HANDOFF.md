@@ -722,3 +722,24 @@ Full pinned warnings-as-errors build/script-state and exact-byte audit passed.
 Synthetic state-reader fixture compiled, NOT executed; no game/native calls/
 tests/live memory/input/network ran. Hold remains. Actual backend, verified
 loaded-world producer and two-PC story/failure/restart/save remain outstanding.
+
+## 2026-11-21 — guarded native end request, no stop acceptance
+
+Added CoopScriptMoveRequestEnd: END guard authorizes pinned image/thread/owned
+Sync-command cleanup even after world withdrawal. Exact native signature and
+typed ownership chain are checked. Only linked raw-state-0 commands request
+state 3 via 0xf5d290; 1..3 are preserved as TERMINAL_OBSERVED. Owned Sync stays
+retained. Busy covers guards/native callbacks. No callback calls this module.
+
+END_REQUESTED/TERMINAL_OBSERVED do NOT mean stopped or removed. Native state-0
+branch writes 3 without Sync Done/ref cleanup; engine processing/physical stop
+must be verified separately. Never map either result directly to backend stop.
+Alternate target-removal 0xf95100 remains unbound: its inspected slot+0x4c is a
+secondary interface (dtor this adjustment -0x40), not Human/controller/brain.
+
+See SCRIPT_MOVE.md. Full pinned warnings-as-errors build/script-end, full-SHA
+audit and emitted-PE thiscall/argument review passed. No game/tests/fixtures/
+native calls/live memory/input/network executed; user hold stays. Next: concrete
+movement task cleanup/physical-stop condition and end/ref acceptance after hold,
+then actual remote backend plus verified loaded-world producer. Two-PC mission/
+failure/restart/host-save and full campaign acceptance remain outstanding.

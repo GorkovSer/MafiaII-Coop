@@ -704,3 +704,25 @@ Full pinned x86 warnings-as-errors compilation completed in build/script-state.
 No game/native binding/test suite/fixture/live memory/input/network execution.
 No actual command cancellation, physical stop or two-PC gameplay claimed; user
 hold continues and all campaign acceptance requirements remain outstanding.
+
+## 2026-11-21 — scripted command end request candidate
+
+Added guarded/reentry-protected CoopScriptMoveRequestEnd using pinned native
+conditional command state change to 3. Full typed owned Sync/command chain and
+remaining Sync link are required for raw state 0. Existing states 1..3 stay
+intact and return TERMINAL_OBSERVED. Caller-owned Sync ref is preserved; no
+queue/global pointers, raw +0x0d or counters are written directly. No callback
+calls the candidate and neither result is accepted as physical stop.
+
+Extended read-only full-SHA byte audit passed for native task result propagation,
+message teardown's state-3 request and secondary-interface adjustment in the
+alternate targeted-removal path. JSON remains ignored at
+work/story-metadata/script-end-audit.json. Full pinned x86 clang 23.1.5
+warnings-as-errors build completed in build/script-end; emitted PE confirmed
+ECX=command, push 3, callee cleanup for native 0xf5d290.
+
+No game/tests/fixtures/native calls/live memory/input/network executed. The
+state-0 native branch only writes state 3, so scheduler cleanup, Sync Done,
+reference balance and physical stop after this request are unverified. Targeted
+removal owner remains unverified/unbound. Hold continues; no actual backend or
+two-PC story/failure/restart/host-save/full-campaign acceptance is claimed.

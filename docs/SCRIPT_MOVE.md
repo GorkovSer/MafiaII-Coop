@@ -113,3 +113,34 @@ Next trace the scheduler's concrete target-removal owner/caller and its task
 cleanup, then verify actual stop/ref balance when tests resume. The new callback
 fixture covers valid/terminal raw states, wrong link/class/count, overflow,
 missing owned userdata and changed snapshots; it was compiled, not executed.
+
+## Candidate end request (2026-11-21, not executed)
+
+CoopScriptMoveRequestEnd now uses the command's native conditional state-change
+routine at 0xf5d290 with value 3. This avoids guessing a target-removal subsystem
+pointer. Native task propagation at 0x40dce0 maps task result 2 to command state
+1 and task result 3 to command state 2; native message teardown at 0xf66497 also
+requests command state 3 in a reference-count-dependent path. This supports a
+candidate end request, not proof of scheduler cancellation or physical stop.
+
+The END guard must verify image/thread and the owned Sync/command while still
+allowing cleanup after world withdrawal. The implementation rechecks the native
+signature and complete typed Sync ownership chain. States 1..3 return
+TERMINAL_OBSERVED without modification. Only state 0 with a matching remaining
+command-to-owned-Sync link is changed; the owned Sync reference is preserved.
+Busy prevents recursive calls during guards/notification, and clears on normal
+returns. There are no callback callers and no automatic network stop behavior.
+
+For previous state 0, 0xf5d290 directly writes state 3; it does not invoke the
+Sync notification/release path on that branch. Existing state 1..3 can reach
+0xf5d210, but our wrapper deliberately preserves those results instead. Thus
+END_REQUESTED can precede task cleanup and Sync Done, or fail to produce them;
+later observation must not equate state 3, link absence or a Done flag with
+stationary physics. Keep the ref until the actual lifecycle/stop is verified.
+Do not use a true remote actor stop result until that proof exists.
+
+The alternate 0xf95100 target-removal function remains unbound. In one inspected
+vtable it is secondary-interface slot+0x4c and its deleting destructor adjusts
+this by -0x40. Neither Human, controller nor the controller+4 brain vtable is
+that interface. Next trace the concrete command task and its physical cleanup,
+then validate the end request, refs and actual stop once tests resume.

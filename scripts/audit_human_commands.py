@@ -167,6 +167,16 @@ def audit(path):
     match(0xf95119, '8b41288b5424143b02753d')
     match(0xf95124, '8b018b501cffd2')
     match(0xf951b9, '8b4e086a02e8cd80fcff')
+    # Native task result propagation maps task state 3 -> command state 2 and
+    # task state 2 -> command state 1. End/abort path also uses state 3 directly.
+    match(0x40dce0, '8b4110568b7424083bc6742c')
+    match(0x40dcfd, '83e80175146a02e807f5b400')
+    match(0x40dd0f, '6a01e8faf4b400')
+    match(0xf66497, '8b461c85c0740f833802750a8b4e186a03e8e36dffff')
+    # Subsystem slot+0x4c is a secondary interface here: its deleting dtor
+    # adjusts this by -0x40. This is not Human/controller/brain's vtable.
+    match(0x18fd35c + 0x4c, struct.pack('<I', 0xf95100).hex())
+    match(0xf99ea0, '83e940e988290000')
 
     # MoveDir descriptor lives in zero-initialized storage; its function
     # pointers are installed by this static initializer, not file data.
@@ -234,6 +244,10 @@ def audit(path):
                 script_move_targeted_remove_candidate='00f95100',
                 script_move_targeted_remove_owner_verified=False,
                 script_move_flag_d_serialized=True,
+                script_move_task_success_command_state=1,
+                script_move_task_failure_command_state=2,
+                script_move_end_request_state=3,
+                script_move_end_request_runtime_verified=False,
                 human_ai_teardown_requires_nonnull_pointer=True,
                 human_ai_null_pointer_is_disable_switch=False,
                 ai_ownership_verified=False, runtime_control_verified=False,

@@ -2,7 +2,8 @@
 #define COOP_SCRIPT_MOVE_H
 #include <stdint.h>
 #include "script_move_state.h"
-enum { COOP_SCRIPT_MOVE_START = 1, COOP_SCRIPT_MOVE_RELEASE = 2, COOP_SCRIPT_MOVE_OBSERVE = 3 };
+enum { COOP_SCRIPT_MOVE_START = 1, COOP_SCRIPT_MOVE_RELEASE = 2,
+    COOP_SCRIPT_MOVE_OBSERVE = 3, COOP_SCRIPT_MOVE_END = 4 };
 typedef int (*CoopScriptMoveGuard)(void *context, uint32_t guid, uint32_t human,
     unsigned int operation);
 typedef struct {
@@ -13,7 +14,8 @@ typedef struct {
 } CoopScriptMove;
 typedef enum {
     COOP_SCRIPT_MOVE_REFUSED, COOP_SCRIPT_MOVE_HANDLE_CREATED,
-    COOP_SCRIPT_MOVE_INCOMPLETE, COOP_SCRIPT_MOVE_REFERENCE_RELEASED
+    COOP_SCRIPT_MOVE_INCOMPLETE, COOP_SCRIPT_MOVE_REFERENCE_RELEASED,
+    COOP_SCRIPT_MOVE_END_REQUESTED, COOP_SCRIPT_MOVE_TERMINAL_OBSERVED
 } CoopScriptMoveResult;
 /* Candidate, not attached to callbacks. Zero-initialize once; never reset a
    live owner. Calls must be serialized on the verified game thread.
@@ -27,9 +29,15 @@ CoopScriptMoveResult CoopScriptMoveStart(CoopScriptMove *owner,
     const float position[3], unsigned int mode, const float end_direction[3]);
 /* Drops only our reference. Does not cancel movement, notify Done or prove
    physical stop. Guard must permit releasing this owned ref after world/actor
-   withdrawal without dereferencing a dead Human. Cancellation is not bound yet. */
+   withdrawal without dereferencing a dead Human. */
 CoopScriptMoveResult CoopScriptMoveRelease(CoopScriptMove *owner);
 /* Observation guard needs pinned image/thread and our owned Sync ref, and must
    not require a live Human or world. No native mutation, stop or success verdict. */
 CoopScriptStateStatus CoopScriptMoveObserve(CoopScriptMove *owner, CoopScriptState *out);
+/* Candidate request through native command state-change routine. END guard
+   verifies image/thread and our owned Sync/command, even after world withdrawal.
+   Only linked raw-state-0 commands are changed; 1..3 are left intact. Neither
+   END_REQUESTED nor TERMINAL_OBSERVED establishes stopped motion/task removal.
+   Caller must preserve the Sync ref and await separately verified stop. */
+CoopScriptMoveResult CoopScriptMoveRequestEnd(CoopScriptMove *owner);
 #endif
