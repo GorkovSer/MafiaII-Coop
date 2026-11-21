@@ -1,7 +1,8 @@
 #ifndef COOP_SCRIPT_MOVE_H
 #define COOP_SCRIPT_MOVE_H
 #include <stdint.h>
-enum { COOP_SCRIPT_MOVE_START = 1, COOP_SCRIPT_MOVE_RELEASE = 2 };
+#include "script_move_state.h"
+enum { COOP_SCRIPT_MOVE_START = 1, COOP_SCRIPT_MOVE_RELEASE = 2, COOP_SCRIPT_MOVE_OBSERVE = 3 };
 typedef int (*CoopScriptMoveGuard)(void *context, uint32_t guid, uint32_t human,
     unsigned int operation);
 typedef struct {
@@ -28,4 +29,7 @@ CoopScriptMoveResult CoopScriptMoveStart(CoopScriptMove *owner,
    physical stop. Guard must permit releasing this owned ref after world/actor
    withdrawal without dereferencing a dead Human. Cancellation is not bound yet. */
 CoopScriptMoveResult CoopScriptMoveRelease(CoopScriptMove *owner);
+/* Observation guard needs pinned image/thread and our owned Sync ref, and must
+   not require a live Human or world. No native mutation, stop or success verdict. */
+CoopScriptStateStatus CoopScriptMoveObserve(CoopScriptMove *owner, CoopScriptState *out);
 #endif

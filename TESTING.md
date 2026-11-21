@@ -684,3 +684,23 @@ network execution. Handle creation does not prove AI acceptance or movement;
 Release is not cancellation/stop. OOM, supersession, arbitration, cancellation,
 ref balance, physical stop and teardown still need acceptance. User hold remains;
 two-PC story/failure/restart/host-save and full campaign are unverified.
+
+## 2026-11-21 — scripted movement state observation, compile/static only
+
+Traced command state setter/conditional changer, owned Sync-wrapper release,
+single four-byte AI refcounter allocation and typed userdata destruction.
+Identified target-specific task/queue removal at 0xf95100; its concrete owner
+and physical stop are not proven, so no cancel binding was added. Flag+0x0d
+serialization evidence prevents assuming the old raw write is a valid cancel.
+Extended full-SHA read-only byte audit passed; output is ignored at
+work/story-metadata/script-state-audit.json.
+
+Added pure callback state reader and guarded/reentry-protected Observe API,
+with pointer/type/counter/link checks, repeated snapshots and cleared refusal
+output. Sync flags report byte+8 only, avoiding uninitialized adjacent bytes.
+Authored/compiled synthetic fixture for raw states, malformed ownership chain,
+overflow/unreadable counter and changing snapshots. Fixture NOT executed.
+Full pinned x86 warnings-as-errors compilation completed in build/script-state.
+No game/native binding/test suite/fixture/live memory/input/network execution.
+No actual command cancellation, physical stop or two-PC gameplay claimed; user
+hold continues and all campaign acceptance requirements remain outstanding.

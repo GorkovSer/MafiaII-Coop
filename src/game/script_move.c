@@ -80,3 +80,13 @@ CoopScriptMoveResult CoopScriptMoveRelease(CoopScriptMove *o) {
     }
     o->busy = 0; return result;
 }
+CoopScriptStateStatus CoopScriptMoveObserve(CoopScriptMove *o, CoopScriptState *out) {
+    if (!out) return COOP_SCRIPT_STATE_UNREADABLE;
+    memset(out, 0, sizeof(*out));
+    if (!o || o->busy || !o->sync || !o->guard) return COOP_SCRIPT_STATE_UNREADABLE;
+    o->busy = 1;
+    CoopScriptStateStatus result = COOP_SCRIPT_STATE_UNREADABLE;
+    if (o->guard(o->context, o->guid, o->human, COOP_SCRIPT_MOVE_OBSERVE) && abi())
+        result = CoopReadScriptMoveState(read_at, NULL, o->sync, out);
+    o->busy = 0; return result;
+}

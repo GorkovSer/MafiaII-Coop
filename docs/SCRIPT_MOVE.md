@@ -77,3 +77,39 @@ do not assume it cancels AI work. When testing resumes, first use one isolated
 mod-owned Human, verify command acceptance, motion, cancellation and teardown,
 then connect the existing remote-actor controller behind verified world agreement.
 No production loaded-world key producer exists yet, so that gate stays closed.
+
+## State observation and cancellation evidence (2026-11-21)
+
+CoopScriptMoveObserve now reads the owned Sync -> typed userdata -> command
+chain through script_move_state.c. It checks Sync vtable/positive intrusive
+count, owned-userdata flag, userdata vtable 0x197bd94, AI move vtable 0x197bccc,
+the separate positive command counter, state range 0..3 and any remaining
+command-to-Sync link. Two snapshots must agree on relevant pointers/state.
+Output clears on refusal. No game function, ref mutation or Human dereference
+is needed; its guard authorizes observation of our owned Sync on the game
+thread even after actor/world withdrawal. A valid snapshot is not physical stop.
+
+The separate AI counter is **four bytes**, allocated by 0x9570a0. Do not read
+a second count from counter+4: other native handle families have two counters,
+but that does not apply to this one. Userdata retains/releases the single
+counter at 0xc368d9 / 0xc4242c. The command owns a four-byte Sync wrapper at
+command+4; native state setter 0xf5d210 writes state+8, notifies Sync Done and
+then releases/clears that wrapper. The Sync flag is byte+8; upper bytes are
+not initialized by the factory and are not reported by the reader.
+
+Native 0xf5d290 performs conditional state changes, using 0xf5d210 when the
+previous state is in 1..3. The raw state codes are reported without promoting
+them to a gameplay-success/cancellation verdict. 0xf95100 finds a command by
+identity in a subsystem's active tasks and queued commands; it calls a task's
+slot+0x1c, destroys/removes that task, and marks queued matches with state 2.
+Its owning subsystem and complete physical-stop contract are not established;
+do not call it with Human/controller/agent merely because one has a pointer.
+
+The old raw command+0x0d write is still rejected as a cancellation binding.
+The pinned byte is initialized and serialized/deserialized at 0xf88914,
+0xf5d307 and 0xf5d3b9; a bare setter at 0xf3c9a0 has no discovered direct
+call/table references in this file. This does not prove it aborts a running task.
+Next trace the scheduler's concrete target-removal owner/caller and its task
+cleanup, then verify actual stop/ref balance when tests resume. The new callback
+fixture covers valid/terminal raw states, wrong link/class/count, overflow,
+missing owned userdata and changed snapshots; it was compiled, not executed.

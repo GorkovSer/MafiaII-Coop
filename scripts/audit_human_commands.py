@@ -151,6 +151,22 @@ def audit(path):
     match(0xf9f883, '8b430cf64004017464')
     match(0xc368b6, 'c70094bd9701')
     match(0xc368ca, '8b4a048b1289500489480885d27402ff01c20400')
+    # Shared AI command counter is a separate FOUR-byte allocation, unlike
+    # other two-count native handle families. Sync userdata retains that count.
+    match(0x9570b9, '6a04e870a7aaff83c40485c07414')
+    match(0x9570c7, 'c70000000000893e894604ff00')
+    match(0xc36579, 'c706ccbc9701')
+    match(0xc42423, '837e040074288b4608ff08')
+    match(0xf5d223, '894608')
+    match(0xf5d25e, '8b56048b0ae818a42800')
+    match(0xf5d27f, 'c7460400000000')
+    match(0xf5d290, '8b41088b5424043bc274124883f8027709')
+    match(0xf5d307, '0fb6470d')
+    match(0xf5d3b9, '884b0d')
+    match(0xf95100, '5156578bf98bb7800000003bb784000000')
+    match(0xf95119, '8b41288b5424143b02753d')
+    match(0xf95124, '8b018b501cffd2')
+    match(0xf951b9, '8b4e086a02e8cd80fcff')
 
     # MoveDir descriptor lives in zero-initialized storage; its function
     # pointers are installed by this static initializer, not file data.
@@ -211,6 +227,13 @@ def audit(path):
                 script_move_sync_ref_copy='00429820', script_move_sync_ref_release='00422d40',
                 script_move_ai_user_data_vtable='0197bd94',
                 script_move_cancellation_verified=False,
+                script_move_command_vtable='0197bccc', script_move_state_offset=8,
+                script_move_ai_counter_size=4,
+                script_move_state_setter='00f5d210',
+                script_move_state_change_candidate='00f5d290',
+                script_move_targeted_remove_candidate='00f95100',
+                script_move_targeted_remove_owner_verified=False,
+                script_move_flag_d_serialized=True,
                 human_ai_teardown_requires_nonnull_pointer=True,
                 human_ai_null_pointer_is_disable_switch=False,
                 ai_ownership_verified=False, runtime_control_verified=False,

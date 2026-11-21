@@ -701,3 +701,24 @@ fixtures/native calls/live memory/input/network ran; user hold remains. Next:
 trace native script-command cancellation/supersession and verify stop/ref balance
 when tests resume, then choose/wire actual backend and loaded-world producer.
 No two-PC mission/failure/restart/save or full campaign acceptance is claimed.
+
+## 2026-11-21 — scripted command state reader; cancellation still pending
+
+Added script_move_state.c/.h pure reader and CoopScriptMoveObserve. It follows
+our owned Sync through typed userdata to AI move command, checking pointer/
+class/count/link/state and repeated snapshots. Refusal clears output. Observe
+needs pinned image/thread/owned Sync, not a live Human/world. No caller attached.
+Raw state/Sync flags/link absence are NOT success, cancellation or stop proof.
+
+Important new pinned fact: this AI command's separate refcounter is one FOUR-
+byte allocation (0x9570a0), not the two-counter handle family. Sync flags are
+byte+8; adjacent uninitialized bytes must not be interpreted as flags. Native
+state setter 0xf5d210 notifies Sync then releases/clears command+4 Sync wrapper.
+0xf95100 removes matching tasks/queued commands, but its concrete owning object
+and physical cleanup remain unverified. Do not guess this or use raw +0x0d
+writes; that byte is serialized. Next: concrete removal owner/caller/task cleanup.
+
+Full pinned warnings-as-errors build/script-state and exact-byte audit passed.
+Synthetic state-reader fixture compiled, NOT executed; no game/native calls/
+tests/live memory/input/network ran. Hold remains. Actual backend, verified
+loaded-world producer and two-PC story/failure/restart/save remain outstanding.

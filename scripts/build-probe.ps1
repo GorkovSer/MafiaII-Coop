@@ -21,10 +21,11 @@ $actorSource=Join-Path $root 'src/game/remote_actor.c'
 $moveSource=Join-Path $root 'src/game/move_command.c'
 $aiSource=Join-Path $root 'src/game/human_ai.c'
 $scriptMoveSource=Join-Path $root 'src/game/script_move.c'
+$scriptStateSource=Join-Path $root 'src/game/script_move_state.c'
 $netLink=@('-I',(Join-Path $root 'third_party/enet/include'),(Join-Path $out 'enet.a'),'-lws2_32','-lwinmm','-lbcrypt')
 & $cc @common -shared (Join-Path $root 'src/probe/probe.c') '-Wl,--kill-at' -o (Join-Path $out 'coop_probe.dll')
 if ($LASTEXITCODE -ne 0) { throw 'Probe DLL build failed' }
-& $cc @common -DCOOP_OBSERVER -shared (Join-Path $root 'src/probe/probe.c') (Join-Path $root 'src/probe/observer.c') (Join-Path $root 'src/probe/profile.c') (Join-Path $root 'src/game/telemetry.c') (Join-Path $root 'src/game/story_test.c') (Join-Path $root 'src/game/model_test.c') (Join-Path $root 'src/game/human_test.c') $registrySource $commandSource $progressSource $actorSource $moveSource $aiSource $scriptMoveSource (Join-Path $root 'src/net/game_bridge.c') $remoteSource @netSources '-Wl,--kill-at' -o (Join-Path $out 'coop_observer.dll') -ladvapi32 @netLink
+& $cc @common -DCOOP_OBSERVER -shared (Join-Path $root 'src/probe/probe.c') (Join-Path $root 'src/probe/observer.c') (Join-Path $root 'src/probe/profile.c') (Join-Path $root 'src/game/telemetry.c') (Join-Path $root 'src/game/story_test.c') (Join-Path $root 'src/game/model_test.c') (Join-Path $root 'src/game/human_test.c') $registrySource $commandSource $progressSource $actorSource $moveSource $aiSource $scriptMoveSource $scriptStateSource (Join-Path $root 'src/net/game_bridge.c') $remoteSource @netSources '-Wl,--kill-at' -o (Join-Path $out 'coop_observer.dll') -ladvapi32 @netLink
 if ($LASTEXITCODE -ne 0) { throw 'Event observer DLL build failed' }
 & $cc @common -DCOOP_PROFILE_TEST -shared (Join-Path $root 'src/probe/probe.c') (Join-Path $root 'src/probe/profile.c') '-Wl,--kill-at' -o (Join-Path $out 'coop_profile_probe.dll')
 if ($LASTEXITCODE -ne 0) { throw 'Profile redirect test DLL build failed' }
@@ -50,6 +51,8 @@ if ($LASTEXITCODE -ne 0) {throw 'Entity registry fixture build failed'}
 if ($LASTEXITCODE -ne 0) {throw 'Command queue fixture build failed'}
 & $cc @common (Join-Path $root 'tests/test_move_reentry.c') $moveSource $commandSource -o (Join-Path $out 'test_move_reentry.exe')
 if ($LASTEXITCODE -ne 0) { throw 'Move reentry fixture build failed' }
+& $cc @common (Join-Path $root 'tests/test_script_move_state.c') $scriptStateSource -o (Join-Path $out 'test_script_move_state.exe')
+if ($LASTEXITCODE -ne 0) { throw 'Script movement state fixture build failed' }
 & $cc @common -mwindows (Join-Path $root 'tests/input_host.c') -o (Join-Path $out 'input_host.exe') -ldinput8 -ldxguid -luser32
 if ($LASTEXITCODE -ne 0) {throw 'Optional input diagnostic build failed'}
 & $cc @common -municode (Join-Path $root 'src/tools/native_input.c') -o (Join-Path $out 'coop_input.exe') -ladvapi32 -luser32
