@@ -644,3 +644,20 @@ ownership while preserving physics/dispatch/teardown. MoveDir EDIT and agreed
 world gates remain closed; no native backend is attached. Read-only byte audit
 succeeded; no game/tests/fixtures/live memory/input/network ran. User hold still
 applies. No two-PC mission/failure/save acceptance or AI suppression claimed.
+
+## 2026-11-21 — MoveDir owner recursive-entry protection
+
+Native candidate now holds a per-owner busy barrier across guards and native
+calls for Create/Input/Cancel/Release. Same-owner recursive calls return REFUSED
+without callbacks/state mutation; creation's pre-ref allocator interval and
+release's post-transfer destructor interval cannot start another operation.
+All normal returns unlock. Use on the verified game thread only; do not treat
+this as thread safety or engine exception recovery, or reset a live owner.
+
+Added production-linked tests/test_move_reentry.c with refusing recursive guards;
+compiled in full pinned warnings-as-errors build/move-reentry, NOT executed.
+No game/tests/live memory/input/network ran; user hold remains. AI message names
+were found statically but do not yet prove a reversible AI ownership API.
+Next: controller eligibility/ownership and confirmed stop, actual Human backend
+and verified loaded-world producer. Neither runtime avatar nor two-PC story/
+failure/restart/host-save acceptance is established.

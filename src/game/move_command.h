@@ -12,13 +12,16 @@ typedef struct {
     uint32_t human, guid, command; /* exactly one owned Command reference */
     CoopMoveGuard guard;
     void *context;
+    unsigned int busy; /* Same-game-thread reentry barrier, not a thread lock. */
 } CoopMoveCommand;
 typedef enum {
     COOP_MOVE_REFUSED, COOP_MOVE_CREATED, COOP_MOVE_UPDATED,
     COOP_MOVE_CANCEL_REQUESTED, COOP_MOVE_RELEASED, COOP_MOVE_INCOMPLETE
 } CoopMoveResult;
 /* Start with a zero-initialized owner. INCOMPLETE may still leave an owned
-   command; caller must preserve it for cleanup, never reset/overwrite it. */
+   command; caller must preserve it for cleanup, never reset/overwrite it.
+   All calls are serialized on the game thread. Recursive calls on the same
+   owner return REFUSED without invoking guards or modifying owner state. */
 CoopMoveResult CoopMoveCommandCreate(CoopMoveCommand *owner, CoopMoveGuard guard,
     void *context, uint32_t guid, uint32_t human);
 CoopMoveResult CoopMoveCommandInput(CoopMoveCommand *owner,

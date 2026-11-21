@@ -69,7 +69,7 @@ static int queue(CoopMoveCommand *o, CoopCommandQueue *q, int inserting) {
     }
     return inserting || matches == 1;
 }
-CoopMoveResult CoopMoveCommandCreate(CoopMoveCommand *o, CoopMoveGuard guard,
+static CoopMoveResult create(CoopMoveCommand *o, CoopMoveGuard guard,
     void *context, uint32_t guid, uint32_t human) {
     if (!o || o->command || !guard || !guid || !human) return COOP_MOVE_REFUSED;
     o->guard = guard; o->context = context; o->guid = guid; o->human = human;
@@ -96,7 +96,7 @@ CoopMoveResult CoopMoveCommandCreate(CoopMoveCommand *o, CoopMoveGuard guard,
     if (!header(o) || !queue(o, &q, 0)) return COOP_MOVE_INCOMPLETE;
     return COOP_MOVE_CREATED;
 }
-CoopMoveResult CoopMoveCommandInput(CoopMoveCommand *o,
+static CoopMoveResult input(CoopMoveCommand *o,
     const float facing[2], const float motion[2], float multiplier, uint8_t mode) {
     if (!facing || !motion || !isfinite(multiplier) || multiplier < 0 || multiplier > 1 || mode > 4)
         return COOP_MOVE_REFUSED;
@@ -116,17 +116,52 @@ CoopMoveResult CoopMoveCommandInput(CoopMoveCommand *o,
     memcpy(p+0x3c, &multiplier, 4); p[0x50] = mode; /* preserve high control bits */
     return COOP_MOVE_UPDATED;
 }
-CoopMoveResult CoopMoveCommandCancel(CoopMoveCommand *o) {
+static CoopMoveResult cancel(CoopMoveCommand *o) {
     CoopCommandQueue q;
     if (!guarded(o, COOP_MOVE_CLEANUP) || !header(o) || !queue(o, &q, 0)) return COOP_MOVE_REFUSED;
     ((ClearMove)(uintptr_t)0x94d8d0)((void *)(uintptr_t)o->human);
     /* ClearMove does not clear Human+0x1a0 or establish physical stop. */
     return COOP_MOVE_CANCEL_REQUESTED;
 }
-CoopMoveResult CoopMoveCommandRelease(CoopMoveCommand *o) {
+static CoopMoveResult release(CoopMoveCommand *o) {
     if (!guarded(o, COOP_MOVE_RELEASE) || !header(o)) return COOP_MOVE_REFUSED;
     uint32_t owned = o->command;
     o->command = 0; /* Destructor may reenter: transfer before the call. */
     ((ReleaseRef)(uintptr_t)0x422db0)(&owned);
     return COOP_MOVE_RELEASED;
+}
+
+/* Hold across guards as well as native calls: either can reenter. In
+   particular, allocator reentry precedes assigning command, and destructor
+   reentry follows clearing it. Neither interval permits another creation. */
+static int enter(CoopMoveCommand *o) {
+    if (!o || o->busy) return 0;
+    o->busy = 1;
+    return 1;
+}
+CoopMoveResult CoopMoveCommandCreate(CoopMoveCommand *o, CoopMoveGuard guard,
+    void *context, uint32_t guid, uint32_t human) {
+    if (!enter(o)) return COOP_MOVE_REFUSED;
+    CoopMoveResult result = create(o, guard, context, guid, human);
+    o->busy = 0;
+    return result;
+}
+CoopMoveResult CoopMoveCommandInput(CoopMoveCommand *o,
+    const float facing[2], const float motion[2], float multiplier, uint8_t mode) {
+    if (!enter(o)) return COOP_MOVE_REFUSED;
+    CoopMoveResult result = input(o, facing, motion, multiplier, mode);
+    o->busy = 0;
+    return result;
+}
+CoopMoveResult CoopMoveCommandCancel(CoopMoveCommand *o) {
+    if (!enter(o)) return COOP_MOVE_REFUSED;
+    CoopMoveResult result = cancel(o);
+    o->busy = 0;
+    return result;
+}
+CoopMoveResult CoopMoveCommandRelease(CoopMoveCommand *o) {
+    if (!enter(o)) return COOP_MOVE_REFUSED;
+    CoopMoveResult result = release(o);
+    o->busy = 0;
+    return result;
 }

@@ -630,3 +630,20 @@ native binding, live process read, input or network session executed; Cyberpunk
 hold continues. No production actor/AI behavior changed. Existing native build
 was not rebuilt because changes are audit/documentation only. Two-PC story,
 failure/restart and host-progress persistence acceptance remain outstanding.
+
+## 2026-11-21 — native command owner reentry barrier (compile only)
+
+Added per-owner barrier around Create/Input/Cancel/Release, covering guard and
+native callback reentry before creation's first ref and after release transfers
+the ref. Recursive operations refuse before guards and preserve all owner fields.
+Added a production-linked refusing-guard regression fixture for all four outer
+operations and wired compile/run scripts; fixture NOT executed under user hold.
+
+Pinned full x86 clang 23.1.5 warnings-as-errors compilation completed in
+build/move-reentry. No game/fixture/suite/live-memory/input/network execution.
+Reviewed return paths: every normal internal return flows through barrier
+release. This is not a cross-thread lock or native exception recovery. Actual
+allocation, reference lifetime, AI exclusion and physical stop remain unverified.
+Further static tracing found C_AIControlMessage/OnAIControl registration names,
+but no verified reversible AI disable operation; no guessed binding was added.
+Full campaign and two-PC mission/failure/host-save acceptance remain outstanding.

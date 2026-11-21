@@ -46,6 +46,8 @@ if ($LASTEXITCODE -ne 0) {throw 'Script progress fixture build failed'}
 if ($LASTEXITCODE -ne 0) {throw 'Entity registry fixture build failed'}
 & $cc @common (Join-Path $root 'tests/test_command_queue.c') $commandSource -o (Join-Path $out 'test_command_queue.exe')
 if ($LASTEXITCODE -ne 0) {throw 'Command queue fixture build failed'}
+& $cc @common (Join-Path $root 'tests/test_move_reentry.c') $moveSource $commandSource -o (Join-Path $out 'test_move_reentry.exe')
+if ($LASTEXITCODE -ne 0) { throw 'Move reentry fixture build failed' }
 & $cc @common -mwindows (Join-Path $root 'tests/input_host.c') -o (Join-Path $out 'input_host.exe') -ldinput8 -ldxguid -luser32
 if ($LASTEXITCODE -ne 0) {throw 'Optional input diagnostic build failed'}
 & $cc @common -municode (Join-Path $root 'src/tools/native_input.c') -o (Join-Path $out 'coop_input.exe') -ladvapi32 -luser32

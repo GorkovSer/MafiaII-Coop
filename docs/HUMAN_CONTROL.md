@@ -316,3 +316,25 @@ native ownership policy that preserves physics, command dispatch and teardown.
 Human+0x20 bit 0x200000 still cannot serve as an AI-only switch. The current
 MoveDir EDIT guard must remain closed until exclusive movement ownership is
 proved; the world-identity gate is independently still required.
+
+# Native owner callback reentry (2026-11-21, compile only)
+
+All four MoveDir owner operations now acquire a per-owner `busy` barrier before
+any guard or native call and clear it on normal return, including refusal and
+INCOMPLETE. A recursive operation on that owner returns REFUSED without calling
+its guard or changing identity/reference fields. This covers allocator reentry
+before the first ref is assigned, guard callbacks during any operation, and
+destructor reentry after release has cleared the caller-owned ref. Previously
+the zero-command check alone left those creation/release intervals open.
+
+This is a same-game-thread reentry barrier, not cross-thread synchronization.
+Callers must still serialize calls on the verified game thread, preserve live
+owners, and never mutate/reset the owner from a callback. Exceptions/nonlocal
+unwinding through a native call have no recovery contract yet. The barrier
+does not establish AI exclusion, stop, reference balance or game ABI acceptance.
+
+tests/test_move_reentry.c compiles with the production implementation and uses
+only refusing guards: it attempts all four recursive operations from each outer
+operation's guard and checks unchanged owner fields and subsequent barrier
+release. No engine call should be reached by that scenario. It is wired into
+test-probe.ps1 for after the hold; it has NOT been executed.
