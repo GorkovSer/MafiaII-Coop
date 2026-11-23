@@ -12,7 +12,8 @@ static void put(unsigned char *p, unsigned int at, uint32_t value) { memcpy(p+at
 static int read_memory(void *context, uint32_t at, void *out, size_t size) {
     Memory *m = context;
     ++m->reads;
-    if (m->change && m->reads == 6) put(m->c, 8, 2);
+    if (m->change == 1 && m->reads == 6) put(m->c, 8, 2);
+    if (m->change == 2 && m->reads == 6) m->c[0xd]=0;
     const void *p = NULL; size_t available = 0;
     if (at == 0x1000) { p=m->s; available=sizeof(m->s); }
     if (at == 0x2000) { p=m->u; available=sizeof(m->u); }
@@ -40,6 +41,9 @@ int main(void) {
     init(&m);
     assert(CoopReadScriptMoveState(read_memory, &m, 0x1000, &out) == COOP_SCRIPT_STATE_VALID);
     assert(out.command == 0x3000 && out.sync_flags == 3 && out.linked_to_sync && out.command_flag_d == 1);
+    init(&m); m.c[0xd]=0;
+    assert(CoopReadScriptMoveState(read_memory, &m, 0x1000, &out) == COOP_SCRIPT_STATE_VALID);
+    assert(!out.command_state && !out.command_flag_d && out.linked_to_sync);
     for (uint32_t state=1; state<=3; ++state) {
         init(&m); put(m.c, 8, state); put(m.c, 4, 0); put(m.s, 8, 2);
         assert(CoopReadScriptMoveState(read_memory, &m, 0x1000, &out) == COOP_SCRIPT_STATE_VALID);
@@ -51,6 +55,7 @@ int main(void) {
     init(&m); put(m.c, 8, 4); refused(&m, COOP_SCRIPT_STATE_MISMATCH);
     init(&m); put(m.u, 8, 0xfffffffeu); refused(&m, COOP_SCRIPT_STATE_UNREADABLE);
     init(&m); m.change=1; refused(&m, COOP_SCRIPT_STATE_CHANGED);
+    init(&m); m.change=2; refused(&m, COOP_SCRIPT_STATE_CHANGED);
     init(&m); put(m.s, 8, 1); refused(&m, COOP_SCRIPT_STATE_MISMATCH);
     assert(CoopReadScriptMoveState(NULL, NULL, 0, &out) == COOP_SCRIPT_STATE_UNREADABLE);
     puts("Script movement state reader fixture passed");
