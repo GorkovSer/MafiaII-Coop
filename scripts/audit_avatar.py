@@ -71,7 +71,28 @@ def audit(path):
     match(0x94e9b6, '5ec20400')
     match(0x11a7cd3, 'f74620000800007408e8dfde3300')
     match(0x1192170, '568bf1f6462020')
+    # Model-frame visual forward basis used by optional facing observation.
+    # This is visual facing, not a physics/AI ownership claim.
+    match(0x43fe50, '83ec18f7410c00100000751b')
+    match(0x43fe5c, '8b44241cd9413cd918d9414cd95804d9415cd95808')
+    # Small visual-only candidate for the reduced prototype. This is not a
+    # Human/Player; no Human Setup, AI or physical movement API may be used on it.
+    match(0x1aa9de8, struct.pack('<6I', 0, 0x37, 0, 0, 0xac9cd0, 0xac79b0).hex())
+    match(0xac9cd0, '6888000000e8567b93ff83c40485c07407')
+    match(0xac79c3, 'e8a80a6e00')
+    match(0xac79cc, 'c706e0d69601e869ea6900')
+    match(0x196d6e0, struct.pack('<I', 0xad04c0).hex())
+    match(0x196d6e0+0x18, struct.pack('<I', 0x119f200).hex())
+    match(0x196d6e0+0x7c, struct.pack('<I', 0x1164d40).hex())
+    match(0x196d6e0+0x80, struct.pack('<I', 0x1175120).hex())
+    match(0x1164d40, '8b496085c97422')
+    match(0x1164d4b, 'd900c744240402000000d95944d94004d95954d94008d95964')
+    match(0xad04c3, 'e83875ffff')
+    match(0xac7a00, 'c701e0d69601e9b5026e00')
     return dict(schema=1, sha256=EXPECTED, memory_writes=0, game_api_calls=0,
+                visual_candidate_type=0x37, visual_candidate_factory='00ac9cd0',
+                visual_candidate_allocation_size=0x88, visual_candidate_vtable='0196d6e0',
+                visual_candidate_is_human=False, visual_candidate_runtime_verified=False,
                 human_vtable='01967058', deleting_destructor='00999160',
                 destructor_body='00990770', deallocator='004019f0',
                 release='0119ddd0', immediate_path_deallocates=True,
