@@ -27,7 +27,8 @@ int main(int argc,char **argv) {
     int started=CoopSessionStart(&session,&config,log_line,NULL);
     if(started) {printf("start_error=%d\n",started);return 3;}
     float xyz[3]={config.role==COOP_HOST?10.25f:-4.0f,20.5f,3.0f};
-    CoopSessionPublish(&session,1,xyz);
+    float heading=1.25f;
+    CoopSessionPublishPose(&session,1,xyz,&heading);
     ULONGLONG start=GetTickCount64(), duration=(ULONGLONG)strtoul(argv[4],NULL,10);
     if(duration>30000) {CoopSessionStop(&session);return 2;}
     int cleared=0, remote_fixture_seen=0, expired_while_ready=0;
@@ -42,7 +43,7 @@ int main(int argc,char **argv) {
                 key[0] = 2; epoch = 91;
             } else if (elapsed >= 2*duration/3 && config.role == COOP_GUEST) epoch = 92;
             CoopSessionWorld(&session, epoch, key);
-            CoopSessionPublish(&session, epoch, xyz);
+            CoopSessionPublishPose(&session, epoch, xyz,&heading);
         } else if(mode==4 && elapsed>1000) {
             /* Service ENet/control traffic but deliberately send no more app state. */
             session.next_send=enet_time_get()+60000;

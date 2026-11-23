@@ -14,19 +14,19 @@ int wmain(int argc,wchar_t **argv) {
     int saw_active=0,saw_inactive=0,ready=0;
     uint32_t received_seen=0;
     CoopRemoteSnapshot remote={0};
-    float fixture[3]={12.25f,-8.0f,4.0f};
+    float fixture[3]={12.25f,-8.0f,4.0f}, heading=0.75f;
     while(GetTickCount64()-start<duration) {
         ULONGLONG elapsed=GetTickCount64()-start;
         /* Stop publishing halfway through; the network must keep servicing
            while the stale game snapshot is invalidated independently. */
-        if(elapsed<1000) CoopNetworkPublish(1,fixture);
+        if(elapsed<1000) CoopNetworkPublishPose(1,fixture,&heading);
         if(CoopNetworkReadRemote(&remote)) {
             ready=1;
             /* The earlier peer may exit before this fixture's deadline.
                ReadRemote must then zero its output, including counters. Keep
                observed receipt evidence separately from that cleared snapshot. */
             if(remote.received_states>received_seen) received_seen=remote.received_states;
-            if(remote.active && remote.position[0]==fixture[0]) saw_active=1;
+            if(remote.active && remote.position[0]==fixture[0] && remote.heading_valid && remote.heading==heading) saw_active=1;
             if(saw_active && !remote.active) saw_inactive=1;
         }
         Sleep(10);
