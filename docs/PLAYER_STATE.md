@@ -27,3 +27,14 @@
 Внешнее read-only наблюдение движущегося игрока в миссии: 75 снимков за 15 секунд, один GUID, диапазоны изменения X/Y/Z — 17.643 / 12.210 / 0.988 игровых единиц. Это подтверждение изменения наблюдаемой позиции после просьбы пользователю двигаться, не доказательство сетевой синхронизации.
 
 Первый внутрипроцессный адаптер действительно получил снимки в игровом callback. Проверка выявила временную нулевую позицию до load_finished; готовность только по game_init была недостаточна. Исправленный адаптер ожидает оба события. Сборка и тесты прошли; анализатор проверен на корректном движении и 7 видах неверного свидетельства. Пользователь затем закрыл старую игру и передал все дальнейшие действия/тесты агенту. Исправленная сборка самостоятельно запущена, меню видно, но переход к миссии через автоматический ввод пока не подтверждён. Нужны два открытия миссии, отсутствие снимков до загрузки/в меню и чистый выход.
+
+## Visual facing for the reduced MVP (2026-11-23)
+
+The observer optionally reads the exact C_Model frame class 0x191c850 and its
+visual forward basis at +0x3c/+0x4c. This matches the pinned frame GetDirection
+storage path 0x43fe50; the byte audit checks it. Finite nondegenerate XY values
+produce atan2f(y,x). Unknown class/read failures/degenerate values leave facing
+unavailable without inventing a direction from velocity. This is visual facing,
+not a physics orientation or movement-ownership verdict. Fixture acceptance
+includes turning while coordinates remain unchanged. Real-game facing acceptance
+is still pending; no new engine function is invoked by this reader.
