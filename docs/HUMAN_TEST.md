@@ -35,6 +35,22 @@ current result below. Mission-reload lifetime remains unverified.
 
 ## Actual results
 
+Optional native movement acceptance: add `-TestScriptMove` to the isolated
+`-TestHuman` launch, with NetworkRole off. The launcher rejects use without
+TestHuman or with networking; the DLL also refuses any coop-session.ini and
+requires the isolated profile, game thread, registry-owned Human and loaded
+unpaused lifetime before Start. It requests a six-unit X offset once at five
+seconds, mode 2, then requests abort after 1.5 seconds. Position/command samples
+continue for 12 seconds. Retirement requests end, releases Human once, then
+drops the owned Sync ref without dereferencing the retired Human. This is local
+native acceptance, with no fake shared-world key or remote actor consumer.
+
+First live result, 23 November: handle creation and abort request returned;
+command state changed 0 -> 2 and abort byte 1 -> 0. Continued physical motion
+afterwards means stop/AI arbitration FAILED acceptance. Owned Sync release and
+registry absence were confirmed on normal exit; the original profile was intact.
+Do not enable a network backend based on this experiment.
+
 Current acceptance, 2026-11-23: two normal-menu launches into the authorized
 isolated story save on DISPLAY2 confirmed creation identity, Setup/Activate,
 one Release per process and subsequent registry absence. AI status was valid

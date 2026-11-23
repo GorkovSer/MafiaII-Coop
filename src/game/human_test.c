@@ -5,6 +5,7 @@
 #include "entity_registry.h"
 #include "command_queue.h"
 #include "human_ai.h"
+#include "script_move.h"
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
@@ -22,6 +23,10 @@ static int position_reported;
 static uint32_t pending_removal;
 static ULONGLONG removal_deadline;
 static int removal_status = -1;
+static int script_enabled, script_attempted, script_end_requested;
+static DWORD script_thread;
+static ULONGLONG script_begin, script_next_sample;
+static CoopScriptMove script_owner;
 typedef void *(__attribute__((stdcall)) *model_factory_type)(void *);
 typedef void *(__attribute__((cdecl)) *entity_factory_type)(unsigned int);
 typedef int (__attribute__((thiscall)) *clone_type)(void *, void *);
@@ -126,11 +131,60 @@ static void record_position(void *human) {
         CloseHandle(file);
     }
 }
+/* Explicit isolated, offline native acceptance test. This guard grants no
+   network/world authority and is never used by the remote actor backend. */
+static int script_guard(void *context, uint32_t guid, uint32_t human, unsigned int op) {
+    (void)context;
+    if (!script_enabled || GetCurrentThreadId() != script_thread ||
+        (uintptr_t)GetModuleHandleW(NULL) != 0x400000 || !CoopProfileWasRedirected()) return 0;
+    if (op != COOP_SCRIPT_MOVE_START) return 1; /* Owned Sync only; no Human read. */
+    return initialized && loaded && !paused && owned && guid == owned_guid &&
+        human == (uint32_t)(uintptr_t)owned && human_valid(owned);
+}
+static void script_tick(void) {
+    if (!script_enabled || !owned || !human_valid(owned)) return;
+    ULONGLONG now = GetTickCount64();
+    if (!script_attempted) {
+        if (now + 55000 < remove_at) return;
+        script_attempted = 1; script_thread = GetCurrentThreadId();
+        void *physics = *(void **)((char *)owned + 0x190);
+        if (!readable(physics, 0x1e4)) { record("script_refused_physics", 1); return; }
+        float target[3], direction[3] = {0, 0, 0};
+        memcpy(target, (char *)physics+0x1d8, sizeof(target));
+        target[0] += 6.0f;
+        record("script_start_begin", 1);
+        CoopScriptMoveResult result = CoopScriptMoveStart(&script_owner, script_guard,
+            NULL, owned_guid, (uint32_t)(uintptr_t)owned, target, 2, direction);
+        record("script_start_result", (unsigned int)result);
+        script_begin = now; script_next_sample = now;
+    }
+    if (!script_owner.sync) return;
+    if (!script_end_requested && now-script_begin >= 1500) {
+        script_end_requested = 1;
+        record("script_end_result", (unsigned int)CoopScriptMoveRequestEnd(&script_owner));
+    }
+    if (now >= script_next_sample && now-script_begin <= 12000) {
+        script_next_sample = now+200;
+        record("script_elapsed_ms", (unsigned int)(now-script_begin));
+        CoopScriptState state;
+        CoopScriptStateStatus status = CoopScriptMoveObserve(&script_owner, &state);
+        record("script_snapshot_status", (unsigned int)status);
+        if (status == COOP_SCRIPT_STATE_VALID) {
+            record("script_command_state", state.command_state);
+            record("script_abort_byte", state.command_flag_d);
+            record("script_sync_flags", state.sync_flags);
+            record("script_link_present", state.linked_to_sync);
+        }
+        record_position(owned);
+    }
+}
 static void remove_owned(void) {
     void *human = owned;
     owned = NULL; /* Engine may delete immediately: abandon handle BEFORE call. */
     if (!human) return;
     if (!human_valid(human)) { record("lost_handle_no_release", 1); return; }
+    if (script_owner.sync)
+        record("script_retire_end", (unsigned int)CoopScriptMoveRequestEnd(&script_owner));
     pending_removal = owned_guid;
     removal_deadline = GetTickCount64() + 10000;
     removal_status = -1;
@@ -139,6 +193,8 @@ static void remove_owned(void) {
     ((entity_call_type)(uintptr_t)0x119ddd0)(human);
     /* No read of human or its model after Release, no second destructor/free. */
     record("release_returned", 1);
+    if (script_owner.sync)
+        record("script_ref_release", (unsigned int)CoopScriptMoveRelease(&script_owner));
     poll_removal();
 }
 int CoopHumanTestStart(const wchar_t *path) {
@@ -150,6 +206,17 @@ int CoopHumanTestStart(const wchar_t *path) {
     if (wcslen(ini) + wcslen(L"\\human-test.ini") >= MAX_PATH) return 1;
     wcscat(ini, L"\\human-test.ini");
     enabled = GetPrivateProfileIntW(L"test", L"human_once", 0, ini) == 1;
+    script_enabled = GetPrivateProfileIntW(L"test", L"script_move_once", 0, ini) == 1;
+    /* Redirection is observed when the game first queries its profile, after
+       this early export. Creation and every script guard require it later. */
+    if (script_enabled && !enabled) return 3;
+    if (script_enabled) {
+        *tail = 0;
+        if (wcslen(ini)+wcslen(L"\\coop-session.ini") >= MAX_PATH) return 3;
+        wcscat(ini, L"\\coop-session.ini");
+        if (GetFileAttributesW(ini) != INVALID_FILE_ATTRIBUTES) return 3;
+        record("script_offline_diagnostic", 1);
+    }
     if (!enabled) return 0;
     static const unsigned char factory[] = {0x68,0x20,0x02,0,0,0xe8,0xc6,0x7a,0xa6,0xff};
     static const unsigned char setup[] = {0x83,0xec,0x50,0x53,0x55,0x56,0x57,0x8b,0xe9};
@@ -175,6 +242,7 @@ void CoopHumanTestEvent(unsigned int id) {
     if (owned && id == 3 && !position_reported && GetTickCount64() + 55000 >= remove_at) {
         position_reported = 1; record_position(owned); record_command_queue(owned);
     }
+    if (owned && id == 3 && loaded && initialized && !paused) script_tick();
     if (attempted || id != 3 || !initialized || !loaded || paused) return;
     if (!CoopProfileWasRedirected()) { attempted = 1; record("refused_profile", 0); return; }
     void *game = *(void **)(uintptr_t)0x1abfe14;

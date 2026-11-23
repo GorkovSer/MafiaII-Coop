@@ -790,3 +790,30 @@ The production fixture group (nine executables, including the new owner test)
 and all nine loader/profile checks passed. The changed state-reader fixture
 was rebuilt and rerun after adding the abort-byte snapshot cases. Network
 code/protocol did not change; the previously passed network suite was not rerun.
+
+## 2026-11-23 — first offline ScrMoveV/abort/Sync release in game
+
+Added explicit -TestHuman -TestScriptMove acceptance with networking forbidden
+in launcher and DLL config. Local guard requires redirected profile, pinned
+base/game thread, loaded unpaused lifetime and owned registry Human; it grants
+no shared-world authority. First early launch refused because redirection had
+not yet been observed before the game's profile query. The check now remains at
+creation/each native guard, rather than the early export. No game input was sent
+to that refused launch. Full pinned rebuild and targeted state/reentry fixtures
+passed; child-command copy/update byte audit passed.
+
+The actual game run used the isolated seed on DISPLAY2. Initial menu input
+stopped on lost focus/user input; after reobserving the main menu, three Enter
+keys reached loading in 1.125 s and first player data in 2.486 s. Screenshot
+confirmed the snowy story scene. One owned Human requested mode-2 movement with
+a six-unit X offset at five seconds; native Start returned HANDLE_CREATED.
+Eight samples before the 1.5-second abort span 0.59958 / 1.28016 / 0 units.
+End returned END_REQUESTED; command state became 2 and abort byte 0. However,
+42 samples at >=3.5 seconds span 0.16166 / 8.35553 / 0.04629 units: physical stop
+FAILED acceptance. Do not infer that remaining movement is necessarily the same
+command; resumed autonomous AI and remaining child work are not distinguished.
+
+On retirement, End returned TERMINAL_OBSERVED, Human Release was followed by
+registry-confirmed absence, and owned Sync release returned REFERENCE_RELEASED.
+Native immediate quit took 1.609 s / nine Enter keys. Launcher/child exits 0;
+original_profile_changed_files=0. No two-PC/native remote backend test occurred.
