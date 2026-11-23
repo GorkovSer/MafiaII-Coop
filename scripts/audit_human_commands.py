@@ -199,6 +199,15 @@ def audit(path):
     match(0xf950ec+8, struct.pack('<II', 0xf9500b, 0xf9500b).hex())
     match(0xc43013, '8b476885c07469')
     match(0xc4307b, 'c74768000000005e8bcf5fe915fefdff')
+    # Recursive movement copies the parent abort byte into its type-3 child.
+    match(0xc361a0, 'c706c4b09701')
+    match(0x197b0c4+4, struct.pack('<I', 0xc0ea00).hex())
+    match(0xc0ea00, 'b803000000c3')
+    match(0xc42529, 'e822a42f00')
+    match(0xf3c95d, '0fb6510d88500d')
+    match(0x197ca78+0x34, struct.pack('<I', 0xcba8b0).hex())
+    match(0xcba8bf, 'e87c4a75ff')
+    match(0x197ca78+0x1c, struct.pack('<I', 0xc42c70).hex())
 
     # MoveDir descriptor lives in zero-initialized storage; its function
     # pointers are installed by this static initializer, not file data.
