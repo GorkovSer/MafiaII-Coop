@@ -29,10 +29,23 @@ The lookup has no game API calls or writes and checks the actual manager slot
 against the pinned 0x5a0c70 lookup before interpreting its container.
 Unexpected allocation contracts are incomplete diagnostics, not cleanup acceptance.
 If the fresh entity cannot be validated, the still-owned clone is released but
-no speculative entity destructor is called. Successful creation/removal of this
-new registry-guarded version remains unverified in the game.
+no speculative entity destructor is called. The current registry-guarded version
+passed two isolated game-process creation/removal cycles on 23 November; see the
+current result below. Mission-reload lifetime remains unverified.
 
 ## Actual results
+
+Current acceptance, 2026-11-23: two normal-menu launches into the authorized
+isolated story save on DISPLAY2 confirmed creation identity, Setup/Activate,
+one Release per process and subsequent registry absence. AI status was valid
+at Setup/activation/before release; both queue observations were valid, with
+7 free / 1 used and a retained command appearing by five seconds. No native
+movement/end binding ran. Screenshots confirmed the playable scene, without
+independently identifying the generated Human among pedestrians. Both child
+exits were 0 and both original-profile change counts were 0. These are separate
+process lifetimes, not an in-process mission reload or leak/AI-control proof.
+All previously deferred fixtures and loader checks passed; the older
+test-hold/compile-only accounts below describe their earlier status.
 
 - Early model-transform placement passed creation, Setup, Activate and a
   returned Release, but screenshots did not establish a visible avatar.

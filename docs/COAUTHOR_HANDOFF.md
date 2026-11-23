@@ -6,12 +6,13 @@
 World agreement прошёл fixtures, но не игровое согласование двух миров.
 Этот хеш обозначает основу этапа, а не будущий HEAD документа.
 
-Текущий участок: `codex/resume-20261123-tests`, отложенные проверки и приёмка
+Текущий участок: `codex/runtime-evidence-20261123`, отложенные проверки и приёмка
 registry-guarded Human. Полная сборка, Python/C/loader проверки и сетевой suite
 выполнены; исправлен только учёт полученных пакетов в bridge fixture после
 обнуления снимка при отключении. В реальной игре подтверждены создание Human,
-valid queue/AI observations и однократное registry-confirmed удаление; выход 0,
-исходный профиль неизменен. Новые native movement/end bindings по-прежнему не
+valid queue/AI observations и registry-confirmed удаление в двух отдельных
+процессах; оба выхода 0, исходный профиль неизменен. Пассивный peer получил
+104 active snapshots во время движения Вито. Новые native movement/end bindings по-прежнему не
 вызывались. Далее: повторные жизненные циклы/переходы и проверяемая отмена/остановка
 scripted movement; не открывать remote/world gates по результату локального теста.
 
@@ -760,4 +761,4 @@ User testing hold is lifted by the current request and explicit second-display a
 
 The current registry-guarded -TestHuman build ran in a normal-menu loaded, visually confirmed story scene on DISPLAY2. Creation identity and one Release/registry-absence cycle passed; AI snapshots were valid at all three phases and the command queue/retained reference reader produced valid observations. This does not authorize AI exclusion, native movement/end calls or remote motion. Screenshots did not independently identify the generated Human in the crowd. The original profile stayed unchanged and native child exit was 0. One epoch is not complete reload/lifecycle acceptance.
 
-Keep movement and world gates closed. Next verify repeated actor lifetime/mission transitions and the scripted-command cancellation/physical-stop/reference contract, then a concrete backend and loaded-world producer. Normal Continue produced script progress observations, not a unique checkpoint identity. The 23 November passive windows were near-stationary and must not be described as movement-transfer proof. Full two-PC story/failure/save acceptance is still missing. Approximate full-campaign readiness: 10% (subjective).
+Keep movement and world gates closed. Next verify repeated actor lifetime/mission transitions and the scripted-command cancellation/physical-stop/reference contract, then a concrete backend and loaded-world producer. Normal Continue produced script progress observations, not a unique checkpoint identity. The first two 23 November passive windows were near-stationary; a subsequent bounded six-second peer run overlapped native Up input and received 104 active samples, ranges 1.33240 / 4.84363 / 0.00959. This proves local-player telemetry transfer, not a remote avatar. A second isolated game process repeated the guarded Human lifecycle with confirmed registry removal, normal exit and zero original-profile changes; same-process reload remains untested. Current AGENTS/HUMAN_TEST/SCRIPT_MOVE status now explicitly supersedes the historical hold. Full two-PC story/failure/save acceptance is still missing. Approximate full-campaign readiness: 10% (subjective).

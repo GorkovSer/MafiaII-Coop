@@ -738,3 +738,28 @@ two-PC story/failure/restart/host-save/full-campaign acceptance is claimed.
 - Two passive loopback windows received 287 and 385 active samples. Their position ranges were near-stationary (0.01756 / 0.01416 / 0.00003 and 0 / 0 / 0); they did not overlap the meaningful native movement. Do not claim this run carried that movement to the passive peer. Earlier movement-transfer evidence remains historical. Neither peer is a second game client.
 - Native immediate quit completed in 1.656 seconds. Launcher and child exit codes were zero; original_profile_changed_files=0. No diagnostic Mafia II process remains running. One sampled epoch does not pass the strict two-load lifecycle acceptance.
 - Current full-campaign readiness estimate is approximately 10%, a subjective engineering estimate rather than a measured completion rate or delivery forecast. A controlled remote avatar, verified loaded-world producer, two-PC Radmin gameplay, combat/vehicles/NPC authority, mission failure/reload and durable host campaign progress remain incomplete.
+
+## 2026-11-23 — second isolated Human lifetime and overlapping motion receiver
+
+- Reused the unchanged accepted build and authorized isolated seed in another
+  game process on DISPLAY2. Normal-menu entry used 16 Enter keys; load started
+  after 6.414 seconds and the first sample appeared after 7.732 seconds from
+  that series. A fresh screenshot confirmed Vito and HUD in the snowy scene.
+- Creation/Setup/Activate and one Release again passed registry identity and
+  eventual absence. AI status was 3 at all three phases (agent present; raw
+  flags 200). Both command-queue snapshots were valid, 7 free / 1 used;
+  the retained reference appeared/was queued by five seconds. Raw flags do
+  not establish AI suppression. No new native movement/end call was made.
+- A six-second passive loopback peer was started and its ready_guest output
+  observed before bounded native Up input (1000 ms), all in one sequential
+  orchestration to guarantee overlap. Native input reported released=1 and
+  focus_retained=1. The peer exited 0 with one connection, received=104,
+  active_samples=104 and axis_ranges=1.33240,4.84363,0.00959. The following
+  screenshot confirmed Vito's changed position. This is real moving-player
+  telemetry into a passive peer, not two game clients or remote actor control.
+- Immediate native Alt+F4/Enter quit completed in 1.594 seconds / nine Enter
+  keys. Launcher and child exits were 0; original_profile_changed_files=0.
+  Two separate process lifetimes do not prove in-process mission reload,
+  physical cancellation, reference balance or complete campaign acceptance.
+- Updated current instructions to supersede the older testing hold and to
+  separate executed fixtures from still-unexecuted native movement bindings.
