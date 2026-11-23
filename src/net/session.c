@@ -72,9 +72,16 @@ int CoopSessionStart(CoopSession *s, const CoopSessionConfig *config, CoopSessio
     return 0;
 }
 void CoopSessionPublish(CoopSession *s, uint32_t epoch, const float *position) {
+    CoopSessionPublishPose(s, epoch, position, NULL);
+}
+void CoopSessionPublishPose(CoopSession *s, uint32_t epoch, const float *position,
+    const float *heading) {
     memset(&s->local, 0, sizeof(s->local));
     s->local.type = COOP_STATE; s->local.epoch = epoch; s->local.active = position != NULL;
     if (position) memcpy(s->local.position, position, sizeof(s->local.position));
+    if (position && heading && CoopHeadingValid(*heading, 1)) {
+        s->local.heading = *heading; s->local.heading_valid = 1;
+    }
 }
 void CoopSessionWorld(CoopSession *s, uint32_t epoch, const unsigned char *key) {
     CoopWorldSetLocal(&s->world, epoch, key);
@@ -163,6 +170,7 @@ void CoopSessionTick(CoopSession *s) {
     if (s->remote_active && CoopSessionRemoteAge(s, now) >= COOP_STATE_MAX_AGE_MS) {
         s->remote_active = 0; s->remote.active = 0;
         memset(s->remote.position, 0, sizeof(s->remote.position));
+        s->remote.heading = 0; s->remote.heading_valid = 0;
         record(s, "remote_expired");
     }
     if (s->ready && s->world.pending_type) {

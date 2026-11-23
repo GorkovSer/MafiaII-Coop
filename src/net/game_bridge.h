@@ -6,6 +6,8 @@ int CoopNetworkStart(const wchar_t *log_path);
 typedef struct {
     uint32_t ready, player_id, epoch, active, rtt_ms, received_states;
     float position[3];
+    float heading;
+    uint32_t heading_valid;
     uint32_t have_state, received_sequence, connection_generation;
     uint64_t session_id, state_received_ms, mailbox_published_ms;
     uint32_t world_authorized, world_generation;
@@ -21,5 +23,7 @@ int CoopNetworkReadRemoteWorld(CoopRemoteSnapshot *out);
    enabled until a verified game-specific world identity is implemented. */
 void CoopNetworkPublishWorld(uint32_t loaded_epoch, const unsigned char *verified_key);
 void CoopNetworkPublish(uint32_t epoch, const float *position);
+/* NULL heading means unknown; NULL position withdraws both position and facing. */
+void CoopNetworkPublishPose(uint32_t epoch, const float *position, const float *heading);
 void CoopNetworkStop(void);
 #endif

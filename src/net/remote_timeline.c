@@ -30,7 +30,8 @@ int CoopRemoteTimelineAt(CoopRemoteTimeline *t, const CoopRemoteSnapshot *curren
                 memset(t, 0, sizeof(*t)); return 0;
             }
         } else if (s.state_received_ms != last->state_received_ms ||
-            memcmp(s.position, last->position, sizeof(s.position))) {
+            memcmp(s.position, last->position, sizeof(s.position)) ||
+            s.heading_valid != last->heading_valid || s.heading != last->heading) {
             memset(t, 0, sizeof(*t)); return 0;
         }
     }

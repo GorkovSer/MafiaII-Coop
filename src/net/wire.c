@@ -14,10 +14,14 @@ static uint32_t get32(const unsigned char *at) {
 }
 static size_t payload_size(unsigned int type) {
     switch (type) {
-        case COOP_HELLO: return 40; case COOP_WELCOME: return 12; case COOP_STATE: return 28;
+        case COOP_HELLO: return 40; case COOP_WELCOME: return 12; case COOP_STATE: return 36;
         case COOP_WORLD_OFFER: case COOP_WORLD_ACK: case COOP_WORLD_COMMIT: return 40;
         default: return 0;
     }
+}
+int CoopHeadingValid(float heading, uint32_t available) {
+    return available <= 1 && isfinite(heading) && fabsf(heading) <= COOP_HEADING_MAX &&
+        (available || heading == 0.0f);
 }
 static int valid(const CoopMessage *m) {
     if (m->type == COOP_STATE) {
@@ -26,6 +30,8 @@ static int valid(const CoopMessage *m) {
             if (!isfinite(m->position[i]) || fabsf(m->position[i]) >= 1000000.0f ||
                 (!m->active && m->position[i] != 0.0f)) return 0;
         if (m->active && !m->epoch) return 0;
+        if (!CoopHeadingValid(m->heading, m->heading_valid) ||
+            (!m->active && m->heading_valid)) return 0;
     }
     if (m->type >= COOP_WORLD_OFFER && m->type <= COOP_WORLD_COMMIT) {
         if (!m->world.generation || CoopWorldKeyValid(m->world.key) != (m->world.epoch != 0)) return 0;
@@ -52,6 +58,8 @@ size_t CoopWireEncode(const CoopMessage *m, unsigned char out[COOP_WIRE_MAX]) {
         put32(out+24, m->player_id); put32(out+28, m->epoch); put32(out+32, m->active);
         for (unsigned int i = 0; i < 3; ++i) { uint32_t bits; memcpy(&bits, &m->position[i], 4); put32(out+36+i*4, bits); }
         put32(out+48, m->world.generation);
+        uint32_t heading_bits; memcpy(&heading_bits, &m->heading, 4);
+        put32(out+52, heading_bits); put32(out+56, m->heading_valid);
     }
     if (m->type >= COOP_WORLD_OFFER && m->type <= COOP_WORLD_COMMIT) {
         put32(out+24, m->world.generation); put32(out+28, m->world.epoch);
@@ -73,6 +81,8 @@ int CoopWireDecode(const unsigned char *bytes, size_t length, CoopMessage *out) 
         out->player_id = get32(bytes+24); out->epoch = get32(bytes+28); out->active = get32(bytes+32);
         for (unsigned int i = 0; i < 3; ++i) { uint32_t bits = get32(bytes+36+i*4); memcpy(&out->position[i], &bits, 4); }
         out->world.generation = get32(bytes+48);
+        uint32_t heading_bits = get32(bytes+52);
+        memcpy(&out->heading, &heading_bits, 4); out->heading_valid = get32(bytes+56);
     }
     if (out->type >= COOP_WORLD_OFFER && out->type <= COOP_WORLD_COMMIT) {
         out->world.generation = get32(bytes+24); out->world.epoch = get32(bytes+28);
