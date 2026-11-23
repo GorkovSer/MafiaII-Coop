@@ -208,6 +208,13 @@ def audit(path):
     match(0x197ca78+0x34, struct.pack('<I', 0xcba8b0).hex())
     match(0xcba8bf, 'e87c4a75ff')
     match(0x197ca78+0x1c, struct.pack('<I', 0xc42c70).hex())
+    # SDK LockControls is not a reversible ownership policy for concrete Human:
+    # its queried lock state is always false and its setter is a stub.
+    match(0x1967058+0x14c, struct.pack('<I', 0x91aaa0).hex())
+    match(0x1967058+0x168, struct.pack('<I', 0x91aa90).hex())
+    match(0x91aaa0, '32c0c3')
+    match(0x91aa90, 'c20400')
+    match(0x95cda0, '84c0743e6a006a008bcfe8918effff')
 
     # MoveDir descriptor lives in zero-initialized storage; its function
     # pointers are installed by this static initializer, not file data.
