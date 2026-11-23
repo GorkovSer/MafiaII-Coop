@@ -11,6 +11,8 @@ typedef struct {
     float position[3];
     float model_position[3];
     int model_valid;
+    float heading;
+    int heading_valid;
 } CoopPlayerSnapshot;
 
 int CoopTelemetryStart(const wchar_t *log_path);

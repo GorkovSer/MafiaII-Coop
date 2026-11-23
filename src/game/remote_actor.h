@@ -13,6 +13,9 @@ typedef struct {
     int (*stop)(void *context, uint32_t handle);
     int (*begin_remove)(void *context, uint32_t handle);
     int (*removed)(void *context, uint32_t handle); /* registry absence, not queued release */
+    /* Needed when the current snapshot supplies visual XY heading in radians.
+       Unknown facing holds the existing direction; it is not guessed from speed. */
+    int (*face)(void *context, uint32_t handle, float heading);
 } CoopRemoteActorOps;
 typedef enum {
     COOP_ACTOR_DISABLED, COOP_ACTOR_WAIT_WORLD, COOP_ACTOR_CREATING,
