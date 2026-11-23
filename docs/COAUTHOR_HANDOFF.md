@@ -1,5 +1,34 @@
 # Указания соавторам и текущее состояние
 
+Последнее указание пользователя, 23 ноября 22:50 МСК: тесты и публикации снова
+разрешены, GitHub обновлять примерно раз в 15 минут с отчётом в чат. Повторное
+перечитывание инструкций и лишний расход пользователь запретил. Остановка
+Computer Use не отменяет разработку/консольные проверки; не обходить остановку
+UI альтернативным вводом. Публиковать только проверенный этап.
+
+Foundation stage прошёл pinned full build, 6 Python scripts, 10 production
+fixtures, 9 loader/profile checks, network suite и 4 presets/7 refusals.
+Реальный LoopbackHost передал 111 движущихся player snapshots пассивному peer;
+native exit 0, исходный профиль неизменен. Это не two-PC Radmin и не remote avatar.
+
+Также подготовлен entity_map.c/.h: ограниченная таблица host network ID ->
+локальный GUID для player/NPC/vehicle, без указателей/нативных вызовов. При
+смене/отзыве мира старые записи уходят в retirement; новый мир не принимается
+до подтверждённого отсутствия всех старых GUID. Отсутствие подтверждает внешний
+registry callback, reentry на время callback закрыт. Это bookkeeping, не готовая
+синхронизация NPC/машин и не разрешение на spawn. Теперь собран и проверен fixture.
+Host-only allocator выдаёт session-scoped uint64 IDs без повторного использования
+и отказывает при исчерпании. Входящие NPC/vehicle bindings разрешены только от
+player 1 (хоста); локальные runtime GUID никогда не становятся сетевыми ID.
+
+Текущая локальная работа: bounded receiver-local interpolation (8 snapshots,
+100 ms delay, no extrapolation, immediate authority withdrawal), optional/off
+actor integration, Loopback/Radmin diagnostic presets. Дополнительно сохранены
+наблюдения refcounts/MoveDir после отмены и исправление resize-race размещения
+окна. Основа интеграции — 167f01c. Ранее прерванный loader suite не считать
+пройденным; новый полный прогон завершился успешно. Следующий участок —
+проверяемая AI ownership/physical stop, затем настоящий backend и world producer.
+
 Сводка обновлена: 23 ноября 2026 года. Основа текущего этапа:
 `607c6786dbcd6812ce0756faf75a5356af56a0a0` в `development`.
 Пользователь возобновил тесты и разрешил нужные проверки на втором мониторе.
