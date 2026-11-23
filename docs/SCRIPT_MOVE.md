@@ -116,7 +116,7 @@ cleanup, then verify actual stop/ref balance when tests resume. The new callback
 fixture covers valid/terminal raw states, wrong link/class/count, overflow,
 missing owned userdata and changed snapshots; it was compiled, not executed.
 
-## Candidate end request (2026-11-21, not executed)
+## Earlier end request (2026-11-21, superseded on 23 November)
 
 CoopScriptMoveRequestEnd now uses the command's native conditional state-change
 routine at 0xf5d290 with value 3. This avoids guessing a target-removal subsystem
@@ -146,3 +146,44 @@ vtable it is secondary-interface slot+0x4c and its deleting destructor adjusts
 this by -0x40. Neither Human, controller nor the controller+4 brain vtable is
 that interface. Next trace the concrete command task and its physical cleanup,
 then validate the end request, refs and actual stop once tests resume.
+
+## Native abort predicate and concrete task (2026-11-23)
+
+The current RequestEnd no longer writes command state 3. Exact pinned evidence
+now connects ScrMoveV's command to its concrete task, and shows a different
+predicate that requests task termination:
+
+- Command vtable 0x197bccc slot+4 -> 0xc0ebf0 returns type 4. Registration at
+  0xb77695 maps type 4 to C_AIAction_SetMoveToBBRec. Its factory descriptor at
+  0x1aad0d0 uses vtable 0x1980d40 -> 0xcaef60, allocating 0x70 bytes and calling
+  0xc653e0. That constructor installs task vtable 0x197ce28.
+- Task factory 0xfa3c40 resolves the command's type/name and retains its two-word
+  command handle at task+0x28/+0x2c. Do not infer a task from the command pointer
+  or pass Human/controller as a task/subsystem interface.
+- Task slot+0x34 -> 0xca3ae0 calls 0xc77550 -> 0x40f340. The latter obtains
+  command+0x0d through 0xf3c9b0. If zero and task state is neither 2 nor 3, it
+  invokes task slot+0x14 with result 3. That slot is 0x40dce0, which propagates
+  command state 2 through the notifying native setter. Directly writing command
+  state 3 does not clear this predicate and is not an accepted abort mechanism.
+- Native 0xf3c9a0 is exactly `mov byte ptr [ecx+0x0d],0; ret`. RequestEnd now
+  verifies that signature and invokes this setter only on the validated linked
+  raw-state-0 owned command. It preserves command state and the owned Sync ref;
+  repeated requests are idempotent. No direct field write was added.
+- Scheduler 0xf94fac updates task slot+0x34. Its state-2/3 branches call cleanup
+  slot+0x1c -> 0xc43010, then destroy/remove the task unless separately retained.
+  Cleanup unregisters/releases task+0x68, clears it, and calls 0xc22ea0, which
+  calls slot+0x3c -> 0xc0c4f0 to unregister/free the task+0x60 record, then
+  0x40ca20. Base destruction releases the retained command handle.
+
+This is static reachability and ownership evidence, not physical-stop or runtime
+reference-balance acceptance. The concrete task creates/updates a separate child
+command through task+0x68; withdrawing records/listeners alone is insufficient
+proof that movement/physics has stopped. Test command acceptance, actual motion,
+abort request, scheduler/Sync cleanup and stationary position independently on
+one owned Human before enabling a backend. The loaded-world gate remains closed.
+
+The production-linked reentry fixture uses refusing guards to attempt Start,
+End, Observe and Release recursively from every outer operation; it verifies
+that recursive calls do not replace identity or drop the owned Sync token.
+It never invokes a game binding. The earlier dated state-3 description above
+records the superseded implementation, not the current request contract.
