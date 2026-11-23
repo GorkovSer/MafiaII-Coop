@@ -20,7 +20,9 @@ typedef enum {
 /* Candidate, not attached to callbacks. Zero-initialize once; never reset a
    live owner. Calls must be serialized on the verified game thread.
    Guard always checks full EXE hash/base/thread; START additionally checks a
-   current mod-owned registry identity and fresh agreed world. Never use story
+   current mod-owned registry identity and fresh agreed world for a network
+   consumer. The opt-in offline Human diagnostic instead requires its isolated
+   profile/local loaded lifetime and cannot grant network authority. Never use story
    NPCs. The native AI scheduler handles this command, rather than bypassing it.
    Scheduler arbitration and the native OOM/exception contract remain untested.
    A created Sync handle is NOT proof of acceptance, physical motion or success. */
