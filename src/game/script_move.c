@@ -8,7 +8,7 @@
 typedef void *(__attribute__((thiscall)) *ScrMove)(void *, uint32_t *,
     const float *, unsigned int, const float *, int);
 typedef void (__attribute__((thiscall)) *ReleaseRef)(uint32_t *);
-typedef void (__attribute__((thiscall)) *ChangeState)(void *, unsigned int);
+typedef void (__attribute__((thiscall)) *RequestAbort)(void *);
 _Static_assert(sizeof(void *) == 4, "Pinned engine requires x86");
 static int read_at(void *context, uint32_t at, void *out, size_t size) {
     (void)context;
@@ -95,20 +95,22 @@ CoopScriptMoveResult CoopScriptMoveRequestEnd(CoopScriptMove *o) {
     if (!o || o->busy || !o->sync || !o->guard) return COOP_SCRIPT_MOVE_REFUSED;
     o->busy = 1;
     CoopScriptMoveResult result = COOP_SCRIPT_MOVE_REFUSED;
-    static const unsigned char signature[] = {0x8b,0x41,8,0x8b,0x54,0x24,4,0x3b,0xc2,0x74,0x12};
+    static const unsigned char signature[] = {0xc6,0x41,0x0d,0,0xc3};
     unsigned char actual[sizeof(signature)];
     CoopScriptState state;
     if (o->guard(o->context, o->guid, o->human, COOP_SCRIPT_MOVE_END) && abi() &&
-        read_at(NULL, 0xf5d290, actual, sizeof(actual)) &&
+        read_at(NULL, 0xf3c9a0, actual, sizeof(actual)) &&
         !memcmp(actual, signature, sizeof(actual)) &&
         CoopReadScriptMoveState(read_at, NULL, o->sync, &state) == COOP_SCRIPT_STATE_VALID) {
         if (state.command_state) result = COOP_SCRIPT_MOVE_TERMINAL_OBSERVED;
         else if (state.linked_to_sync) {
-            /* Native conditional transition; no queue/global-AI pointer writes.
-               Own Sync keeps userdata's command ref alive across notification.
-               State zero takes the native direct-state branch; task cleanup
-               and physical stop are still asynchronous/unverified. */
-            ((ChangeState)(uintptr_t)0xf5d290)((void *)(uintptr_t)state.command, 3);
+            /* Native task update 0x40f340 consumes command+0x0d through
+               0xf3c9b0, requests task result 3 and lets native cleanup propagate
+               the command result/Sync notification. Merely setting command
+               state 3 does not trigger that predicate. Do not change the
+               command state ourselves, release Sync or report physical stop.
+               The setter is idempotent; the request remains asynchronous. */
+            ((RequestAbort)(uintptr_t)0xf3c9a0)((void *)(uintptr_t)state.command);
             result = COOP_SCRIPT_MOVE_END_REQUESTED;
         }
     }

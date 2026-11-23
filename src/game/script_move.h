@@ -34,9 +34,10 @@ CoopScriptMoveResult CoopScriptMoveRelease(CoopScriptMove *owner);
 /* Observation guard needs pinned image/thread and our owned Sync ref, and must
    not require a live Human or world. No native mutation, stop or success verdict. */
 CoopScriptStateStatus CoopScriptMoveObserve(CoopScriptMove *owner, CoopScriptState *out);
-/* Candidate request through native command state-change routine. END guard
+/* Candidate request through native command abort-flag setter. END guard
    verifies image/thread and our owned Sync/command, even after world withdrawal.
-   Only linked raw-state-0 commands are changed; 1..3 are left intact. Neither
+   Only linked raw-state-0 commands receive the request; command state itself
+   stays untouched for native task result/Sync propagation. 1..3 are left intact. Neither
    END_REQUESTED nor TERMINAL_OBSERVED establishes stopped motion/task removal.
    Caller must preserve the Sync ref and await separately verified stop. */
 CoopScriptMoveResult CoopScriptMoveRequestEnd(CoopScriptMove *owner);
