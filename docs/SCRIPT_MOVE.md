@@ -3,9 +3,10 @@
 This is a new candidate route for the remote actor, not an enabled backend.
 It follows the engine's own scripted command lifecycle instead of placing a
 raw MoveDir underneath an autonomous AI producer. Full two-PC mission acceptance
-is still outstanding. The user resumed testing on 23 November; the state-reader
-fixture now passes, but no native Start/End/Release candidate has been invoked
-in game. Later dated compile-only/hold accounts record their original status.
+is still outstanding. The isolated offline -TestScriptMove diagnostic invoked
+Start/End/Release on 23 November. Motion and command abort were observed, but
+continued movement failed physical-stop acceptance. The remote backend remains
+unwired. Later dated compile-only/hold accounts record their original status.
 
 ## Source and pinned EXE evidence
 
@@ -47,7 +48,8 @@ evidence, not proof that calling it in a mission works.
 
 ## Implemented candidate
 
-src/game/script_move.c/.h compiles into the observer but has no callers there.
+src/game/script_move.c/.h compiles into the observer; the explicit offline
+Human diagnostic is its sole caller. No network backend calls it.
 CoopScriptMoveStart requires a guard for pinned image/base/game thread,
 mod-owned registry identity and fresh agreed-world authority. It independently
 checks the Human/controller layout, active Human/agent, script back-pointer,
@@ -187,3 +189,28 @@ End, Observe and Release recursively from every outer operation; it verifies
 that recursive calls do not replace identity or drop the owned Sync token.
 It never invokes a game binding. The earlier dated state-3 description above
 records the superseded implementation, not the current request contract.
+
+## First offline native acceptance (2026-11-23)
+
+The user-authorized isolated Human diagnostic now has explicit TestScriptMove
+opt-in. Its guard uses loaded local lifetime, pinned image/base/thread, redirected
+profile and fresh owned registry identity, with networking prohibited at both
+launcher and DLL configuration boundaries. This is a local acceptance exception;
+it supplies no invented agreed-world key and cannot authorize a remote consumer.
+
+Start returned HANDLE_CREATED. Native abort returned END_REQUESTED; snapshots
+changed from command state 0/abort byte 1 to state 2/byte 0. The Human moved
+before the request and continued moving afterwards: 42 samples at >=3.5 seconds
+after Start span 0.16166 / 8.35553 / 0.04629 units. Therefore command termination
+is not sufficient evidence of physical stop or exclusive movement ownership.
+After native Human release, owned Sync release returned REFERENCE_RELEASED and
+the registry confirmed absence; normal child exit 0 and original-profile changes 0.
+
+Additional static evidence: the recursive task creates a type-3 MoveToPos child
+(vtable 0x197b0c4), copies its parent through 0xc42520 -> 0xf3c950, including
+abort byte +0x0d, and updates that copy before its own base abort check. The
+MoveToPos task vtable is 0x197ca78; update 0xcba8b0 also calls 0x40f340, and
+cleanup is 0xc42c70. These sites pass the exact-byte audit. They do not identify
+the cause of post-abort motion: remaining child work and resumed autonomous AI
+still need to be distinguished. Next capture task/child lifetime and AI ownership
+around abort; do not substitute repeated teleports or zero the controller.
