@@ -1,6 +1,7 @@
 #ifndef COOP_REMOTE_ACTOR_H
 #define COOP_REMOTE_ACTOR_H
 #include "../net/game_bridge.h"
+#include "../net/remote_timeline.h"
 
 /* Game-thread-only controller. Backend owns all engine references and must
    validate pinned image, registry identity, context and AI exclusion itself. */
@@ -25,8 +26,12 @@ typedef struct {
     uint64_t session, retry_after;
     uint32_t connection, generation, epoch, player;
     CoopRemoteActorStatus status;
+    CoopRemoteTimeline timeline;
+    unsigned int smoothing_enabled;
 } CoopRemoteActor;
 void CoopRemoteActorInit(CoopRemoteActor *actor, const CoopRemoteActorOps *ops, void *context);
+/* Configure before actor creation only. Off by default pending acceptance. */
+int CoopRemoteActorEnableSmoothing(CoopRemoteActor *actor, int enabled);
 /* NULL/expired/unagreed remote retires the owned actor. Repeat while removal
    is pending, including in menus. Never reset a live controller to discard it. */
 CoopRemoteActorStatus CoopRemoteActorTick(CoopRemoteActor *actor,

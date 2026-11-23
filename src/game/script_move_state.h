@@ -10,6 +10,7 @@ typedef enum {
 typedef struct {
     uint32_t sync_flags, command, command_state;
     uint32_t linked_to_sync;
+    uint32_t command_references; /* Observed native count, not ownership acquired. */
     uint8_t command_flag_d; /* Raw serialized byte, not a cancellation verdict. */
 } CoopScriptState;
 /* Owned Sync reference and pinned image/game-thread context required externally.

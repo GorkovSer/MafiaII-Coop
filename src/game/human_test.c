@@ -141,6 +141,35 @@ static int script_guard(void *context, uint32_t guid, uint32_t human, unsigned i
     return initialized && loaded && !paused && owned && guid == owned_guid &&
         human == (uint32_t)(uintptr_t)owned && human_valid(owned);
 }
+static void script_dispatch_sample(void) {
+    CoopCommandQueue queue;
+    if (!human_valid(owned) || CoopReadCommandQueue(registry_read, NULL,
+        (uint32_t)(uintptr_t)owned, &queue) != COOP_COMMAND_QUEUE_VALID) return;
+    record("script_queue_used", queue.used_count);
+    if (!queue.retained_command) { record("script_movedir_retained", 0); return; }
+    unsigned char a[0x58], b[0x58];
+    if (!registry_read(NULL, queue.retained_command, a, sizeof(a)) ||
+        !registry_read(NULL, queue.retained_command, b, sizeof(b)) ||
+        memcmp(a, b, sizeof(a))) return;
+    uint32_t type, refs;
+    memcpy(&type, a, 4); memcpy(&refs, a+4, 4);
+    if (type != 0x18f14b0 || !refs || refs >= 0x7fffffffu) {
+        record("script_movedir_retained", 0); return;
+    }
+    float motion[2], multiplier;
+    memcpy(motion, a+0x30, sizeof(motion)); memcpy(&multiplier, a+0x3c, 4);
+    if (!isfinite(motion[0]) || !isfinite(motion[1]) || !isfinite(multiplier)) return;
+    char line[180];
+    int n = snprintf(line, sizeof(line),
+        "human_script_dispatch used=%u queued=%u motion=%.5f,%.5f multiplier=%.5f\r\n",
+        queue.used_count, queue.retained_is_queued, (double)motion[0], (double)motion[1], (double)multiplier);
+    HANDLE file = CreateFileW(evidence, FILE_APPEND_DATA, FILE_SHARE_READ | FILE_SHARE_WRITE,
+        NULL, OPEN_EXISTING, 0, NULL);
+    if (file != INVALID_HANDLE_VALUE) {
+        DWORD written; if (n > 0 && (size_t)n < sizeof(line)) WriteFile(file, line, (DWORD)n, &written, NULL);
+        CloseHandle(file);
+    }
+}
 static void script_tick(void) {
     if (!script_enabled || !owned || !human_valid(owned)) return;
     ULONGLONG now = GetTickCount64();
@@ -174,8 +203,10 @@ static void script_tick(void) {
             record("script_abort_byte", state.command_flag_d);
             record("script_sync_flags", state.sync_flags);
             record("script_link_present", state.linked_to_sync);
+            record("script_command_references", state.command_references);
         }
         record_position(owned);
+        script_dispatch_sample();
     }
 }
 static void remove_owned(void) {

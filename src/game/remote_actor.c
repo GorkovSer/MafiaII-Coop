@@ -30,18 +30,34 @@ static CoopRemoteActorStatus retire(CoopRemoteActor *a) {
     a->handle = a->retiring = a->stopped = a->removal_started = 0;
     return a->status = COOP_ACTOR_WAIT_WORLD;
 }
+int CoopRemoteActorEnableSmoothing(CoopRemoteActor *a, int enable) {
+    if (!a || a->handle || a->retiring) return 0;
+    memset(&a->timeline, 0, sizeof(a->timeline));
+    a->smoothing_enabled = enable != 0;
+    return 1;
+}
 CoopRemoteActorStatus CoopRemoteActorTick(CoopRemoteActor *a, const CoopRemoteSnapshot *remote, uint64_t now) {
     if (!enabled(a)) return a->status = COOP_ACTOR_DISABLED;
     CoopRemoteSnapshot s;
     int authorized = CoopRemoteSnapshotAt(remote, now, &s) && s.active && s.world_authorized;
     int changed = authorized && (s.session_id != a->session || s.connection_generation != a->connection ||
         s.world_generation != a->generation || s.epoch != a->epoch || s.player_id != a->player);
+    if (!authorized || changed) memset(&a->timeline, 0, sizeof(a->timeline));
     if (a->handle && (a->retiring || !authorized || changed)) return retire(a);
     if (!authorized) return a->status = COOP_ACTOR_WAIT_WORLD;
+    float target[3]; memcpy(target, s.position, sizeof(target));
+    if (a->smoothing_enabled) {
+        CoopRemoteFrame frame;
+        if (!CoopRemoteTimelineAt(&a->timeline, &s, now, &frame)) {
+            if (a->handle) return retire(a);
+            return a->status = COOP_ACTOR_WAIT_WORLD;
+        }
+        memcpy(target, frame.position, sizeof(target));
+    }
     if (!a->handle) {
         if (now < a->retry_after) return a->status = COOP_ACTOR_CREATING;
         a->retry_after = now > UINT64_MAX - 500 ? UINT64_MAX : now + 500;
-        uint32_t handle = a->ops.create(a->context, s.position);
+        uint32_t handle = a->ops.create(a->context, target);
         if (!handle)
             return a->status = COOP_ACTOR_BACKEND_REFUSED;
         a->handle = handle; a->session = s.session_id; a->connection = s.connection_generation;
@@ -51,12 +67,14 @@ CoopRemoteActorStatus CoopRemoteActorTick(CoopRemoteActor *a, const CoopRemoteSn
     }
     float p[3];
     if (!a->ops.position(a->context, a->handle, p) || !position_valid(p)) return retire(a);
-    float dx = s.position[0] - p[0], dy = s.position[1] - p[1];
+    float dx = target[0] - p[0], dy = target[1] - p[1];
     float distance = sqrtf(dx*dx + dy*dy);
+    float raw_dx=s.position[0]-p[0], raw_dy=s.position[1]-p[1];
     /* No implicit teleport, vertical warp or unbounded catch-up through walls.
        These policy limits require real-game tuning; velocities use world
        coordinate units per second, not a native MoveDir mode byte. */
-    if (distance > 20.0f || fabsf(s.position[2] - p[2]) > 3.0f) {
+    if (distance > 20.0f || fabsf(target[2] - p[2]) > 3.0f ||
+        raw_dx*raw_dx+raw_dy*raw_dy > 400.0f || fabsf(s.position[2]-p[2]) > 3.0f) {
         if (!a->stopped) {
             if (!a->ops.stop(a->context, a->handle)) {
                 a->retiring = 1; return a->status = COOP_ACTOR_BACKEND_REFUSED;
