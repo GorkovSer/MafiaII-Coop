@@ -6,7 +6,7 @@
 World agreement прошёл fixtures, но не игровое согласование двух миров.
 Этот хеш обозначает основу этапа, а не будущий HEAD документа.
 
-Текущий участок: `codex/runtime-evidence-20261123`, отложенные проверки и приёмка
+Текущий участок: `codex/script-abort-20261123`, отмена scripted movement и приёмка
 registry-guarded Human. Полная сборка, Python/C/loader проверки и сетевой suite
 выполнены; исправлен только учёт полученных пакетов в bridge fixture после
 обнуления снимка при отключении. В реальной игре подтверждены создание Human,
@@ -15,6 +15,15 @@ valid queue/AI observations и registry-confirmed удаление в двух �
 104 active snapshots во время движения Вито. Новые native movement/end bindings по-прежнему не
 вызывались. Далее: повторные жизненные циклы/переходы и проверяемая отмена/остановка
 scripted movement; не открывать remote/world gates по результату локального теста.
+
+Новое статическое основание: command type 4 -> SetMoveToBBRec -> task vtable
+0x197ce28; update читает command+0x0d через 0xf3c9b0 и ставит task result 3.
+RequestEnd теперь вызывает штатный setter 0xf3c9a0, сохраняя command state/Sync;
+прежняя запись command state 3 отменой не подтверждена и заменена. Конкретные
+пути scheduler cleanup найдены, но физическая остановка/баланс ссылок в игре
+ещё не проверены. См. SCRIPT_MOVE.md; backend по-прежнему не подключать.
+Pinned full build/audit, девять production fixtures и девять loader/profile
+checks прошли; новый guard-reentry тест не вызывает игровые функции.
 
 ## Обязательно перед работой и каждым коммитом
 

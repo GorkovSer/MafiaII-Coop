@@ -763,3 +763,30 @@ two-PC story/failure/restart/host-save/full-campaign acceptance is claimed.
   physical cancellation, reference balance or complete campaign acceptance.
 - Updated current instructions to supersede the older testing hold and to
   separate executed fixtures from still-unexecuted native movement bindings.
+
+## 2026-11-23 — concrete script task and native abort request correction
+
+Pinned SHA256 was revalidated. Static tracing connected command type 4 through
+the registered C_AIAction_SetMoveToBBRec descriptor/factory to task vtable
+0x197ce28. Its update reaches 0x40f340, which reads command+0x0d through
+0xf3c9b0 and requests task result 3 when that byte is zero. Native task result
+propagation, scheduler cleanup slot+0x1c, child listener/record cleanup and
+command reference destruction were traced; see SCRIPT_MOVE.md for exact sites.
+
+RequestEnd previously changed command state to 3, which does not clear that
+abort predicate. It now verifies/calls the native setter 0xf3c9a0 on the same
+guarded, linked raw-state-0 owned command, preserving command state and owned
+Sync for native asynchronous propagation. It remains unwired and unexecuted in
+game. END_REQUESTED is not physical stop, cancellation completion or deletion.
+
+Full pinned clang 23.1.5 warnings-as-errors build passed. The extended full-SHA
+byte audit passed. Emitted wrapper inspection confirmed command in ECX and
+the no-stack-argument call to 0xf3c9a0. New production-linked refusing-guard
+fixture passed all four outer/recursive operations and reference preservation;
+it makes no native calls. Updated state-reader fixture passed zero abort byte
+with still-linked raw-state-0 command and refusal when that byte changes between
+snapshots. No real-game native command or two-PC test was performed in this stage.
+The production fixture group (nine executables, including the new owner test)
+and all nine loader/profile checks passed. The changed state-reader fixture
+was rebuilt and rerun after adding the abort-byte snapshot cases. Network
+code/protocol did not change; the previously passed network suite was not rerun.
