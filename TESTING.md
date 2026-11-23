@@ -817,3 +817,66 @@ On retirement, End returned TERMINAL_OBSERVED, Human Release was followed by
 registry-confirmed absence, and owned Sync release returned REFERENCE_RELEASED.
 Native immediate quit took 1.609 s / nine Enter keys. Launcher/child exits 0;
 original_profile_changed_files=0. No two-PC/native remote backend test occurred.
+
+## 2026-11-23 evening — dispatch observations, then user hold
+
+The next isolated run initially failed DISPLAY2 containment: the launcher saw
+a stable 320x176 placeholder, then the game resized to 1286x749 during placement.
+Placement now recenters after a startup size change and requires one second of
+post-placement containment within the existing startup deadline. The rebuilt
+launcher placed the 1280x720 client fully on DISPLAY2 in the following actual run.
+
+State observation now includes the native command reference count and rejects
+a changed count between snapshots; the updated state/reentry fixtures passed
+before the hold. Added read-only retained MoveDir observations in the explicit
+offline diagnostic. In game, eight pre-abort samples spanned 1.12230/0.51629/0;
+42 late samples spanned 0.81391/6.03961/0.04678. Late command state stayed 2,
+with 2 or 3 observed references; retained queued MoveDir motion was nonzero,
+multiplier 1. This does not identify remaining child work versus autonomous AI.
+
+Owned Sync release and registry removal were confirmed. Immediate quit took
+1.906 seconds / ten Enter keys; launcher/child exits 0, original-profile changes 0.
+A later loader/profile suite was interrupted when the user paused ALL tests;
+it is not a full-suite pass. No game/test processes remained after interruption.
+
+After the hold: source-only remote_timeline, optional actor smoothing, build
+source wiring and Loopback/Radmin presets were prepared. They were NOT built,
+executed or published. Verification and working-change selection remain pending
+the user's explicit permission. No ready-mod or increased-readiness claim.
+
+## 2026-11-23, 22:50 onward — resumed foundation acceptance
+
+The user resumed tests and publications, changing the cadence to fifteen minutes.
+The complete pinned warnings-as-errors build passed. All six Python scripts,
+ten production fixture executables and nine loader/profile checks passed.
+The new foundation fixture covers delayed interpolation without rewriting
+authority metadata, direct world changes, withdrawal, equal receive timestamps,
+packet gaps, expiry, sequence wrap/rollback, NaN, smoothing integration and raw
+large-distance refusal. It also covers host-only ID allocation/exhaustion,
+duplicate bindings, guest NPC/vehicle refusal, host vehicle bindings, full map,
+retirement across world changes, non-absence refusal and callback reentry.
+The expanded foundation fixture was rebuilt/rerun after adding direct world
+change and vehicle cases; it passed.
+
+The complete network script reached every PASS and its normal final message.
+The outer invocation initially misclassified its inherited LASTEXITCODE=3 from
+an EXPECTED invalid-endpoint rejection as suite failure. Source/log review
+confirmed normal suite completion; no network implementation fix or redundant
+rerun was required. The new preset script passed four preparation configurations
+and seven endpoint refusals using a nonexistent game path, without launching it.
+Full-SHA native audit, including the non-reversible Human LockControls wrapper,
+passed. No native lock/AI suppression was enabled.
+
+Actual LoopbackHost preset launched the new observer on DISPLAY2 with full
+1280x720 containment. Computer Use was interrupted before automated menu entry;
+the user then loaded the story and explicitly resumed game testing. Loaded
+player telemetry and the snowy scene were observed. A six-second passive guest
+overlapped authorized native Up input (1000 ms): one connection, 111 active
+samples, position ranges 1.34459/4.88849/0.00973, guest exit 0. Screenshot confirmed
+Vito's changed position. Native immediate quit took 1.656 s/nine Enter keys;
+launcher/child exits 0, original-profile changes 0. This accepts diagnostic
+transport/startup, not a second game client, Radmin link or remote avatar.
+
+Full-campaign readiness remains approximately 10% (subjective). Physical stop,
+AI arbitration, verified loaded-world production, combat/vehicles/NPC authority,
+two-PC mission failure/reload and host-save acceptance remain incomplete.
