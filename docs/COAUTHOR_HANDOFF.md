@@ -1,9 +1,19 @@
 # Указания соавторам и текущее состояние
 
-Сводка обновлена: 21 ноября 2026 года. Основа текущего этапа:
-`4919005cf51842d4a408834de1b12892281a68f1` в `development`.
-Новый world agreement проверен только сборкой; игровые тесты отложены.
+Сводка обновлена: 23 ноября 2026 года. Основа текущего этапа:
+`607c6786dbcd6812ce0756faf75a5356af56a0a0` в `development`.
+Пользователь возобновил тесты и разрешил нужные проверки на втором мониторе.
+World agreement прошёл fixtures, но не игровое согласование двух миров.
 Этот хеш обозначает основу этапа, а не будущий HEAD документа.
+
+Текущий участок: `codex/resume-20261123-tests`, отложенные проверки и приёмка
+registry-guarded Human. Полная сборка, Python/C/loader проверки и сетевой suite
+выполнены; исправлен только учёт полученных пакетов в bridge fixture после
+обнуления снимка при отключении. В реальной игре подтверждены создание Human,
+valid queue/AI observations и однократное registry-confirmed удаление; выход 0,
+исходный профиль неизменен. Новые native movement/end bindings по-прежнему не
+вызывались. Далее: повторные жизненные циклы/переходы и проверяемая отмена/остановка
+scripted movement; не открывать remote/world gates по результату локального теста.
 
 ## Обязательно перед работой и каждым коммитом
 
@@ -743,3 +753,11 @@ native calls/live memory/input/network executed; user hold stays. Next: concrete
 movement task cleanup/physical-stop condition and end/ref acceptance after hold,
 then actual remote backend plus verified loaded-world producer. Two-PC mission/
 failure/restart/host-save and full campaign acceptance remain outstanding.
+
+## 2026-11-23 — current runtime acceptance and next work
+
+User testing hold is lifted by the current request and explicit second-display authorization. The pinned full build, six Python scripts, eight C fixtures, nine loader/profile checks and complete network suite have run. A fixture-summary failure after expected peer disconnect was fixed without changing production networking: keep observed receive evidence independently of the currently zeroed mailbox. The stopped-output-zero check remains mandatory.
+
+The current registry-guarded -TestHuman build ran in a normal-menu loaded, visually confirmed story scene on DISPLAY2. Creation identity and one Release/registry-absence cycle passed; AI snapshots were valid at all three phases and the command queue/retained reference reader produced valid observations. This does not authorize AI exclusion, native movement/end calls or remote motion. Screenshots did not independently identify the generated Human in the crowd. The original profile stayed unchanged and native child exit was 0. One epoch is not complete reload/lifecycle acceptance.
+
+Keep movement and world gates closed. Next verify repeated actor lifetime/mission transitions and the scripted-command cancellation/physical-stop/reference contract, then a concrete backend and loaded-world producer. Normal Continue produced script progress observations, not a unique checkpoint identity. The 23 November passive windows were near-stationary and must not be described as movement-transfer proof. Full two-PC story/failure/save acceptance is still missing. Approximate full-campaign readiness: 10% (subjective).
