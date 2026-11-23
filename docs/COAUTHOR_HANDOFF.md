@@ -1,5 +1,29 @@
 # Указания соавторам и текущее состояние
 
+## Последнее решение пользователя: сократить объём до MVP
+
+2026-11-23: сначала только два персонажа в одной фиксированной сцене,
+подключение, появление, движение/поворот и штатное отключение. Бой, NPC, машины,
+сюжетная синхронизация, катсцены, сейвы и reconnect отложены. Не продолжать
+широкую инфраструктуру кампании. Ближайшее препятствие — управляемый отдельный
+аватар; использовать готовую основу, если она действительно совместима и
+сокращает работу. Приёмка MVP — два реальных ПК и видимое движение с обеих сторон.
+Полный план сохранён как отложенный в ROADMAP.md; MVP не считать полной кампанией.
+
+# Current local stage: Player control observer (2026-11-23)
+
+After published 5bc93c3, added a read-only concrete Player control reader and
+pinned class/factory/query audit. Full build, audit and loader/profile suite
+passed; expanded production telemetry fixture passed. Isolated game session
+20261123-231437-105 / PID 29900 was loaded manually by the user. All 100 control
+samples were accepted, including modes 10, 0, 1 and 5. A one-second native Up
+input moved Vito; input released and focus retained. Native quit took 2 seconds,
+child/launcher exit 0, original profile changed files 0. No Player control method
+or spawn was called. Native CUA window access was restored; stale internal browser
+handles failed, a fresh IAB tab succeeded. Do not treat old node tool cancellation
+as blocking all code work. Details: [PLAYER_CONTROL.md](PLAYER_CONTROL.md).
+Full campaign readiness remains approximately 10%, subjective.
+
 Последнее указание пользователя, 23 ноября 22:50 МСК: тесты и публикации снова
 разрешены, GitHub обновлять примерно раз в 15 минут с отчётом в чат. Повторное
 перечитывание инструкций и лишний расход пользователь запретил. Остановка

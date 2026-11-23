@@ -216,6 +216,19 @@ def audit(path):
     match(0x91aa90, 'c20400')
     match(0x95cda0, '84c0743e6a006a008bcfe8918effff')
 
+    # Concrete Player has a real lock query/setter. This proves layout only:
+    # the setter also calls a shared subsystem path, not just this entity.
+    match(0x1a8d950, struct.pack('<6I', 0, 0x10, 0, 0, 0x430970, 0x41d990).hex())
+    match(0x430970, '68d0030000e8b60efdff83c40485c07407')
+    match(0x42f9b4, 'c706b8148f01')
+    match(0x18f14b8+0x14c, struct.pack('<I', 0x41fcd0).hex())
+    match(0x18f14b8+0x168, struct.pack('<I', 0x438230).hex())
+    match(0x41fcd0, '33c083b9100300000a0f94c0c3')
+    match(0x438342, 'c786100300000a000000')
+    match(0x438394, '6a01e8158dc4008bc8e81e9fc400')
+    match(0x4383aa, '6a006a006846464f468bc8e876abc400')
+    match(0x10810b0, 'a1accaab01c3')
+
     # MoveDir descriptor lives in zero-initialized storage; its function
     # pointers are installed by this static initializer, not file data.
     match(0xef5ad0, '33c0a3c0ebcb01b8a007980033c9a3b0ebcb01b850709300')
@@ -230,6 +243,11 @@ def audit(path):
     match(0x9375d7, '8b475025fffeffff0d00020000894750')
 
     return dict(schema=1, sha256=EXPECTED, game_api_calls=0, memory_writes=0,
+                player_factory='00430970', player_allocation_size=0x3d0,
+                player_vtable='018f14b8', player_lock_mode_offset=0x310,
+                player_lock_query='0041fcd0', player_lock_setter='00438230',
+                player_lock_query_mode=10, player_lock_setter_has_global_calls=True,
+                player_spawn_or_lock_runtime_verified=False,
                 create_enqueue_candidate='0095b0f0', movement_type=1,
                 movement_allocation_size=0x58, movement_vtable='018f14b0',
                 movement_deleting_destructor='0042d3e0',

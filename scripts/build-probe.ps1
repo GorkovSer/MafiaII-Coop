@@ -22,12 +22,13 @@ $actorSource=Join-Path $root 'src/game/remote_actor.c'
 $timelineSource=Join-Path $root 'src/net/remote_timeline.c'
 $moveSource=Join-Path $root 'src/game/move_command.c'
 $aiSource=Join-Path $root 'src/game/human_ai.c'
+$playerControlSource=Join-Path $root 'src/game/player_control.c'
 $scriptMoveSource=Join-Path $root 'src/game/script_move.c'
 $scriptStateSource=Join-Path $root 'src/game/script_move_state.c'
 $netLink=@('-I',(Join-Path $root 'third_party/enet/include'),(Join-Path $out 'enet.a'),'-lws2_32','-lwinmm','-lbcrypt')
 & $cc @common -shared (Join-Path $root 'src/probe/probe.c') '-Wl,--kill-at' -o (Join-Path $out 'coop_probe.dll')
 if ($LASTEXITCODE -ne 0) { throw 'Probe DLL build failed' }
-& $cc @common -DCOOP_OBSERVER -shared (Join-Path $root 'src/probe/probe.c') (Join-Path $root 'src/probe/observer.c') (Join-Path $root 'src/probe/profile.c') (Join-Path $root 'src/game/telemetry.c') (Join-Path $root 'src/game/story_test.c') (Join-Path $root 'src/game/model_test.c') (Join-Path $root 'src/game/human_test.c') $registrySource $entityMapSource $commandSource $progressSource $actorSource $timelineSource $moveSource $aiSource $scriptMoveSource $scriptStateSource (Join-Path $root 'src/net/game_bridge.c') $remoteSource @netSources '-Wl,--kill-at' -o (Join-Path $out 'coop_observer.dll') -ladvapi32 @netLink
+& $cc @common -DCOOP_OBSERVER -shared (Join-Path $root 'src/probe/probe.c') (Join-Path $root 'src/probe/observer.c') (Join-Path $root 'src/probe/profile.c') (Join-Path $root 'src/game/telemetry.c') (Join-Path $root 'src/game/story_test.c') (Join-Path $root 'src/game/model_test.c') (Join-Path $root 'src/game/human_test.c') $registrySource $entityMapSource $commandSource $progressSource $actorSource $timelineSource $moveSource $aiSource $playerControlSource $scriptMoveSource $scriptStateSource (Join-Path $root 'src/net/game_bridge.c') $remoteSource @netSources '-Wl,--kill-at' -o (Join-Path $out 'coop_observer.dll') -ladvapi32 @netLink
 if ($LASTEXITCODE -ne 0) { throw 'Event observer DLL build failed' }
 & $cc @common -DCOOP_PROFILE_TEST -shared (Join-Path $root 'src/probe/probe.c') (Join-Path $root 'src/probe/profile.c') '-Wl,--kill-at' -o (Join-Path $out 'coop_profile_probe.dll')
 if ($LASTEXITCODE -ne 0) { throw 'Profile redirect test DLL build failed' }
@@ -45,7 +46,7 @@ if ($LASTEXITCODE -ne 0) {throw 'World agreement fixture build failed'}
 if ($LASTEXITCODE -ne 0) {throw 'Remote actor fixture build failed'}
 & $cc @common (Join-Path $root 'tests/test_replication_foundation.c') $actorSource $entityMapSource $timelineSource $remoteSource (Join-Path $root 'src/net/wire.c') $worldSource -o (Join-Path $out 'test_replication_foundation.exe')
 if ($LASTEXITCODE -ne 0) {throw 'Replication foundation fixture build failed'}
-& $cc @common -DCOOP_TELEMETRY_TEST (Join-Path $root 'tests/telemetry_host.c') (Join-Path $root 'src/game/telemetry.c') $progressSource -o (Join-Path $out 'telemetry_host.exe')
+& $cc @common -DCOOP_TELEMETRY_TEST (Join-Path $root 'tests/telemetry_host.c') (Join-Path $root 'src/game/telemetry.c') $progressSource $playerControlSource -o (Join-Path $out 'telemetry_host.exe')
 if ($LASTEXITCODE -ne 0) {throw 'Telemetry fixture build failed'}
 & $cc @common (Join-Path $root 'tests/test_script_progress.c') $progressSource -o (Join-Path $out 'test_script_progress.exe')
 if ($LASTEXITCODE -ne 0) {throw 'Script progress fixture build failed'}

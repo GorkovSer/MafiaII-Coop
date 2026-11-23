@@ -5,6 +5,7 @@
 #include "../net/game_bridge.h"
 #include "story_test.h"
 #include "script_progress.h"
+#include "player_control.h"
 #include <math.h>
 #include <stdio.h>
 #include <string.h>
@@ -87,6 +88,25 @@ static int progress_read(void *context, uint32_t address, void *out, size_t size
     return copy_at(address, out, size);
 }
 
+static void log_player_control(uint32_t guid) {
+    uintptr_t game, player, game_again, player_again;
+    CoopPlayerControl control = {0};
+    int status = COOP_PLAYER_CONTROL_UNREADABLE;
+    if (pointer_at(GAME_SLOT, &game) && pointer_at(game + 0x118, &player)) {
+        status = CoopPlayerControlObserve(progress_read, NULL, (uint32_t)player, guid, &control);
+        if (!pointer_at(GAME_SLOT, &game_again) || game_again != game ||
+            !pointer_at(game_again + 0x118, &player_again) || player_again != player) {
+            status = COOP_PLAYER_CONTROL_CHANGED;
+            memset(&control, 0, sizeof(control));
+        }
+    }
+    char line[160];
+    int size = snprintf(line, sizeof(line),
+        "player_control status=%d mode=%lu native_lock_query=%d ownership_verified=0\r\n",
+        status, (unsigned long)control.mode, control.native_lock_query);
+    append(line, size);
+}
+
 static void log_script_progress(unsigned int event_id) {
     int transition = event_id == 10 || event_id == 11 || event_id == 12 || event_id == 13 ||
         event_id == 14 || event_id == 19 || event_id == 20 || event_id == 21 ||
@@ -151,6 +171,7 @@ void CoopTelemetryEvent(unsigned int event_id) {
     CoopNetworkPublish(epoch, snapshot.position);
     if (now < next_log) return;
     next_log = now + 500;
+    log_player_control(snapshot.local_guid);
     int size = snprintf(line, sizeof(line),
         "player_sample ms=%llu epoch=%lu guid=%lu xyz=%.5f,%.5f,%.5f model_valid=%d model=%.5f,%.5f,%.5f\r\n",
         (unsigned long long)now, (unsigned long)snapshot.epoch, (unsigned long)snapshot.local_guid,
