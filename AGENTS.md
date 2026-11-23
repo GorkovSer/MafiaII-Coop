@@ -1,5 +1,14 @@
 # Project instructions
 
+Latest user override (2026-11-23, resumed at 22:50 Moscow): tests and GitHub
+publication are authorized again; publish verified stages roughly every fifteen
+minutes and report each successful update in chat. Do not repeatedly reread
+instructions or dump large tool output. Stopping Computer Use stops UI control,
+not source work/console checks; continue independent work, without bypassing the
+UI interruption. The earlier interrupted loader suite remains historical; the
+new foundation build completed all ten production fixtures and nine loader/profile
+checks. Native avatar physical-stop and two-PC campaign acceptance remain absent.
+
 User-authorized destination: `https://github.com/GorkovSer/MafiaII-Coop.git`, branch `development`.
 
 Shared handoff: read `docs/COAUTHOR_HANDOFF.md` before starting work and before EVERY commit. The user explicitly requires keeping coauthor instructions current. In the same commit, update that file whenever the task, ownership, behavior, verified results, limitations or next action changes. If nothing relevant changed, review it without inventing a status update. Keep `TESTING.md` as the detailed evidence record; the handoff is the concise current state. Fetch before integration, preserve the other author's commits and never overwrite concurrent work.

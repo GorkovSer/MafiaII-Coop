@@ -24,6 +24,7 @@ static CoopScriptStateStatus snapshot(CoopScriptStateRead read, void *context,
         return COOP_SCRIPT_STATE_MISMATCH;
     out->sync_flags = s[8]; out->command = identity[1];
     out->command_state = word(c+8); out->command_flag_d = c[0xd];
+    out->command_references = count;
     if (word(c+4)) {
         uint32_t linked;
         if (!take(read, context, word(c+4), &linked, 4)) return COOP_SCRIPT_STATE_UNREADABLE;
@@ -44,7 +45,8 @@ CoopScriptStateStatus CoopReadScriptMoveState(CoopScriptStateRead read, void *co
     if (status != COOP_SCRIPT_STATE_VALID) return status;
     if (memcmp(ia, ib, sizeof(ia)) || a.sync_flags != b.sync_flags ||
         a.command != b.command || a.command_state != b.command_state ||
-        a.linked_to_sync != b.linked_to_sync || a.command_flag_d != b.command_flag_d)
+        a.linked_to_sync != b.linked_to_sync || a.command_flag_d != b.command_flag_d ||
+        a.command_references != b.command_references)
         return COOP_SCRIPT_STATE_CHANGED;
     *out = b; return COOP_SCRIPT_STATE_VALID;
 }

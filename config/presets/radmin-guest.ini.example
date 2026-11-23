@@ -1,0 +1,5 @@
+; Replace with the HOST PC's Radmin adapter IPv4 before use.
+[network]
+role=guest
+address=REPLACE_WITH_HOST_RADMIN_IPV4
+port=28960

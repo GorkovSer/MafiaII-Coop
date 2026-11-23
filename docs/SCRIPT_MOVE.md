@@ -214,3 +214,13 @@ cleanup is 0xc42c70. These sites pass the exact-byte audit. They do not identify
 the cause of post-abort motion: remaining child work and resumed autonomous AI
 still need to be distinguished. Next capture task/child lifetime and AI ownership
 around abort; do not substitute repeated teleports or zero the controller.
+
+## LockControls wrapper rejected as a reversible Human policy
+
+Pinned static inspection shows HumanScript::LockControls at 0x95cd80 querying
+Human vtable+0x14c before changing control state through slot+0x168 and the
+embedded controller. For concrete Human vtable 0x1967058 these are 0x91aaa0
+(always returns false) and 0x91aa90 (ret-4 stub). The unlock branch skips the
+embedded-controller call when that query is false. Thus this wrapper does not
+establish a reversible lock/unlock policy for this class. Exact-byte audit now
+checks these sites. No native LockControls call was added or executed.

@@ -23,6 +23,8 @@ if ($LASTEXITCODE -ne 0) { throw 'Production script progress fixture failed' }
 if ($LASTEXITCODE -ne 0) { throw 'World agreement fixture failed' }
 & (Join-Path $out 'test_remote_actor.exe')
 if ($LASTEXITCODE -ne 0) { throw 'Remote actor fixture failed' }
+& (Join-Path $out 'test_replication_foundation.exe')
+if ($LASTEXITCODE -ne 0) { throw 'Replication foundation fixture failed' }
 & (Join-Path $out 'telemetry_host.exe')
 if ($LASTEXITCODE -ne 0) { throw 'Production telemetry lifecycle fixture failed' }
 $dir = Join-Path $root ('work/loader-test/' + [Guid]::NewGuid().ToString('N'))
