@@ -3,7 +3,9 @@
 This is a new candidate route for the remote actor, not an enabled backend.
 It follows the engine's own scripted command lifecycle instead of placing a
 raw MoveDir underneath an autonomous AI producer. Full two-PC mission acceptance
-is still outstanding, and the user test hold remains active.
+is still outstanding. The user resumed testing on 23 November; the state-reader
+fixture now passes, but no native Start/End/Release candidate has been invoked
+in game. Later dated compile-only/hold accounts record their original status.
 
 ## Source and pinned EXE evidence
 
