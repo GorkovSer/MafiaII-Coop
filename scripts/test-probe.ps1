@@ -15,6 +15,8 @@ if ($LASTEXITCODE -ne 0) { throw 'Production command queue fixture failed' }
 if ($LASTEXITCODE -ne 0) { throw 'Move reentry fixture failed' }
 & (Join-Path $out 'test_script_move_state.exe')
 if ($LASTEXITCODE -ne 0) { throw 'Script movement state fixture failed' }
+& (Join-Path $out 'test_script_move_reentry.exe')
+if ($LASTEXITCODE -ne 0) { throw 'Script movement reentry fixture failed' }
 & (Join-Path $out 'test_script_progress.exe')
 if ($LASTEXITCODE -ne 0) { throw 'Production script progress fixture failed' }
 & (Join-Path $out 'test_world_sync.exe')

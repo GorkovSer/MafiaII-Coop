@@ -178,6 +178,28 @@ def audit(path):
     match(0x18fd35c + 0x4c, struct.pack('<I', 0xf95100).hex())
     match(0xf99ea0, '83e940e988290000')
 
+    # ScrMoveV's command type 4 resolves to SetMoveToBBRec, then this task.
+    # Native task update consumes the abort flag, NOT command state 3.
+    match(0x197bccc+4, struct.pack('<I', 0xc0ebf0).hex())
+    match(0xc0ebf0, 'b804000000c3')
+    match(0xb77695, '68605597016a04e87f314300')
+    match(0x1aad0d0, struct.pack('<II', 0x1980d40, 0x1975560).hex())
+    match(0x1980d40, struct.pack('<I', 0xcaef60).hex())
+    match(0xcaef66, '6a70e8931376ff85c074078bc8e96864fbff')
+    match(0xc653f0, 'c70628ce9701')
+    match(0x197ce28+0x34, struct.pack('<I', 0xca3ae0).hex())
+    match(0xca3ae3, 'e898feffff8bcee8613afdff')
+    match(0xc77553, 'e8e87d79ff')
+    match(0x40f344, '8b4f2885c97421e860d6b20084c07518')
+    match(0xf3c9b0, '8a410dc3')
+    match(0xf3c9a0, 'c6410d00c3')
+    match(0x40f361, '8b078b50146a038bcfffd2')
+    match(0x197ce28+0x14, struct.pack('<I', 0x40dce0).hex())
+    match(0x197ce28+0x1c, struct.pack('<I', 0xc43010).hex())
+    match(0xf950ec+8, struct.pack('<II', 0xf9500b, 0xf9500b).hex())
+    match(0xc43013, '8b476885c07469')
+    match(0xc4307b, 'c74768000000005e8bcf5fe915fefdff')
+
     # MoveDir descriptor lives in zero-initialized storage; its function
     # pointers are installed by this static initializer, not file data.
     match(0xef5ad0, '33c0a3c0ebcb01b8a007980033c9a3b0ebcb01b850709300')
@@ -246,7 +268,13 @@ def audit(path):
                 script_move_flag_d_serialized=True,
                 script_move_task_success_command_state=1,
                 script_move_task_failure_command_state=2,
-                script_move_end_request_state=3,
+                script_move_end_request_setter='00f3c9a0',
+                script_move_end_request_flag_offset=0x0d,
+                script_move_end_request_flag_value=0,
+                script_move_task_vtable='0197ce28',
+                script_move_task_update='00ca3ae0',
+                script_move_task_abort_predicate='0040f340',
+                script_move_task_cleanup='00c43010',
                 script_move_end_request_runtime_verified=False,
                 human_ai_teardown_requires_nonnull_pointer=True,
                 human_ai_null_pointer_is_disable_switch=False,
