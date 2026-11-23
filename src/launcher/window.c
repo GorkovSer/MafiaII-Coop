@@ -59,21 +59,38 @@ int CoopPlaceOnSecondMonitor(DWORD pid, HANDLE process) {
         if (!EqualRect(&rect, &next)) { rect = next; stable_since = GetTickCount64(); }
     }
     if (GetTickCount64() - stable_since < 1000) return 0;
-    int width = rect.right - rect.left, height = rect.bottom - rect.top;
-    if (width > work.right - work.left || height > work.bottom - work.top) {
-        fprintf(stderr, "Window exceeds DISPLAY2: check isolated windowed video config\n");
-        return 0;
-    }
-    int x = work.left + (work.right - work.left - width) / 2;
-    int y = work.top + (work.bottom - work.top - height) / 2;
-    if (!SetWindowPos(target.window, NULL, x, y, 0, 0, SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE)) return 0;
-    if (MonitorFromWindow(target.window, MONITOR_DEFAULTTONEAREST) != second) return 0;
+    int x=0, y=0;
     RECT placed;
-    if (!GetWindowRect(target.window, &placed) || placed.left < work.left ||
-        placed.top < work.top || placed.right > work.right || placed.bottom > work.bottom) {
-        fprintf(stderr, "Game window is not fully inside DISPLAY2 work area\n");
-        return 0;
+    int settled=0;
+    while (GetTickCount64() < deadline) {
+        int width=rect.right-rect.left, height=rect.bottom-rect.top;
+        if (width > work.right-work.left || height > work.bottom-work.top) {
+            fprintf(stderr, "Window exceeds DISPLAY2: check isolated windowed video config\n");
+            return 0;
+        }
+        x=work.left+(work.right-work.left-width)/2;
+        y=work.top+(work.bottom-work.top-height)/2;
+        if (!SetWindowPos(target.window, NULL, x, y, 0, 0,
+            SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE)) return 0;
+        stable_since=GetTickCount64();
+        int resized=0;
+        do {
+            if (WaitForSingleObject(process, 50) != WAIT_TIMEOUT ||
+                !GetWindowRect(target.window, &placed)) return 0;
+            if (placed.right-placed.left != width || placed.bottom-placed.top != height) {
+                rect=placed; resized=1; break; /* Recenter the real game window. */
+            }
+            if (placed.left < work.left || placed.top < work.top ||
+                placed.right > work.right || placed.bottom > work.bottom ||
+                MonitorFromWindow(target.window, MONITOR_DEFAULTTONEAREST) != second) {
+                fprintf(stderr, "Game window moved outside DISPLAY2 during placement\n");
+                return 0;
+            }
+        } while (GetTickCount64() < deadline && GetTickCount64()-stable_since < 1000);
+        if (resized) continue;
+        if (GetTickCount64()-stable_since >= 1000) { settled=1; break; }
     }
+    if (!settled) return 0;
     RECT client;
     GetClientRect(target.window, &client);
     printf("window_display=DISPLAY2 x=%d y=%d client=%ldx%ld\n", x, y, client.right, client.bottom);
