@@ -10,6 +10,7 @@
 #include "../game/telemetry.h"
 #include "../game/model_test.h"
 #include "../game/human_test.h"
+#include "../game/visual_test.h"
 
 static wchar_t log_path[MAX_PATH];
 static const unsigned char original[5] = {0x8b, 0x42, 0x1c, 0x6a, 0x0a};
@@ -85,6 +86,7 @@ static void __attribute__((thiscall, force_align_arg_pointer)) on_event(void *se
     CoopTelemetryEvent(item->id);
     CoopModelTestEvent(item->id);
     CoopHumanTestEvent(item->id);
+    CoopVisualTestEvent(item->id);
     LONG count = InterlockedIncrement(&item->count);
     /* Every lifecycle transition matters, including later menu returns and
        pauses. Frame callbacks still log only once; no per-frame disk I/O. */
@@ -147,6 +149,7 @@ DWORD CoopObserverInstall(const wchar_t *path) {
     }
     if (CoopModelTestStart(path)) { record("refused_model_test_config", 0, 0); return 15; }
     if (CoopHumanTestStart(path)) { record("refused_human_test_config", 0, 0); return 16; }
+    if (CoopVisualTestStart(path)) { record("refused_visual_test_config", 0, 0); return 17; }
     if (CoopTelemetryStart(path)) { record("refused_network_config", 0, 0); return 14; }
     unsigned char patch[5] = {0xe9};
     uint32_t delta = (uint32_t)(uintptr_t)startup_bridge - (0x4f2f05u + 5u);
