@@ -24,6 +24,15 @@ int CoopSecondMonitorAvailable(void) {
 }
 
 typedef struct { DWORD pid; HWND window; } search;
+static int child_waiting(HANDLE process, DWORD timeout, const char *stage) {
+    DWORD state=WaitForSingleObject(process, timeout);
+    if(state==WAIT_TIMEOUT) return 1;
+    DWORD code;
+    if(state==WAIT_OBJECT_0 && GetExitCodeProcess(process,&code))
+        fprintf(stderr,"window_child_exited stage=%s exit=%lu\n",stage,code);
+    else fprintf(stderr,"window_child_wait_failed stage=%s error=%lu\n",stage,GetLastError());
+    return 0;
+}
 static BOOL CALLBACK find_window(HWND window, LPARAM param) {
     search *target = (search *)param;
     DWORD pid;
@@ -41,19 +50,22 @@ int CoopPlaceOnSecondMonitor(DWORD pid, HANDLE process) {
     search target = {pid, NULL};
     ULONGLONG deadline = GetTickCount64() + 15000;
     do {
-        if (WaitForSingleObject(process, 0) != WAIT_TIMEOUT) return 0;
+        if (!child_waiting(process, 0, "find_window")) return 0;
         EnumWindows(find_window, (LPARAM)&target);
         if (target.window) break;
         Sleep(50);
     } while (GetTickCount64() < deadline);
-    if (!target.window) return 0;
+    if (!target.window) {
+        fprintf(stderr,"window_not_found_deadline pid=%lu\n",pid);
+        return 0;
+    }
     RECT rect;
     if (!GetWindowRect(target.window, &rect)) return 0;
     /* Startup can resize the same window after the splash. Center only once
        its outer bounds have remained stable for one second. */
     ULONGLONG stable_since = GetTickCount64();
     while (GetTickCount64() < deadline && GetTickCount64() - stable_since < 1000) {
-        if (WaitForSingleObject(process, 100) != WAIT_TIMEOUT) return 0;
+        if (!child_waiting(process, 100, "stabilize_window")) return 0;
         RECT next;
         if (!GetWindowRect(target.window, &next)) return 0;
         if (!EqualRect(&rect, &next)) { rect = next; stable_since = GetTickCount64(); }
@@ -75,7 +87,7 @@ int CoopPlaceOnSecondMonitor(DWORD pid, HANDLE process) {
         stable_since=GetTickCount64();
         int resized=0;
         do {
-            if (WaitForSingleObject(process, 50) != WAIT_TIMEOUT ||
+            if (!child_waiting(process, 50, "place_window") ||
                 !GetWindowRect(target.window, &placed)) return 0;
             if (placed.right-placed.left != width || placed.bottom-placed.top != height) {
                 rect=placed; resized=1; break; /* Recenter the real game window. */

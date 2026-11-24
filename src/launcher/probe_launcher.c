@@ -169,13 +169,26 @@ int wmain(int argc, wchar_t **argv) {
         failure = ERROR_FUNCTION_FAILED;
     }
     if (!failure && early && ResumeThread(child.hThread) == (DWORD)-1) failure = GetLastError();
-    if (!failure && second_screen && !CoopPlaceOnSecondMonitor(child.dwProcessId, child.hProcess))
+    if (!failure && second_screen && !CoopPlaceOnSecondMonitor(child.dwProcessId, child.hProcess)) {
+        fprintf(stderr,"probe_failure_stage=window_placement\n");
         failure = ERROR_INVALID_WINDOW_HANDLE;
+    }
 cleanup:
     if (failure) {
-        fprintf(stderr, "Probe failed: %lu; newly launched process terminated\n", failure);
-        TerminateProcess(child.hProcess, 1);
-        WaitForSingleObject(child.hProcess, 5000);
+        fprintf(stderr, "Probe failed: %lu; cleaning up newly launched process\n", failure);
+        int termination_requested=0;
+        if(WaitForSingleObject(child.hProcess,0)==WAIT_TIMEOUT) {
+            termination_requested=1;
+            if(!TerminateProcess(child.hProcess,1))
+                fprintf(stderr,"failed_child_termination_error=%lu\n",GetLastError());
+        }
+        DWORD failed_code;
+        if(WaitForSingleObject(child.hProcess,5000)==WAIT_OBJECT_0 &&
+           GetExitCodeProcess(child.hProcess,&failed_code))
+            fprintf(stderr,"failed_child_exit=%lu cleanup_termination_requested=%d\n",
+                failed_code,termination_requested);
+        else fprintf(stderr,"failed_child_exit=unknown cleanup_termination_requested=%d\n",
+            termination_requested);
     } else {
         if (remote) VirtualFreeEx(child.hProcess, remote, 0, MEM_RELEASE);
         printf("probe_loaded pid=%lu log_written=1\n", child.dwProcessId);
