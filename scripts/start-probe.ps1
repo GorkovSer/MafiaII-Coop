@@ -4,7 +4,7 @@ param([Parameter(Mandatory=$true)][string]$GameDirectory, [switch]$WaitForExit,
       [string]$Address='127.0.0.1', [ValidateRange(1,65535)][int]$Port=28960,
       [ValidatePattern('^\d{8}-\d{6}-\d{3}$')][string]$TestProfileFrom,
       [switch]$ContinueMainStory, [switch]$TestModelClone, [switch]$TestHuman,
-      [switch]$TestScriptMove)
+      [switch]$TestScriptMove, [switch]$TestVisualAvatar)
 $ErrorActionPreference = 'Stop'
 $root = Split-Path $PSScriptRoot -Parent
 . (Join-Path $PSScriptRoot 'launch-result.ps1')
@@ -16,7 +16,14 @@ if ((Get-FileHash -LiteralPath $exe).Hash.ToLowerInvariant() -ne $expected) {
 if (Get-Process mafia2 -ErrorAction SilentlyContinue) { throw 'Close existing Mafia II before starting this probe.' }
 $stamp = Get-Date -Format 'yyyyMMdd-HHmmss-fff'
 $local = Join-Path $root "work/probe-sessions/$stamp"
+if($TestVisualAvatar -and (!$Observer -or !$TestProfileFrom -or $NetworkRole -ne 'off' -or
+    $TestHuman -or $TestScriptMove -or $TestModelClone -or $ContinueMainStory)) {
+    throw 'Visual avatar test requires an isolated observer profile, networking off and no other native tests'
+}
 New-Item -ItemType Directory -Path $local -Force | Out-Null
+if($TestVisualAvatar) {
+    [IO.File]::WriteAllText((Join-Path $local 'visual-test.ini'),"[test]`r`nvisual_once=1`r`n",[Text.Encoding]::ASCII)
+}
 if($TestScriptMove -and (!$TestHuman -or $NetworkRole -ne 'off')) {
     throw 'Script movement acceptance requires the isolated Human test with networking off'
 }
