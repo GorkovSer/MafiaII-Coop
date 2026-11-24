@@ -1,3 +1,16 @@
+> Latest checkpoint — 2026-11-24. The user requested publication after ten more
+> minutes, then stopping work until later. No continuing/background work is
+> scheduled. Resume only when the user asks.
+>
+> Published baseline: `9e1919d26934bb2faec555237d628d51e352f19c` (PR #12).
+> Additional checkpoint: launcher window/cleanup diagnostics and the same-PC pair
+> attempt. The second game naturally exited 0 before its own window; handshake
+> alone is not two-client acceptance. Production one-game guard and original game
+> files remain unchanged. Pinned Werror build, loader/profile/user-token fixtures,
+> normal native host loading/exit and unchanged original profiles passed. See
+> VISUAL_MVP.md for exact sessions and results. Only one PC is available; the
+> next gameplay acceptance still needs a second real client. MVP estimate stays
+> around 70% for the reduced visual-only scope, not a full campaign mod.
 # Указания соавторам и текущее состояние
 
 ## Current portable checkpoint (2026-11-24)

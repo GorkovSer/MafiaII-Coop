@@ -169,6 +169,26 @@ binding to the Radmin adapter, not a remote VPN path or two-client gameplay.
 
 ### Next acceptance: two actual game clients
 
+A same-PC two-process diagnostic was attempted on 2026-11-24 because no second
+PC was available. The second injected module reached the network handshake but
+the second game exited with code 0 before creating its own window. The updated
+launcher reported `window_child_exited stage=find_window exit=0` and
+`failed_child_exit=0 cleanup_termination_requested=0`; its overall launch remained
+a failure (9). The normal child-exit field correctly remained unknown. This is
+not an accepted second game client and does not establish the exact internal
+reason for the early exit. No game binary or single-instance mechanism was
+patched; the production one-game guard remains enabled.
+
+The launcher diagnostics distinguish natural early exit from cleanup termination.
+The pinned Werror build and loader/profile/user-token fixture suite passed. A
+normal isolated host using that launcher loaded the alley and exited in 1641 ms
+with child/launcher 0 and original profile changes 0. Failed second-launch profile
+changes were also zero. Private sessions: `20261124-114354-864` (normal host) and
+`20261124-114532-370` (early-exit diagnostic). Neither process remains running.
+The unaudited-image loader fixture additionally verified the opposite cleanup
+path: the still-suspended owned child was terminated with code 1 and explicitly
+reported `cleanup_termination_requested=1`; the fixture suite now checks this.
+
 Use the same archive on both PCs. Record its SHA256 and both manifest source
 commits before starting. Start the host first, then the guest using the host's
 Radmin address. Both choose Continue from the isolated control save and stay in
