@@ -1,11 +1,16 @@
 param([string]$BuildDirectory='build/visual-network-20261124', [string]$OutputDirectory='dist')
 $ErrorActionPreference='Stop'
 $root=Split-Path $PSScriptRoot -Parent
+$commit=(& git -C $root rev-parse HEAD).Trim()
+if($LASTEXITCODE -ne 0) {throw 'Source commit not available'}
+$pending=@(& git -C $root status --porcelain --untracked-files=normal)
+if($LASTEXITCODE -ne 0) {throw 'Cannot verify the source worktree'}
+if($pending.Count) {throw 'Commit source changes before packaging so the manifest identifies the exact source'}
 $stamp=Get-Date -Format 'yyyyMMdd-HHmmss-fff'
 $stage=Join-Path $root "work/visual-package/$stamp/MafiaII-Coop-visual-preview"
 if(Test-Path -LiteralPath $stage) {throw 'Package staging already exists; no overwrite performed'}
 $files=@('scripts/start-visual-session.ps1','scripts/start-probe.ps1',
-    'scripts/install-test-save.ps1','scripts/launch-result.ps1',
+    'scripts/install-test-save.ps1','scripts/launch-result.ps1','scripts/visual-session-report.ps1',
     'testdata/story-save.zip','testdata/story-save.json',
     'third_party/enet/LICENSE','docs/VISUAL_MVP.md')
 $binaryDirectory='build/visual-network-20261124'
@@ -43,6 +48,7 @@ Open PowerShell in this folder.
 Host (use the Radmin IP assigned to the HOST computer):
   .\scripts\start-visual-session.ps1 -Role host -Address 26.X.X.X -GameDirectory 'C:\Games\Mafia II Classic'
 
+Wait for the host game window to open, then start the guest.
 Guest (use that SAME host Radmin IP):
   .\scripts\start-visual-session.ps1 -Role guest -Address 26.X.X.X -GameDirectory 'C:\Games\Mafia II Classic'
 
@@ -51,11 +57,17 @@ from the supplied fresh profile, then one player should step aside a few paces.
 Original saves are separate. Stay in the initial
 scene. Pausing withdraws the model and resuming restores it. Reloading/changing
 the scene ends approval: close and restart the preview on both PCs.
+If the guest started before the host and timed out, close and restart the guest.
+Automatic reconnect is not included in this preview.
 
 Use -SecondScreen to put the game on a second monitor. -PrepareOnly creates the
 isolated profile and checks files without starting the game. Private diagnostics
 are written under work/probe-sessions. This package contains no original game EXE
 or game assets; the same previously authorized control save is included.
+
+After closing the game, summarize a session without starting the game:
+  .\scripts\visual-session-report.ps1 -SessionDirectory .\work\probe-sessions\SESSION_ID
+The report summarizes evidence; an active session has no exit/save verdict.
 '@
 [IO.File]::WriteAllText((Join-Path $stage 'README.txt'),$readme,[Text.Encoding]::UTF8)
 $files+='README.txt'
@@ -63,8 +75,6 @@ $records=@(foreach($file in $files) {
     $path=Join-Path $stage $file
     [pscustomobject]@{path=$file;sha256=(Get-FileHash -LiteralPath $path).Hash.ToLowerInvariant();bytes=(Get-Item -LiteralPath $path).Length}
 })
-$commit=(& git -C $root rev-parse HEAD).Trim()
-if($LASTEXITCODE -ne 0) {throw 'Source commit not available'}
 $manifest=[pscustomobject]@{schema=1;mode='visual-only-preview';module_version=6;protocol=3;
     build_directory=$binaryDirectory;source_commit=$commit;files=$records}
 $manifest | ConvertTo-Json -Depth 4 | Set-Content -LiteralPath (Join-Path $stage 'visual-preview-manifest.json')
