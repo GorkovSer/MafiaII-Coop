@@ -13,7 +13,7 @@ int main(int argc,char **argv) {
     config.role=!strcmp(argv[1],"host") ? COOP_HOST : !strcmp(argv[1],"guest") ? COOP_GUEST : 0;
     config.address=argv[2];
     unsigned long port=strtoul(argv[3],NULL,10),duration=strtoul(argv[5],NULL,10);
-    if(!port || port>65535 || duration<3000 || duration>60000) return 2;
+    if(!port || port>65535 || duration<3000 || duration>600000) return 2;
     config.port=(uint16_t)port; config.capabilities=COOP_CAP_TELEMETRY|COOP_CAP_VISUAL_SCENE;
     config.module_version=COOP_MODULE_VERSION; memcpy(config.build,CoopGameBuild,32);
     unsigned char key[32];
@@ -30,7 +30,7 @@ int main(int argc,char **argv) {
     unsigned int connections=0;
     while(GetTickCount64()-begin<duration) {
         ULONGLONG elapsed=GetTickCount64()-begin;
-        if(elapsed>=18000 && !restarted) {
+        if(config.role==COOP_GUEST && elapsed>=18000 && !restarted) {
             connections+=s.connections; CoopSessionStop(&s); Sleep(750);
             if(CoopSessionStart(&s,&config,NULL,NULL)) return 4;
             restarted=1; was_ready=0;
