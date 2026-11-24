@@ -52,6 +52,9 @@ int main(void) {
     CoopRemoteActorInit(&a, NULL, NULL);
     assert(CoopRemoteActorTick(&a, &s, 1000) == COOP_ACTOR_DISABLED);
     CoopRemoteActorInit(&a, &ops, &b);
+    s.visual_only=1;
+    assert(CoopRemoteActorTick(&a,&s,1000)==COOP_ACTOR_WAIT_WORLD && !b.created);
+    s.visual_only=0;
     s.world_authorized = 0;
     assert(CoopRemoteActorTick(&a, &s, 1000) == COOP_ACTOR_WAIT_WORLD && !b.created);
     s.world_authorized = 1;
