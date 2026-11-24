@@ -135,8 +135,10 @@ This reports samples, visual lifecycle events and per-model release/registry
 counts. Exit/profile evidence remains null until the launcher has finished.
 Balanced ownership is reported only after a completed native wait and does not
 constitute visual or two-client gameplay acceptance.
+For automated batches, `-WaitForExitSeconds 10` waits for the launcher's final
+evidence before reading the log; an expired wait remains explicitly unknown.
 
-### Next acceptance: two actual game clients
+### Packaged session stability
 
 Additional accepted packaged guest run (2026-11-24): session
 `20261124-050945-461`, package source `b9a56d565e3750a53cbb3ddb16cffabbb9cb58a5`.
@@ -153,6 +155,19 @@ it produced no visual samples and exited normally. It is retained as a negative
 case for the session report, not counted as a successful visual run. The report
 was also checked against an active session (unknown exit verdict), the earlier
 88-sample accepted run, and Windows PowerShell 5.
+
+The additional packaged HOST run `20261124-051745-124` used the assigned Radmin
+adapter address, a synthetic guest and a normal Windows PowerShell 5 launch.
+The avatar was observed in the alley. One combined run accepted application-state
+expiry/recovery, guest disconnect/rejoin, local player input, pause/resume and
+exit with an active model: 664 samples over 334219 ms; five complete model
+ownership cycles, no visual refusals, two peer connections. Native exit took
+1688 ms, child/launcher exits were zero and original profile changes were zero.
+The bounded-wait report collected final evidence successfully and no test
+process remained. Both endpoints were still on this PC: this verifies local
+binding to the Radmin adapter, not a remote VPN path or two-client gameplay.
+
+### Next acceptance: two actual game clients
 
 Use the same archive on both PCs. Record its SHA256 and both manifest source
 commits before starting. Start the host first, then the guest using the host's
