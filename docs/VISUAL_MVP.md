@@ -69,3 +69,53 @@ This remains one game plus a synthetic peer, NOT two game clients or two PCs.
 Real two-player/Radmin play, long-session stability and a simple distributable
 launcher remain to be accepted. Animation, collision, combat, vehicles, mission
 sync and shared saves remain outside this first MVP.
+
+
+## Portable preview (2026-11-24)
+
+scripts/start-visual-session.ps1 accepts only role/address plus optional game path,
+port and second screen. It verifies the pinned game and packaged file hashes,
+rejects overly long legacy profile paths and unassigned host addresses, normalizes
+role casing, installs the same fresh isolated save, then delegates to start-probe.
+PrepareOnly performs checks/profile preparation without starting a game. No user
+save is adopted and no execution policy or firewall setting is changed.
+
+scripts/package-visual-mvp.ps1 produces a ZIP with 11 manifest-listed files:
+two custom binaries, launch/install helpers, the already authorized control save,
+ENet license, instructions and evidence. There is no original game EXE or game
+asset. Its manifest records file SHA256/size and source commit. Both players
+should start with Continue, then one should step aside because the same initial
+save puts both local players at the same coordinates.
+
+Portable checks passed: extraction into a short path with spaces; host/guest
+preparation and case normalization; Windows PowerShell 5 compatibility; six bad
+endpoints, missing game and long path refused; a changed DLL refused before a
+profile was created. The candidate archive itself then launched a REAL guest
+against a synthetic host. The visible model bound successfully. Native mission
+replay produced scene_approval_ended at event 32 and load_finished=2 without a
+new model; the first-load consent boundary is now native-tested too. Native quit
+1641 ms, child/launcher exit 0 and original profile changed files 0.
+Private portable session: 20261124-044747-289 (PID 2568 exited).
+
+Thus actual host and guest game paths have each been exercised separately against
+synthetic peers, including launch from the archive. This is still not simultaneous
+two-game/two-PC/Radmin acceptance or a long-play stability claim. The next required
+acceptance needs another supported game client. The archive remains a visual
+preview, not a full co-op release.
+
+Build a package after building the pinned binaries:
+
+```powershell
+./scripts/package-visual-mvp.ps1
+```
+
+From its extracted short folder, use the host computer's Radmin IPv4 on BOTH PCs:
+
+```powershell
+./scripts/start-visual-session.ps1 -Role host -Address 26.X.X.X
+./scripts/start-visual-session.ps1 -Role guest -Address 26.X.X.X
+```
+
+These are two separate commands, one per PC. Replace the example IP with the
+real host IP. GameDirectory defaults to C:\Games\Mafia II Classic and can be
+supplied explicitly. The guest's own Radmin IP is not the connection target.

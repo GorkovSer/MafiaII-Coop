@@ -1,5 +1,36 @@
 # Указания соавторам и текущее состояние
 
+## Current portable checkpoint (2026-11-24)
+
+Published network core: f75c1d3 / PR #10. Portable scripts now prepared/tested:
+start-visual-session.ps1 (role/address, fresh isolated profile, checksums/path
+limit/host bind address, PrepareOnly), package-visual-mvp.ps1 (11 files + manifest,
+no original game assets/EXE, existing authorized save + ENet license).
+
+Candidate extracted to C:\Temp\Mafia Coop 7fc562b6\MafiaII-Coop-visual-preview.
+Real packaged GUEST / PID 2568 / session 20261124-044747-289 exited normally.
+Visible network model accepted against synthetic HOST. Native mission replay
+ended scene approval at event 32; second load finished, no new model. Exit 1641ms,
+child/launcher 0, original profile changes 0. Both native roles are now separately
+accepted against synthetic counterparts. NOT simultaneous two-game/two-PC proof.
+Console package checks: path with spaces, host/guest/casing, Windows PowerShell5,
+six bad endpoints, missing game, path-length refusal and changed-DLL refusal
+before profile writes. Old overlong extraction is NOT used for native launch.
+
+Private packaging reports: work/visual-package-candidate.json,
+work/visual-package-smoke.json, work/portable-native-case.json. Dist ZIP is a
+local preview artifact; final package should be regenerated at the published
+source commit so its manifest points to that exact source. Synthetic helper
+supports bounded 10-minute tests; only guest fixtures deliberately reconnect.
+
+Remaining real acceptance: two actual clients on two PCs/Radmin and longer play.
+User availability question about second PC remains unanswered. Assume only this
+PC until answered; do not fake two-PC acceptance. Do not expand back to story,
+combat, physics/AI or cars. Scope is the approved model-only first MVP.
+Latest user workflow: finish code chunks, combine native checks in one session,
+GitHub ~every20min with "обновила" + link; Computer Use only for concrete UI work,
+continue console/code if interrupted. Do not repeatedly reread this document.
+
 ## Current accepted network-visual stage (2026-11-24)
 
 Last published checkpoint b85afc9 / PR #9 is the offline visual lifecycle.
