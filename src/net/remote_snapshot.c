@@ -18,7 +18,7 @@ int CoopRemoteSnapshotAt(const CoopRemoteSnapshot *source, uint64_t now, CoopRem
         candidate.state_received_ms <= now && now - candidate.state_received_ms < COOP_STATE_MAX_AGE_MS;
     for (unsigned int i = 0; usable && i < 3; ++i)
         usable = isfinite(candidate.position[i]) && fabsf(candidate.position[i]) < 1000000.0f;
-    usable = usable && CoopHeadingValid(candidate.heading, candidate.heading_valid);
+    usable = usable && candidate.visual_only<=1 && CoopHeadingValid(candidate.heading, candidate.heading_valid);
     out->active = (uint32_t)usable;
     out->world_authorized = (uint32_t)(usable && candidate.world_authorized == 1 &&
         candidate.world_generation && candidate.world_observed_ms <= candidate.mailbox_published_ms &&

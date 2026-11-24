@@ -4,7 +4,8 @@
 
 static int same_world(const CoopRemoteSnapshot *a, const CoopRemoteSnapshot *b) {
     return a->session_id == b->session_id && a->connection_generation == b->connection_generation &&
-        a->world_generation == b->world_generation && a->epoch == b->epoch && a->player_id == b->player_id;
+        a->world_generation == b->world_generation && a->epoch == b->epoch && a->player_id == b->player_id &&
+        a->visual_only == b->visual_only;
 }
 int CoopRemoteTimelineAt(CoopRemoteTimeline *t, const CoopRemoteSnapshot *current,
     uint64_t now, CoopRemoteFrame *out) {

@@ -5,8 +5,9 @@
 
 #include "world_sync.h"
 #define COOP_PROTOCOL 3
-#define COOP_MODULE_VERSION 5u /* diagnostic 0.0.5; exact compatibility */
+#define COOP_MODULE_VERSION 6u /* visual MVP 0.0.6; exact compatibility */
 #define COOP_CAP_TELEMETRY 1u
+#define COOP_CAP_VISUAL_SCENE 2u /* Explicit operator-agreed scene; visual models only. */
 #define COOP_WIRE_MAX 64
 #define COOP_STATE_MAX_AGE_MS 2000u /* Receiver-local validity; not a wire timestamp. */
 #define COOP_HEADING_MAX 3.1415928f

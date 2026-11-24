@@ -12,12 +12,18 @@ typedef struct {
     uint64_t session_id, state_received_ms, mailbox_published_ms;
     uint32_t world_authorized, world_generation;
     uint64_t world_observed_ms;
+    uint32_t visual_only; /* Manual preview scope; never physical actor authority. */
 } CoopRemoteSnapshot;
 /* Pure receiver-local validity filter. Does not read a worker or call the game. */
 int CoopRemoteSnapshotAt(const CoopRemoteSnapshot *source, uint64_t now, CoopRemoteSnapshot *out);
 int CoopNetworkReadRemote(CoopRemoteSnapshot *out);
 /* Actor application must use this stricter gate, not telemetry readiness. */
 int CoopNetworkReadRemoteWorld(CoopRemoteSnapshot *out);
+/* Separate manual fixed-scene agreement for visual-only models. This mode
+   always refuses ReadRemoteWorld: it grants no physical actor/campaign authority. */
+int CoopNetworkReadRemoteVisual(CoopRemoteSnapshot *out);
+int CoopNetworkVisualMode(void);
+void CoopNetworkPublishVisualScene(uint32_t loaded_epoch);
 /* loaded_epoch must change for every actual load/rewind, even for the same
    digest. NULL immediately withdraws local loaded-world authority. No producer is
    enabled until a verified game-specific world identity is implemented. */
