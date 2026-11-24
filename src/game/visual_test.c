@@ -1,9 +1,11 @@
-/* Opt-in FrameWrapper lifecycle/pose diagnostic. Never call Human/AI APIs on it.
+/* Opt-in visual-only FrameWrapper and offline lifecycle batch. No Human/AI APIs.
    The observer establishes the full pinned EXE hash before this module starts. */
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 #include "visual_test.h"
 #include "entity_registry.h"
+#include "../net/game_bridge.h"
+#include "../net/remote_timeline.h"
 #include <math.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -11,12 +13,18 @@
 
 int CoopProfileWasRedirected(void);
 static wchar_t log_path[MAX_PATH];
-static int enabled, initialized, loaded, paused, attempted, busy, invalidate;
+static int enabled, initialized, loaded, paused, pause_known, attempted, busy, invalidate;
 static uint32_t entity, guid, model, pending;
 static DWORD owner_thread;
 static ULONGLONG ready_at, born_at, next_pose, next_sample;
 static float origin[3];
 static int last_phase=-1;
+static int network_mode;
+static int scene_seen, scene_ended;
+static uint32_t local_epoch;
+static CoopRemoteSnapshot owner_scope;
+static CoopRemoteTimeline timeline;
+static ULONGLONG retry_at;
 typedef void *(__attribute__((stdcall)) *ModelFactory)(void *);
 typedef void *(__attribute__((cdecl)) *EntityFactory)(unsigned int);
 typedef int (__attribute__((thiscall)) *Clone)(void *, void *);
@@ -71,6 +79,7 @@ static void poll_removed(void) {
     }
 }
 static void retire(void) {
+    memset(&timeline,0,sizeof(timeline));
     if(!entity) return;
     if(GetCurrentThreadId()!=owner_thread) return; /* Keep ownership for the game thread. */
     if(!valid()) {record("lost_identity_no_release",guid); entity=model=0; return;}
@@ -93,11 +102,16 @@ static int local_source(uint32_t *source, float p[3]) {
         word(physics_table,0x54,&getter) && getter==0x18ae690 &&
         physics<=UINT32_MAX-0x1e4 && read_at(NULL,physics+0x1d8,p,12) && vector_ok(p);
 }
-static void create(void) {
+static void create(const float *remote_position) {
     uint32_t source,parent,link;
     if(!CoopProfileWasRedirected() || !local_source(&source,origin)) return;
     attempted=1; owner_thread=GetCurrentThreadId();
-    origin[0]-=2; origin[1]+=2;
+    if(remote_position) {
+        float dx=remote_position[0]-origin[0],dy=remote_position[1]-origin[1];
+        if(!vector_ok(remote_position) || dx*dx+dy*dy>400 ||
+            fabsf(remote_position[2]-origin[2])>3) return;
+        memcpy(origin,remote_position,sizeof(origin));
+    } else {origin[0]-=2; origin[1]+=2;}
     void *copy=((ModelFactory)(uintptr_t)0x14ec940)(NULL);
     if(!copy) {record("model_allocation_failed",0); return;}
     int status=((Clone)(uintptr_t)0x14ec8f0)(copy,(void *)(uintptr_t)source);
@@ -135,22 +149,10 @@ static void create(void) {
     }
     record("active",guid); born_at=GetTickCount64(); next_pose=next_sample=0;
 }
-static void tick(void) {
-    ULONGLONG now=GetTickCount64();
-    if(!valid()) {retire(); return;}
-    if(now-born_at>=15000) {retire(); return;}
-    if(now<next_pose) return;
-    next_pose=now+50;
-    float t=(float)(now-born_at)/1000.0f;
-    float p[3]={origin[0],origin[1],origin[2]}, direction[3]={1,0,0};
-    int phase=t<4 ? 0 : t<7 ? 1 : t<11 ? 2 : 3;
-    if(phase==0) p[0]+=fmaxf(0,t-1)*2.0f/3.0f;
-    else {p[0]+=2; direction[0]=0; direction[1]=1;}
-    if(phase>=2) p[1]+=fminf(4,t-7)*0.5f;
-    if(phase!=last_phase) {last_phase=phase; record("phase",(uint32_t)phase);}
+static void apply_pose(const float p[3], const float *direction, int phase, ULONGLONG now) {
     ((SetVector)(uintptr_t)0x1164d40)((void *)(uintptr_t)entity,p);
     if(invalidate || !valid()) {retire(); return;}
-    ((SetVector)(uintptr_t)0x1175120)((void *)(uintptr_t)entity,direction);
+    if(direction) ((SetVector)(uintptr_t)0x1175120)((void *)(uintptr_t)entity,direction);
     if(now>=next_sample && valid()) {
         next_sample=now+500;
         float xyz[3],x,y;
@@ -164,6 +166,54 @@ static void tick(void) {
         }
     }
 }
+static void tick(void) {
+    ULONGLONG now=GetTickCount64();
+    if(!valid()) {retire(); return;}
+    if(now-born_at>=15000) {retire(); return;}
+    if(now<next_pose) return;
+    next_pose=now+50;
+    float t=(float)(now-born_at)/1000.0f;
+    float p[3]={origin[0],origin[1],origin[2]}, direction[3]={1,0,0};
+    int phase=t<4 ? 0 : t<7 ? 1 : t<11 ? 2 : 3;
+    if(phase==0) p[0]+=fmaxf(0,t-1)*2.0f/3.0f;
+    else {p[0]+=2; direction[0]=0; direction[1]=1;}
+    if(phase>=2) p[1]+=fminf(4,t-7)*0.5f;
+    if(phase!=last_phase) {last_phase=phase; record("phase",(uint32_t)phase);}
+    apply_pose(p,direction,phase,now);
+}
+static void network_tick(void) {
+    ULONGLONG now=GetTickCount64();
+    CoopRemoteSnapshot s;
+    if(!CoopNetworkReadRemoteVisual(&s)) {
+        if(entity) record("scope_withdrawn",guid);
+        retire(); return;
+    }
+    if(entity && (s.session_id!=owner_scope.session_id ||
+        s.connection_generation!=owner_scope.connection_generation ||
+        s.world_generation!=owner_scope.world_generation || s.epoch!=owner_scope.epoch ||
+        s.player_id!=owner_scope.player_id)) {record("scope_changed",guid); retire(); return;}
+    CoopRemoteFrame frame;
+    if(!CoopRemoteTimelineAt(&timeline,&s,now,&frame)) {
+        if(entity) record("timeline_refused",s.received_sequence);
+        retire(); return;
+    }
+    uint32_t source; float local[3];
+    if(!local_source(&source,local)) {retire(); return;}
+    float dx=s.position[0]-local[0],dy=s.position[1]-local[1];
+    if(dx*dx+dy*dy>400 || fabsf(s.position[2]-local[2])>3) {retire(); return;}
+    if(!entity) {
+        if(pending || now<retry_at) return;
+        retry_at=now+500;
+        create(frame.position);
+        if(entity) {owner_scope=s; record("network_bound",s.received_sequence);}
+        return;
+    }
+    if(!valid()) {retire(); return;}
+    if(now<next_pose) return;
+    next_pose=now+50;
+    float direction[3]={cosf(s.heading),sinf(s.heading),0};
+    apply_pose(frame.position,s.heading_valid ? direction : NULL,4,now);
+}
 int CoopVisualTestStart(const wchar_t *path) {
     if(!path || wcslen(path)>=MAX_PATH) return 1;
     wcscpy(log_path,path);
@@ -172,36 +222,54 @@ int CoopVisualTestStart(const wchar_t *path) {
     size_t length=wcslen(ini);
     if(length+32>=MAX_PATH) return 1;
     wcscat(ini,L"\\visual-test.ini");
-    enabled=GetPrivateProfileIntW(L"test",L"visual_once",0,ini)==1;
+    int offline=GetPrivateProfileIntW(L"test",L"visual_once",0,ini)==1;
+    ini[length]=0; wcscat(ini,L"\\coop-session.ini");
+    network_mode=GetPrivateProfileIntW(L"network",L"visual_only",0,ini)==1;
+    if(offline && network_mode) return 2;
+    enabled=offline || network_mode;
     if(!enabled) return 0;
     const wchar_t *conflicts[]={L"\\coop-session.ini",L"\\human-test.ini",
         L"\\model-test.ini",L"\\story-test.ini"};
     for(unsigned int i=0;i<sizeof(conflicts)/sizeof(conflicts[0]);++i) {
+        if(network_mode && i==0) continue;
         ini[length]=0; wcscat(ini,conflicts[i]);
         DWORD attributes=GetFileAttributesW(ini),error=GetLastError();
         if(attributes!=INVALID_FILE_ATTRIBUTES ||
             (error!=ERROR_FILE_NOT_FOUND && error!=ERROR_PATH_NOT_FOUND)) {enabled=0; return 2;}
     }
-    record("enabled_offline",1); return 0;
+    record(network_mode ? "enabled_visual_network" : "enabled_offline",1); return 0;
 }
 void CoopVisualTestEvent(unsigned int id) {
     if(!enabled) return;
+    if(id==10) ++local_epoch;
     int close=id==10 || id==11 || id==12 || id==14 || id==32 || id==39;
+    if(network_mode && close && scene_seen && !scene_ended) {
+        scene_ended=1; record("scene_approval_ended",id);
+    }
     if(id==10 || id==11 || id==12 || id==14 || id==39) initialized=loaded=0;
     if(id==13) initialized=1;
     if(id==32) {loaded=0; ready_at=0;}
     if(id==33) loaded=1;
-    if(id==34 || id==4) paused=1;
-    if(id==35) paused=0;
-    if(close) invalidate=1;
+    if(id==34) {paused=1; pause_known=1;}
+    if(id==35) {paused=0; pause_known=1;}
+    if(id==4 && !pause_known) paused=1;
+    if(close || (network_mode && paused)) invalidate=1;
+    if(network_mode) {
+        int approved=initialized && loaded && !paused && !scene_ended;
+        if(approved) scene_seen=1;
+        CoopNetworkPublishVisualScene(approved ? local_epoch : 0);
+    }
     if(busy) return;
     busy=1; poll_removed();
-    if(invalidate) retire();
+    if(invalidate) {if(entity) record("scene_invalidated",id); retire();}
     else if(id==3 && initialized && loaded && !paused) {
-        if(entity) tick();
+        if(network_mode) {
+            if(!ready_at) ready_at=GetTickCount64()+3000;
+            if(GetTickCount64()>=ready_at) network_tick();
+        } else if(entity) tick();
         else if(!attempted && !pending) {
             if(!ready_at) ready_at=GetTickCount64()+3000;
-            if(GetTickCount64()>=ready_at) create();
+            if(GetTickCount64()>=ready_at) create(NULL);
         }
     }
     if(invalidate) {retire(); if(!entity) invalidate=0;}

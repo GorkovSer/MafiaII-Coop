@@ -13,7 +13,7 @@
 
 static wchar_t evidence_path[MAX_PATH];
 static uint32_t epoch;
-static int initialized, loaded, paused, last_status = -1;
+static int initialized, loaded, paused, pause_known, last_status = -1;
 static ULONGLONG next_sample, next_log, next_progress_log;
 
 /* Only the standalone fixture build substitutes its own pointer storage and
@@ -154,8 +154,12 @@ void CoopTelemetryEvent(unsigned int event_id) {
     if (event_id == 13) initialized = 1;
     if (event_id == 32) loaded = 0;
     if (event_id == 33) loaded = 1;
-    if (event_id == 34 || event_id == 4) paused = 1;
-    if (event_id == 35) paused = 0;
+    if (event_id == 34) {paused = 1; pause_known = 1;}
+    if (event_id == 35) {paused = 0; pause_known = 1;}
+    /* A final paused-frame callback can arrive AFTER explicit unpause. Do not
+       let that stale frame relatch pause; lifecycle events own the known state.
+       Before any lifecycle observation, paused frames still fail closed. */
+    if (event_id == 4 && !pause_known) paused = 1;
     if (event_id == 11 || event_id == 12 || event_id == 14 || event_id == 39) initialized = loaded = 0;
     /* A pause can stop ordinary ticks completely. Invalidate the published
        position at the pause callback instead of retaining it for the worker's
