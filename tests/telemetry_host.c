@@ -106,6 +106,8 @@ int main(void) {
     CHECK(CoopTelemetryStart(L"fixture-no-game-evidence.log")==0);
     CHECK(tick_expects(0));
     CoopTelemetryEvent(10); CoopTelemetryEvent(13);
+    CoopTelemetryEvent(4); CHECK(tick_expects(0)); /* Unknown paused frame fails closed. */
+    CoopTelemetryEvent(35);
     CHECK(tick_expects(0));  /* Objects exist but loading is unfinished. */
     CoopTelemetryEvent(33); CHECK(tick_expects(1)); CHECK(published_epoch==1);
     CHECK(facing_valid && facing==0);
@@ -123,8 +125,9 @@ int main(void) {
     CoopTelemetryEvent(34);
     CHECK(active==0 && publications==before_pause+1); /* No stall timeout. */
     CHECK(tick_expects(0)); /* A stray ordinary tick must not undo pause. */
+    CoopTelemetryEvent(4); CHECK(tick_expects(0)); /* Paused lifecycle remains authoritative. */
     CoopTelemetryEvent(35); CHECK(tick_expects(1));
-    CoopTelemetryEvent(4); CHECK(active==0); CHECK(tick_expects(0));
+    CoopTelemetryEvent(4); CHECK(tick_expects(1)); /* Late paused frame after explicit resume. */
     CoopTelemetryEvent(35); CHECK(tick_expects(1));
     CoopTelemetryEvent(32); CHECK(tick_expects(0));
     CoopTelemetryEvent(33); CHECK(tick_expects(1));

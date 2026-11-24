@@ -39,7 +39,7 @@ int CoopRemoteActorEnableSmoothing(CoopRemoteActor *a, int enable) {
 CoopRemoteActorStatus CoopRemoteActorTick(CoopRemoteActor *a, const CoopRemoteSnapshot *remote, uint64_t now) {
     if (!enabled(a)) return a->status = COOP_ACTOR_DISABLED;
     CoopRemoteSnapshot s;
-    int authorized = CoopRemoteSnapshotAt(remote, now, &s) && s.active && s.world_authorized;
+    int authorized = CoopRemoteSnapshotAt(remote, now, &s) && s.active && s.world_authorized && !s.visual_only;
     int changed = authorized && (s.session_id != a->session || s.connection_generation != a->connection ||
         s.world_generation != a->generation || s.epoch != a->epoch || s.player_id != a->player);
     if (!authorized || changed) memset(&a->timeline, 0, sizeof(a->timeline));

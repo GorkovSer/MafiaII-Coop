@@ -33,3 +33,39 @@ live-avatar scene unload, longer sessions or arbitrary models/scenes. The batch
 is not a playable co-op claim. Next: reuse this proven model lifecycle for a
 fresh, explicitly agreed fixed-scene visual session; keep physical actor/world
 authority separate and fail closed on stale state or scene change.
+
+
+## Network-driven batch (2026-11-24)
+
+VisualNetwork now reuses the accepted FrameWrapper lifecycle. It takes fresh
+ReadRemoteVisual snapshots, bounded existing interpolation, explicit facing and
+current scope identity. It owns one model, retires on withdrawal/expiry/pause or
+connection/world change, and waits for registry absence before another creation.
+Only nearby poses (20 horizontal / 3 vertical units) are accepted. Scene agreement
+is manual, visual-only and valid for the first scene load; reload/change requires
+a new process/approval. Local Vito is not moved or locked by this renderer.
+
+The accepted final native batch used session 20261124-042020-189 / PID 24020,
+which has exited. One actual game exchanged data with an explicitly synthetic
+peer: visible model, position/facing, app-state stall while ENet remained live,
+expiry/retirement, recovery, deliberate peer reconnect, pause/cleanup, resume/new
+binding, independent local Up input, and exit initiated with a live model.
+88 accepted model samples; six creations, six single releases and six confirmed
+registry absences; zero timeline refusals. Native quit took 1594 ms, child and
+launcher exit 0, original profile changed files 0. A separate wrong-scene peer in
+the preceding batch created no model. Real-game heading reading was accepted.
+
+Two issues found in earlier combined runs were corrected before acceptance:
+receiver-clock recomputation changed the same packet timestamp, and a trailing
+paused-frame callback relatched pause after explicit unpause. Production fixtures
+cover stable receipt, scope isolation and event ordering; the latest event fixture
+also covers first-load approval and refusal to automatically approve a new scene.
+Full pinned build, baseline network suite, visual match/mismatch and five invalid
+configuration cases passed. Four unsafe visual-network launch combinations were
+refused before launch. Escape was added to the PID/start-time/hash/foreground
+bounded input helper and used for intro/pause; unrestricted input was not added.
+
+This remains one game plus a synthetic peer, NOT two game clients or two PCs.
+Real two-player/Radmin play, long-session stability and a simple distributable
+launcher remain to be accepted. Animation, collision, combat, vehicles, mission
+sync and shared saves remain outside this first MVP.

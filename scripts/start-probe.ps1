@@ -4,7 +4,8 @@ param([Parameter(Mandatory=$true)][string]$GameDirectory, [switch]$WaitForExit,
       [string]$Address='127.0.0.1', [ValidateRange(1,65535)][int]$Port=28960,
       [ValidatePattern('^\d{8}-\d{6}-\d{3}$')][string]$TestProfileFrom,
       [switch]$ContinueMainStory, [switch]$TestModelClone, [switch]$TestHuman,
-      [switch]$TestScriptMove, [switch]$TestVisualAvatar)
+      [switch]$TestScriptMove, [switch]$TestVisualAvatar, [switch]$VisualNetwork,
+      [ValidatePattern('^[A-Za-z0-9_.-]{1,64}$')][string]$VisualScene='classic-alley-mvp-v1')
 $ErrorActionPreference = 'Stop'
 $root = Split-Path $PSScriptRoot -Parent
 . (Join-Path $PSScriptRoot 'launch-result.ps1')
@@ -16,6 +17,10 @@ if ((Get-FileHash -LiteralPath $exe).Hash.ToLowerInvariant() -ne $expected) {
 if (Get-Process mafia2 -ErrorAction SilentlyContinue) { throw 'Close existing Mafia II before starting this probe.' }
 $stamp = Get-Date -Format 'yyyyMMdd-HHmmss-fff'
 $local = Join-Path $root "work/probe-sessions/$stamp"
+if($VisualNetwork -and (!$Observer -or !$TestProfileFrom -or $NetworkRole -eq 'off' -or
+    $TestHuman -or $TestScriptMove -or $TestModelClone -or $ContinueMainStory -or $TestVisualAvatar)) {
+    throw 'Visual network requires an isolated observer profile, host/guest role and no native diagnostics'
+}
 if($TestVisualAvatar -and (!$Observer -or !$TestProfileFrom -or $NetworkRole -ne 'off' -or
     $TestHuman -or $TestScriptMove -or $TestModelClone -or $ContinueMainStory)) {
     throw 'Visual avatar test requires an isolated observer profile, networking off and no other native tests'
@@ -48,8 +53,18 @@ if($NetworkRole -ne 'off') {
        $parsedAddress.AddressFamily -ne [Net.Sockets.AddressFamily]::InterNetwork) {
         throw 'A literal IPv4 address is required'
     }
+    $visualSettings=''
+    if($VisualNetwork) {
+        # This is explicit operator agreement on a scene label, NOT automatic
+        # mission/save detection. Its capability cannot authorize physical actors.
+        $sceneHasher=[Security.Cryptography.SHA256]::Create()
+        try {$sceneDigest=$sceneHasher.ComputeHash([Text.Encoding]::UTF8.GetBytes("MafiaII-Coop visual-only scene approval/v1`n$VisualScene"))}
+        finally {$sceneHasher.Dispose()}
+        $sceneKey=([BitConverter]::ToString($sceneDigest)).Replace('-','').ToLowerInvariant()
+        $visualSettings="visual_only=1`r`nscene_key=$sceneKey`r`n"
+    }
     [IO.File]::WriteAllText((Join-Path $local 'coop-session.ini'),
-        "[network]`r`nrole=$NetworkRole`r`naddress=$Address`r`nport=$Port`r`n",[Text.Encoding]::ASCII)
+        "[network]`r`nrole=$NetworkRole`r`naddress=$Address`r`nport=$Port`r`n$visualSettings",[Text.Encoding]::ASCII)
 }
 # Private data stays in ignored work; absence is recorded, never fabricated.
 $candidates = @(

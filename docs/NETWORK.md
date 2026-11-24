@@ -1,10 +1,35 @@
 # Сетевая телеметрия: технический прототип
 
+## Visual-only fixed-scene mode (2026-11-24)
+
+Protocol 3 / module 0.0.6 adds capability COOP_CAP_VISUAL_SCENE. Both peers must
+explicitly enable visual_only and agree on a scene label. This is operator
+agreement for one visual preview scene, NOT detected mission/checkpoint identity.
+The launcher domain-separates and hashes the label into scene_key. Malformed,
+zero or mismatching keys refuse visual application. Both sides still validate
+build, module, role, sequence, fresh position and OFFER/ACK/COMMIT agreement.
+
+ReadRemoteVisual is separate from ReadRemoteWorld. Visual mode always returns
+zero/cleared physical-world authority; verified-world publication cannot override
+it. Snapshots carry visual_only, and the physical actor rejects that flag even
+if accidentally given the raw snapshot. No Human/AI backend is enabled.
+
+Receipt time is cached once per accepted sequence/connection/session using the
+receiver's clock. It is not recomputed by mixing ENet age and Windows clock
+resolution on each poll. This fixes real-game repeated retirement of the same
+accepted packet; a fixture now checks timestamp stability while rereading it.
+Explicit pause/unpause lifecycle owns known pause state: a late paused-frame
+callback after unpause cannot relatch it. Unknown pause state still fails closed.
+The reduced visual mode consumes scene approval on the first scene close/reload;
+it does not silently approve another level. Pause/resume within that scene works.
+
+Native combined acceptance and remaining limits: [VISUAL_MVP.md](VISUAL_MVP.md).
+
 ## MVP: направление персонажа (2026-11-23)
 
 STATE теперь имеет 36 байт payload / 60 байт вместе с заголовком: после world
 Generation идут float32 heading (XY radians, [-pi, pi]) и uint32 heading_valid.
-Протокол 3 / модуль 0.0.5 несовместимы с прежним форматом; обе стороны обновлять
+Протокол 3 / модуль 0.0.6 несовместимы с прежним форматом; обе стороны обновлять
 вместе. Нулевой heading при heading_valid=1 — настоящий поворот, а не отсутствие
 данных. При неизвестном направлении оба поля равны нулю; скорость не используется
 для догадки о направлении. Inactive, expiry и disconnect очищают также направление.
@@ -28,7 +53,7 @@ pose fixture после исправления ожидаемого тестов
 Это транспорт и обмен read-only состоянием. Второй игровой персонаж, управление гостя, бой, транспорт, NPC, общий сюжет и host save пока отсутствуют. Локальные тестовые процессы и пассивный приёмник не являются вторым игровым клиентом.
 
 Обновление 2026-11-21: добавлен сетевой контракт согласования мира
-[WORLD_AGREEMENT.md](WORLD_AGREEMENT.md), protocol 3 / module 0.0.5.
+[WORLD_AGREEMENT.md](WORLD_AGREEMENT.md), protocol 3 / module 0.0.6.
 Реализация скомпилирована, исполнение пока не проверено. Проверенного игрового
 producer идентичности мира ещё нет, поэтому разрешение управления остаётся
 закрытым. Для применения состояния нужен `CoopNetworkReadRemoteWorld`;
@@ -37,7 +62,7 @@ producer идентичности мира ещё нет, поэтому раз�
 ## Реализовано
 
 - ENet 1.3.18 с исправлениями из точного upstream commit `5a9c537fd464b3c6d3c55e1d3bd47588faf71b42`. MIT LICENSE и исходники включены; SHA256 каждого файла проверяется при сборке. Источник: https://github.com/lsalzman/enet/tree/5a9c537fd464b3c6d3c55e1d3bd47588faf71b42
-- Прямой IPv4/порт, host на явно выбранном адресе, один guest. Проверка wire protocol, отдельной версии диагностического модуля 0.0.5, SHA256 целевого EXE и набора возможностей. Совпадение версии модуля требуется точно.
+- Прямой IPv4/порт, host на явно выбранном адресе, один guest. Проверка wire protocol, отдельной версии диагностического модуля 0.0.6, SHA256 целевого EXE и набора возможностей. Совпадение версии модуля требуется точно.
 - Надёжный channel 0 для HELLO/WELCOME, sequenced unreliable channel 1 для заменяемого состояния. Общий session ID генерируется ОС; player IDs назначаются host: 1 и 2. Локальные GUID и указатели по сети не передаются.
 - Явная сериализация в сетевом порядке байтов, фиксированные длины, ограничения ENet на размер пакета/очередь, проверки конечности координат, source player ID/session, sequence и локальной epoch. Epoch не заменяет идентификатор главы или согласованное состояние мира.
 - Очистка remote snapshot после отключения, таймаут handshake/соединения, последовательное повторное подключение guest. Автоматического reconnect или пользовательского интерфейса сессии ещё нет.

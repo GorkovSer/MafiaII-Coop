@@ -72,4 +72,10 @@ if ($LASTEXITCODE -ne 0) {throw 'Network thread fixture build failed'}
 if ($LASTEXITCODE -ne 0) {throw 'Remote validity fixture build failed'}
 & $cc @common (Join-Path $root 'src/tools/netcheck.c') @netSources -o (Join-Path $out 'coop_netcheck.exe') @netLink
 if ($LASTEXITCODE -ne 0) {throw 'Passive network diagnostic build failed'}
+& $cc @common -municode (Join-Path $root 'tests/visual_bridge_host.c') (Join-Path $root 'src/net/game_bridge.c') $remoteSource @netSources -o (Join-Path $out 'visual_bridge_host.exe') @netLink
+if ($LASTEXITCODE -ne 0) {throw 'Visual scope fixture build failed'}
+& $cc @common (Join-Path $root 'tests/visual_peer.c') @netSources -o (Join-Path $out 'visual_peer.exe') @netLink
+if ($LASTEXITCODE -ne 0) {throw 'Visual synthetic peer build failed'}
+& $cc @common -municode (Join-Path $root 'tests/visual_events_host.c') (Join-Path $root 'src/game/visual_test.c') $registrySource $timelineSource $remoteSource (Join-Path $root 'src/net/wire.c') $worldSource -o (Join-Path $out 'visual_events_host.exe')
+if ($LASTEXITCODE -ne 0) {throw 'Visual event fixture build failed'}
 Get-FileHash -LiteralPath (Join-Path $out 'coop_probe.dll'),(Join-Path $out 'probe_launcher.exe'),(Join-Path $out 'probe_host.exe') | Format-Table

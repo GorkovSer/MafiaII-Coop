@@ -1,5 +1,31 @@
 # Указания соавторам и текущее состояние
 
+## Current accepted network-visual stage (2026-11-24)
+
+Last published checkpoint b85afc9 / PR #9 is the offline visual lifecycle.
+Local VisualNetwork code now passed one combined native batch after fixes:
+session 20261124-042020-189 / PID 24020 EXITED, 88 model samples, six creations /
+single releases / registry absences, zero timeline refusals. Stall/expiry/recovery,
+peer reconnect, pause/resume rebind, independent local input and exit begun with
+live model passed. Child/launcher exit 0, original profile changes 0. One game +
+synthetic peer only; no two-PC claim. Wrong-scene refusal passed in previous batch.
+
+Build visual-network-20261124. Baseline network suite and production fixtures
+passed; visual scope fixtures passed match/mismatch, five bad configs, stable
+receipt, physical authority isolation and stopped-zero. Latest pure visual event
+fixture passed late paused-frame ordering and one-load scene consent. Two native
+findings fixed: per-poll mixed-clock receipt timestamps and id4 relatching after
+id35. New scene/reload approval now fails closed until process restart; that added
+state rule has pure-event fixture acceptance, not a new level-switch game run.
+
+Current target remains minimal visible model without animation/collision.
+Next: simple portable launch package and longer combined checks; ask/await second
+PC availability for genuine two-player/Radmin acceptance. An availability question
+is pending; meanwhile assume only this PC. No new campaign/AI infrastructure.
+GitHub every ~20 minutes, final-packet report in chat; only tested code. Computer
+Use only for specific game tests/publication, never for idle code work.
+See VISUAL_MVP.md for evidence and limitations.
+
 ## Current local checkpoint: native visual batch accepted (2026-11-24)
 
 Published previous packet: 60e61bf (PR #8). New visual_test.c/.h and
