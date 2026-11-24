@@ -7,6 +7,7 @@ param([Parameter(Mandatory=$true)][string]$GameDirectory, [switch]$WaitForExit,
       [switch]$TestScriptMove, [switch]$TestVisualAvatar, [switch]$VisualNetwork,
       [ValidatePattern('^[A-Za-z0-9_.-]{1,64}$')][string]$VisualScene='classic-alley-mvp-v1')
 $ErrorActionPreference = 'Stop'
+$NetworkRole=$NetworkRole.ToLowerInvariant()
 $root = Split-Path $PSScriptRoot -Parent
 . (Join-Path $PSScriptRoot 'launch-result.ps1')
 $exe = Join-Path $GameDirectory 'pc/mafia2.exe'
