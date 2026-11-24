@@ -103,3 +103,10 @@ SendInput — системный ввод: проверка foreground не ат
 native exit 0, исходный профиль не изменился.
 Эти числа не включают запуск инструмента, активацию окна и пересылку снимков.
 Два реальных сетевых клиента этим тестом не проверялись.
+
+
+2026-11-24: the guarded native helper additionally accepts `escape` (scan 0x01)
+for the user-requested intro skip and bounded pause/resume acceptance. It retains
+full game hash, PID/start-time and continuous foreground checks and key release.
+The fixed immediate Alt+F4/Enter exit is unchanged. Escape intro/pause and Enter
+resume were accepted in the combined visual-network batch.
