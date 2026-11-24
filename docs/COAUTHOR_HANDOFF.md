@@ -1,5 +1,33 @@
 # Указания соавторам и текущее состояние
 
+## Срочная передача: упрощённый визуальный аватар согласован
+
+Пользователь подтвердил: сначала видимая модель, двигающаяся/поворачивающаяся
+по сети, БЕЗ анимации ходьбы и столкновений. Не продолжать дорогую борьбу с AI
+ради первого MVP. Найден кандидат FrameWrapper type 0x37, allocation 0x88,
+factory 0xac9cd0, vtable 0x196d6e0. Static byte audit прошёл; он не Human/Player.
+Native visual SetPosition slot 0x7c -> 0x1164d40, SetDirection slot 0x80 ->
+0x1175120. Generic setup/activate/removal требуют отдельной приёмки. НИ ОДИН
+FrameWrapper native call пока не исполнялся. Следующий шаг: один изолированный
+опциональный visual-avatar lifecycle test на клоне модели, затем сетевое
+применение pose в фиксированной сцене. Не вызывать на нём Human Setup/AI API.
+Реальное чтение нового heading также ещё ждёт игрового теста. Всё остальное
+pose replication уже прошло перечисленные ниже сборку/консольные проверки.
+Обновление сейчас затребовано пользователем до исчерпания лимита.
+
+## Local MVP pose stage after published 50a6172
+
+Protocol 3 / module 0.0.5 adds optional explicit visual heading to STATE, session,
+mailbox and actor face callback. Pinned build/audit, five changed production
+fixtures and network cases passed (mailbox expected-angle fixture corrected and
+rerun alone, both sides 61 snapshots). Current source is under build/mvp-pose-20261123.
+Visual heading reader and native face backend have not had in-game acceptance.
+Do not claim a controlled guest or publish that as a playable mod. Work next on
+the smallest owned visual avatar, avoiding new campaign/network infrastructure.
+Computer Use only for a specific game test or one publication packet; continue
+console/code work if UI is interrupted. Existing separate-player ownership and
+scene authorization boundaries remain unresolved, not silently bypassed.
+
 ## Последнее решение пользователя: сократить объём до MVP
 
 2026-11-23: сначала только два персонажа в одной фиксированной сцене,

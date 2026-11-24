@@ -8,6 +8,9 @@ typedef struct {
     unsigned int created, moved, stopped, removed;
     int gone, refuse_stop, fail_create;
     float position[3], velocity[2];
+    unsigned int faced;
+    int refuse_face;
+    float heading;
 } Backend;
 static uint32_t create(void *context, const float p[3]) {
     Backend *b = context; ++b->created;
@@ -38,9 +41,13 @@ static CoopRemoteSnapshot snapshot(void) {
     s.session_id = 9; s.state_received_ms = s.mailbox_published_ms = s.world_observed_ms = 1000;
     return s;
 }
+static int face(void *context, uint32_t handle, float heading) {
+    Backend *b=context; assert(handle==123); ++b->faced; b->heading=heading;
+    return !b->refuse_face;
+}
 int main(void) {
     Backend b = {0}; CoopRemoteActor a;
-    CoopRemoteActorOps ops = {create, position, move, stop, remove_actor, gone};
+    CoopRemoteActorOps ops = {create, position, move, stop, remove_actor, gone, face};
     CoopRemoteSnapshot s = snapshot();
     CoopRemoteActorInit(&a, NULL, NULL);
     assert(CoopRemoteActorTick(&a, &s, 1000) == COOP_ACTOR_DISABLED);
@@ -79,6 +86,22 @@ int main(void) {
     assert(CoopRemoteActorTick(&a, &s, 3500) == COOP_ACTOR_BACKEND_REFUSED);
     unsigned int attempts = b.created;
     assert(CoopRemoteActorTick(&a, &s, 3501) == COOP_ACTOR_CREATING && b.created == attempts);
+    Backend turning={0}; CoopRemoteActor turn_actor;
+    CoopRemoteActorInit(&turn_actor,&ops,&turning);
+    s=snapshot(); s.heading_valid=1; s.heading=1.25f;
+    assert(CoopRemoteActorTick(&turn_actor,&s,1000)==COOP_ACTOR_CREATING && !turning.faced);
+    assert(CoopRemoteActorTick(&turn_actor,&s,1001)==COOP_ACTOR_STANDING);
+    assert(turning.faced==1 && turning.heading==1.25f && !turning.moved);
+    s.heading=0; /* Valid zero radians still requests an in-place turn. */
+    assert(CoopRemoteActorTick(&turn_actor,&s,1002)==COOP_ACTOR_STANDING);
+    assert(turning.faced==2 && turning.heading==0);
+    s.heading_valid=0;
+    assert(CoopRemoteActorTick(&turn_actor,&s,1003)==COOP_ACTOR_STANDING && turning.faced==2);
+    s.heading_valid=1; turning.refuse_face=1;
+    assert(CoopRemoteActorTick(&turn_actor,&s,1004)==COOP_ACTOR_REMOVING);
+    assert(turning.removed==1 && !turning.moved);
+    assert(CoopRemoteActorTick(&turn_actor,NULL,1005)==COOP_ACTOR_REMOVING && turning.faced==3);
+    turning.gone=1; CoopRemoteActorTick(&turn_actor,NULL,1006); assert(!turn_actor.handle);
     puts("PASS actor ownership retirement, fresh-world gating and bounded motion requests");
     return 0;
 }

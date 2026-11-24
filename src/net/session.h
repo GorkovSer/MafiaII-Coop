@@ -29,6 +29,8 @@ typedef struct {
 } CoopSession;
 int CoopSessionStart(CoopSession *session, const CoopSessionConfig *config, CoopSessionLog log, void *context);
 void CoopSessionPublish(CoopSession *session, uint32_t epoch, const float *position);
+void CoopSessionPublishPose(CoopSession *session, uint32_t epoch,
+    const float *position, const float *heading);
 void CoopSessionWorld(CoopSession *session, uint32_t loaded_epoch, const unsigned char *verified_key);
 void CoopSessionTick(CoopSession *session);
 uint32_t CoopSessionRemoteAge(const CoopSession *session, uint32_t now);

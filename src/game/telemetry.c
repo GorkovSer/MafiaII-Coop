@@ -69,6 +69,17 @@ static int read_player(CoopPlayerSnapshot *out) {
         out->model_valid = copy_at(model + 0x44, &out->model_position[0], 4) &&
             copy_at(model + 0x54, &out->model_position[1], 4) &&
             copy_at(model + 0x64, &out->model_position[2], 4) && finite_position(out->model_position);
+        /* Visual model basis, matching the pinned frame GetDirection path.
+           A missing/degenerate basis leaves facing unknown; never invent it
+           from velocity, since a standing player may turn in place. */
+        uintptr_t model_table;
+        float x, y;
+        if (pointer_at(model, &model_table) && model_table == 0x191c850 &&
+            copy_at(model + 0x3c, &x, 4) && copy_at(model + 0x4c, &y, 4) &&
+            isfinite(x) && isfinite(y) && fabsf(x) <= 100 && fabsf(y) <= 100 &&
+            x*x+y*y > 0.000001f) {
+            out->heading = atan2f(y, x); out->heading_valid = 1;
+        }
     }
     return 0;
 }
@@ -168,15 +179,15 @@ void CoopTelemetryEvent(unsigned int event_id) {
         last_status = status;
     }
     if (status) { CoopNetworkPublish(epoch, NULL); return; }
-    CoopNetworkPublish(epoch, snapshot.position);
+    CoopNetworkPublishPose(epoch, snapshot.position, snapshot.heading_valid ? &snapshot.heading : NULL);
     if (now < next_log) return;
     next_log = now + 500;
     log_player_control(snapshot.local_guid);
     int size = snprintf(line, sizeof(line),
-        "player_sample ms=%llu epoch=%lu guid=%lu xyz=%.5f,%.5f,%.5f model_valid=%d model=%.5f,%.5f,%.5f\r\n",
+        "player_sample ms=%llu epoch=%lu guid=%lu xyz=%.5f,%.5f,%.5f model_valid=%d model=%.5f,%.5f,%.5f heading_valid=%d heading=%.6f\r\n",
         (unsigned long long)now, (unsigned long)snapshot.epoch, (unsigned long)snapshot.local_guid,
         (double)snapshot.position[0], (double)snapshot.position[1], (double)snapshot.position[2],
         snapshot.model_valid, (double)snapshot.model_position[0], (double)snapshot.model_position[1],
-        (double)snapshot.model_position[2]);
+        (double)snapshot.model_position[2], snapshot.heading_valid, (double)snapshot.heading);
     append(line, size);
 }

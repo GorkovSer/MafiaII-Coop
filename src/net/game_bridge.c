@@ -10,7 +10,8 @@ static CoopSession session;
 static wchar_t evidence[MAX_PATH];
 static HANDLE worker, stop_event;
 static SRWLOCK mailbox_lock = SRWLOCK_INIT;
-static struct {uint32_t epoch; int active; float xyz[3]; ULONGLONG published;} latest;
+static struct {uint32_t epoch; int active; float xyz[3], heading;
+    uint32_t heading_valid; ULONGLONG published;} latest;
 static struct {uint32_t epoch; unsigned char key[32]; ULONGLONG published, revision;} loaded_world;
 static CoopRemoteSnapshot remote;
 static void log_event(void *context, const char *event) {
@@ -33,6 +34,8 @@ static DWORD WINAPI network_worker(void *context) {
         uint32_t epoch = latest.epoch;
         int active = latest.active && GetTickCount64()-latest.published < COOP_STATE_MAX_AGE_MS;
         float xyz[3]; memcpy(xyz, latest.xyz, sizeof(xyz));
+        float heading = latest.heading;
+        uint32_t heading_valid = latest.heading_valid;
         uint32_t world_epoch = loaded_world.epoch;
         unsigned char world_key[32]; memcpy(world_key, loaded_world.key, 32);
         uint64_t world_observed = loaded_world.published;
@@ -46,7 +49,8 @@ static DWORD WINAPI network_worker(void *context) {
             applied_world_revision = world_revision;
         }
         CoopSessionWorld(&session, world_fresh ? world_epoch : 0, world_fresh ? world_key : NULL);
-        CoopSessionPublish(&session, epoch, active ? xyz : NULL);
+        CoopSessionPublishPose(&session, epoch, active ? xyz : NULL,
+            active && heading_valid ? &heading : NULL);
         CoopSessionTick(&session);
         uint64_t published = GetTickCount64();
         uint32_t age = CoopSessionRemoteAge(&session, enet_time_get());
@@ -68,6 +72,7 @@ static DWORD WINAPI network_worker(void *context) {
         remote.world_generation = session.remote.world.generation;
         remote.world_observed_ms = world_observed;
         memcpy(remote.position, session.remote.position, sizeof(remote.position));
+        remote.heading = session.remote.heading; remote.heading_valid = session.remote.heading_valid;
         ReleaseSRWLockExclusive(&mailbox_lock);
     }
     CoopSessionStop(&session);
@@ -119,10 +124,15 @@ int CoopNetworkReadRemote(CoopRemoteSnapshot *out) {
     return CoopRemoteSnapshotAt(&snapshot, GetTickCount64(), out);
 }
 void CoopNetworkPublish(uint32_t epoch, const float *position) {
+    CoopNetworkPublishPose(epoch, position, NULL);
+}
+void CoopNetworkPublishPose(uint32_t epoch, const float *position, const float *heading) {
     if (!worker) return;
     AcquireSRWLockExclusive(&mailbox_lock);
     latest.epoch=epoch; latest.active=position != NULL; latest.published=GetTickCount64();
     if(position) memcpy(latest.xyz,position,sizeof(latest.xyz)); else memset(latest.xyz,0,sizeof(latest.xyz));
+    latest.heading_valid = position && heading && CoopHeadingValid(*heading, 1);
+    latest.heading = latest.heading_valid ? *heading : 0;
     ReleaseSRWLockExclusive(&mailbox_lock);
 }
 void CoopNetworkPublishWorld(uint32_t epoch, const unsigned char *key) {

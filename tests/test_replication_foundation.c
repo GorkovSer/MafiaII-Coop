@@ -26,6 +26,16 @@ static int position(void *c,uint32_t id,float p[3]) { (void)c; assert(id==123); 
 static int move(void *c,uint32_t id,const float v[2]) { (void)c; assert(id==123 && v[0]>0); return 1; }
 static int yes(void *c,uint32_t id) { (void)c; assert(id==123); return 1; }
 int main(void) {
+    {
+        CoopRemoteTimeline pose_timeline={0}; CoopRemoteFrame frame;
+        CoopRemoteSnapshot pose=sample(100,1,0);
+        pose.heading_valid=1; pose.heading=1;
+        assert(CoopRemoteTimelineAt(&pose_timeline,&pose,100,&frame));
+        assert(frame.authority.heading_valid && frame.authority.heading==1);
+        pose.heading=2; /* Same packet sequence cannot acquire a new facing. */
+        assert(!CoopRemoteTimelineAt(&pose_timeline,&pose,101,&frame));
+        assert(!pose_timeline.count && !frame.authority.ready);
+    }
     CoopRemoteTimeline t={0}; CoopRemoteFrame f;
     CoopRemoteSnapshot s=sample(1000,1,0);
     assert(CoopRemoteTimelineAt(&t,&s,1000,&f) && f.position[0]==0);
@@ -52,7 +62,7 @@ int main(void) {
     s=sample(4060,UINT32_MAX,2); assert(!CoopRemoteTimelineAt(&t,&s,4060,&f));
     s=sample(4100,1,NAN); assert(!CoopRemoteTimelineAt(&t,&s,4100,&f));
 
-    CoopRemoteActor a; CoopRemoteActorOps ops={create,position,move,yes,yes,yes};
+    CoopRemoteActor a; CoopRemoteActorOps ops={create,position,move,yes,yes,yes,NULL};
     CoopRemoteActorInit(&a,&ops,NULL); assert(CoopRemoteActorEnableSmoothing(&a,1));
     s=sample(1000,1,0); assert(CoopRemoteActorTick(&a,&s,1000)==COOP_ACTOR_CREATING);
     assert(!CoopRemoteActorEnableSmoothing(&a,0));

@@ -6,6 +6,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
+#include <math.h>
 #include "../src/game/telemetry.h"
 #include "../src/game/player_control.h"
 
@@ -31,6 +32,9 @@ static int control_read(void *context, uint32_t address, void *out, size_t size)
 
 static uint32_t game[0x120/4], player[0x198/4], player_table[0x90/4];
 static uint32_t physics[0x1e8/4], physics_table[0x58/4];
+static uint32_t model[0xa0/4];
+static int facing_valid;
+static float facing;
 static int active, publications, stopped;
 static uint32_t published_epoch;
 static uintptr_t game_pointer;
@@ -46,6 +50,10 @@ void CoopNetworkStop(void) {stopped=1;}
 void CoopNetworkPublish(uint32_t epoch,const float *position) {
     published_epoch=epoch; active=position!=NULL; ++publications;
     if(position && (position[0]!=1 || position[1]!=2 || position[2]!=3)) active=-1;
+}
+void CoopNetworkPublishPose(uint32_t epoch,const float *position,const float *heading) {
+    CoopNetworkPublish(epoch,position);
+    facing_valid=heading!=NULL; facing=heading ? *heading : 0;
 }
 static int tick_expects(int expected) {
     now+=50; CoopTelemetryEvent(3); return active==expected;
@@ -87,6 +95,8 @@ int main(void) {
     game[0x118/4]=(uint32_t)(uintptr_t)player;
     player[0]=(uint32_t)(uintptr_t)player_table;
     player[0x190/4]=(uint32_t)(uintptr_t)physics;
+    player[0x60/4]=(uint32_t)(uintptr_t)model; model[0]=0x191c850;
+    float axis=1; memcpy((char *)model+0x3c,&axis,4);
     player[0x1c/4]=1;
     player_table[0x8c/4]=0x938250;
     physics[0]=(uint32_t)(uintptr_t)physics_table;
@@ -98,6 +108,14 @@ int main(void) {
     CoopTelemetryEvent(10); CoopTelemetryEvent(13);
     CHECK(tick_expects(0));  /* Objects exist but loading is unfinished. */
     CoopTelemetryEvent(33); CHECK(tick_expects(1)); CHECK(published_epoch==1);
+    CHECK(facing_valid && facing==0);
+    axis=0; memcpy((char *)model+0x3c,&axis,4);
+    axis=1; memcpy((char *)model+0x4c,&axis,4);
+    CHECK(tick_expects(1)); CHECK(facing_valid && fabsf(facing-1.5707963f)<0.00001f);
+    axis=NAN; memcpy((char *)model+0x4c,&axis,4);
+    CHECK(tick_expects(1)); CHECK(!facing_valid && facing==0);
+    axis=0; memcpy((char *)model+0x4c,&axis,4);
+    CHECK(tick_expects(1)); CHECK(!facing_valid); /* Degenerate basis. */
     int before_pause=publications;
     now+=49; CoopTelemetryEvent(3); CHECK(publications==before_pause);
     now+=1; CoopTelemetryEvent(3); CHECK(publications==before_pause+1);

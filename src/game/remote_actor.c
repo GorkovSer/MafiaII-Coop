@@ -83,6 +83,8 @@ CoopRemoteActorStatus CoopRemoteActorTick(CoopRemoteActor *a, const CoopRemoteSn
         }
         return a->status = COOP_ACTOR_TOO_FAR;
     }
+    if (s.heading_valid && (!a->ops.face || !a->ops.face(a->context, a->handle, s.heading)))
+        return retire(a);
     if (distance <= (a->stopped ? 0.20f : 0.10f)) {
         if (!a->stopped && !a->ops.stop(a->context, a->handle)) {
             a->retiring = 1; return a->status = COOP_ACTOR_BACKEND_REFUSED;

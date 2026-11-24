@@ -19,12 +19,22 @@ static void check(const CoopRemoteSnapshot *source, uint64_t now, int ready, int
     int result = CoopRemoteSnapshotAt(source, now, &out);
     if (result != ready || out.active != (uint32_t)active ||
         (!ready && memcmp(&out, &zero, sizeof(out))) ||
-        (!active && (out.position[0] || out.position[1] || out.position[2]))) {
+        (!active && (out.position[0] || out.position[1] || out.position[2] ||
+            out.heading || out.heading_valid))) {
         fputs("remote validity assertion failed\n", stderr); exit(1);
     }
 }
 int main(void) {
     CoopRemoteSnapshot s = fresh();
+    s.heading_valid=1; s.heading=1.25f;
+    check(&s,10000,1,1);
+    CoopRemoteSnapshot pose;
+    if (!CoopRemoteSnapshotAt(&s,10000,&pose) || !pose.heading_valid || pose.heading!=1.25f) return 1;
+    s.heading=NAN; check(&s,10000,1,0);
+    s.heading=4; check(&s,10000,1,0);
+    s.heading=0; s.heading_valid=2; check(&s,10000,1,0);
+    s.heading=1; s.heading_valid=0; check(&s,10000,1,0);
+    s=fresh();
     check(&s, 10000, 1, 1); check(&s, 11999, 1, 1);
     check(&s, 12000, 0, 0); /* worker stopped updating */
     s.mailbox_published_ms = 11999;
