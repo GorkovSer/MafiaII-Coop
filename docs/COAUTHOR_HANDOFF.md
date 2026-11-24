@@ -1,5 +1,21 @@
 # Указания соавторам и текущее состояние
 
+## Current local checkpoint: native visual batch accepted (2026-11-24)
+
+Published previous packet: 60e61bf (PR #8). New visual_test.c/.h and
+-TestVisualAvatar now passed one real isolated career batch: visible model,
+XY motion, in-place turn, stationary hold, registry-confirmed retirement and
+unaffected local input; 30 samples, native exit 0, original profile changes 0.
+Session 20261124-034633-203 / PID 18560 has exited. Build visual-mvp-20261124;
+full build/loader checks and four invalid launch combinations passed. The new
+visual heading reader was accepted in that same run. See VISUAL_MVP.md.
+Next code chunk is network-driven visual application in one explicitly agreed
+fixed scene, followed by one combined native batch, not many tiny game launches.
+Current instruction: update GitHub about every 20 minutes, report each final
+packet; use Computer Use only for specific game checks and publication. An
+interrupted UI session does not stop console/code work. Do not reread handoffs
+repeatedly. Physical Human stop remains unresolved and is outside this MVP.
+
 ## Срочная передача: упрощённый визуальный аватар согласован
 
 Пользователь подтвердил: сначала видимая модель, двигающаяся/поворачивающаяся
