@@ -103,7 +103,8 @@ two-game/two-PC/Radmin acceptance or a long-play stability claim. The next requi
 acceptance needs another supported game client. The archive remains a visual
 preview, not a full co-op release.
 
-Build a package after building the pinned binaries:
+Build a package after building the pinned binaries and committing source changes
+(packaging refuses a dirty source tree before creating an archive):
 
 ```powershell
 ./scripts/package-visual-mvp.ps1
@@ -119,3 +120,75 @@ From its extracted short folder, use the host computer's Radmin IPv4 on BOTH PCs
 These are two separate commands, one per PC. Replace the example IP with the
 real host IP. GameDirectory defaults to C:\Games\Mafia II Classic and can be
 supplied explicitly. The guest's own Radmin IP is not the connection target.
+
+Start the guest after the host game window opens. A guest that times out before
+the host starts must be closed and restarted; this preview has no automatic
+reconnect.
+
+For a compact, read-only session summary, use:
+
+```powershell
+./scripts/visual-session-report.ps1 -SessionDirectory ./work/probe-sessions/SESSION_ID
+```
+
+This reports samples, visual lifecycle events and per-model release/registry
+counts. Exit/profile evidence remains null until the launcher has finished.
+Balanced ownership is reported only after a completed native wait and does not
+constitute visual or two-client gameplay acceptance.
+For automated batches, `-WaitForExitSeconds 10` waits for the launcher's final
+evidence before reading the log; an expired wait remains explicitly unknown.
+
+### Packaged session stability
+
+Additional accepted packaged guest run (2026-11-24): session
+`20261124-050945-461`, package source `b9a56d565e3750a53cbb3ddb16cffabbb9cb58a5`.
+Actual game connected to a synthetic host; the visible model was observed in the
+alley. The run recorded 636 visual samples over 318390 ms, pause/resume and exit
+with a live model. Three creations each had one release request, return and
+registry absence confirmation. Native exit took 1563 ms; child/launcher exits
+were zero and original profile changes were zero. During the final three-minute
+sampling interval private bytes increased by 73728; this short observation is
+not a leak-free or long-play guarantee. No game/fixture was left running.
+
+An earlier launch in this batch timed out because the guest preceded the host;
+it produced no visual samples and exited normally. It is retained as a negative
+case for the session report, not counted as a successful visual run. The report
+was also checked against an active session (unknown exit verdict), the earlier
+88-sample accepted run, and Windows PowerShell 5.
+
+The additional packaged HOST run `20261124-051745-124` used the assigned Radmin
+adapter address, a synthetic guest and a normal Windows PowerShell 5 launch.
+The avatar was observed in the alley. One combined run accepted application-state
+expiry/recovery, guest disconnect/rejoin, local player input, pause/resume and
+exit with an active model: 664 samples over 334219 ms; five complete model
+ownership cycles, no visual refusals, two peer connections. Native exit took
+1688 ms, child/launcher exits were zero and original profile changes were zero.
+The bounded-wait report collected final evidence successfully and no test
+process remained. Both endpoints were still on this PC: this verifies local
+binding to the Radmin adapter, not a remote VPN path or two-client gameplay.
+
+### Next acceptance: two actual game clients
+
+Use the same archive on both PCs. Record its SHA256 and both manifest source
+commits before starting. Start the host first, then the guest using the host's
+Radmin address. Both choose Continue from the isolated control save and stay in
+the initial alley. One player steps aside to separate the overlapping spawns.
+
+Perform these checks in one paired run:
+
+1. Walk a few paces and turn while the other player watches; exchange roles.
+   Each receiver must show movement and standing turns in the correct direction,
+   while its own player remains independently controllable.
+2. Pause/resume each game in turn. The remote visual should withdraw during a
+   pause and return after resume. No duplicate should remain behind.
+3. Keep both connected for several minutes, within the preview's nearby range.
+   Observe both screens; logs alone do not establish smooth or usable movement.
+4. Close the guest normally while the host remains in the alley. The host must
+   remove the guest model. Restart the guest to rejoin and repeat a short move.
+5. Replay the mission on one client. Its approval must end; further visual
+   spawning requires restarting the preview. Then close both games normally.
+
+Run the session report on each PC after exit. Preserve both private session
+folders, observed failures, model lifetime counts and launcher/profile results.
+Only a paired run with visual observations on both clients can satisfy this
+acceptance; the existing synthetic-peer runs cannot substitute for it.
