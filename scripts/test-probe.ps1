@@ -2,7 +2,8 @@ param([string]$BuildDirectory = 'build/probe')
 $ErrorActionPreference = 'Stop'
 $root = Split-Path $PSScriptRoot -Parent
 . (Join-Path $PSScriptRoot 'launch-result.ps1')
-foreach($invalid in @('', "child_exit=0`nchild_exit=7", 'child_exit=unknown')) {
+foreach($invalid in @('', "child_exit=0`nchild_exit=7", 'child_exit=unknown',
+                      'failed_child_exit=0 cleanup_termination_requested=0')) {
     $unknown=Get-CoopLaunchResult -LauncherOutput $invalid -LauncherExit 0 -WaitedForExit $true -OriginalProfileChanges 0
     if($null -ne $unknown.child_exit_code) {throw 'Ambiguous launcher result incorrectly accepted'}
 }
@@ -65,12 +66,15 @@ $earlyFields = Get-Content -LiteralPath $earlyLog | ConvertFrom-StringData
 if ($earlyFields.test_host_entry_seen -ne '0') { throw 'Early load ran after executable entry' }
 Write-Output 'PASS early DLL/export executes before host entry, then host exits normally'
 $observerLog = Join-Path $dir 'observer-negative.log'
-& $launcher $hostExe (Join-Path $out 'coop_observer.dll') $observerLog --early 2>$null
+$observerError = Join-Path $dir 'observer-negative-error.txt'
+& $launcher $hostExe (Join-Path $out 'coop_observer.dll') $observerLog --early 2>$observerError
 if ($LASTEXITCODE -ne 9 -or
-    (Get-Content -LiteralPath $observerLog -Raw) -notmatch 'refused_unknown_image') {
+    (Get-Content -LiteralPath $observerLog -Raw) -notmatch 'refused_unknown_image' -or
+    (Get-Content -LiteralPath $observerError -Raw) -notmatch 'failed_child_exit=1 cleanup_termination_requested=1') {
     throw 'Observer must reject non-audited executable before game hooks'
 }
 Write-Output 'PASS observer refuses unaudited executable without installing a hook'
+Write-Output 'PASS failed owned suspended child is terminated and distinguished from normal exit'
 $profileDir = Join-Path $dir 'profile-test'
 $profileRoot = Join-Path $profileDir 'profile-localappdata'
 New-Item -ItemType Directory -Path $profileRoot -Force | Out-Null
