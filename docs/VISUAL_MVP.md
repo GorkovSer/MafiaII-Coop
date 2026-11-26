@@ -121,9 +121,13 @@ These are two separate commands, one per PC. Replace the example IP with the
 real host IP. GameDirectory defaults to C:\Games\Mafia II Classic and can be
 supplied explicitly. The guest's own Radmin IP is not the connection target.
 
-Start the guest after the host game window opens. A guest that times out before
-the host starts must be closed and restarted; this preview has no automatic
-reconnect.
+Starting the host first is recommended. The visual guest automatically retries
+after a transport timeout or disconnect, with a two-second delay before another
+attempt. Disconnect clears its old identity, world agreement and remote pose;
+a replacement host needs a fresh handshake and scene agreement. An observed
+protocol refusal blocks retries until the guest restarts. Telemetry-only sessions
+retain the original default-off retry policy. Reconnection does not renew the
+one-load visual approval after a scene reload.
 
 For a compact, read-only session summary, use:
 
@@ -167,7 +171,34 @@ The bounded-wait report collected final evidence successfully and no test
 process remained. Both endpoints were still on this PC: this verifies local
 binding to the Radmin adapter, not a remote VPN path or two-client gameplay.
 
-### Next acceptance: two actual game clients
+### Visual guest transport recovery (2026-11-26)
+
+Visual guests now opt into a local retry policy; protocol 3/module 6 and the
+wire format are unchanged. Transport timeout/disconnect clears the old identity,
+scene agreement and pose, then retries after two seconds. An observed protocol
+refusal blocks further retries until process restart. Telemetry sessions retain
+the default-off policy. Scene reload still ends visual approval for that process.
+
+The real-loopback production fixture covers an absent host, late host startup,
+replacement host, fresh session/connection identity, stale pose clearing,
+protocol refusal, default-off behavior and stop. The complete network suite and
+visual scene/physical-authority isolation suite passed after the pinned Werror
+build.
+
+Native session `20261126-230119-981` used one real guest game and three sequential
+synthetic host processes. The user opened the career; the first host was started
+only after a recorded guest timeout/retry. The same game automatically connected
+to the late host and two replacements. The user was shown the visible network
+model near the shop. Application-state expiry and transport loss retired models;
+the final pause/resume rebound and exit with a live model were verified. There
+were 192 visual samples spanning 266500 ms, nine creations with nine single
+release/registry-absence cycles, and zero timeline refusals. Exit took 1735 ms;
+child/launcher exits were zero and original profile changes were zero. The sample
+span includes deliberate gaps and is not a continuous-play stability claim.
+No game or synthetic host remains running. This remains one-game acceptance,
+not simultaneous two-client or remote VPN acceptance.
+
+### Remaining paired acceptance
 
 A same-PC two-process diagnostic was attempted on 2026-11-24 because no second
 PC was available. The second injected module reached the network handshake but
