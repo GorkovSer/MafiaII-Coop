@@ -137,6 +137,7 @@ int CoopNetworkStart(const wchar_t *log_path) {
     if (!port || port > 65535) return 2;
     config.address = ascii_address; config.port = (uint16_t)port; config.capabilities = COOP_CAP_TELEMETRY;
     if(visual_mode) config.capabilities|=COOP_CAP_VISUAL_SCENE;
+    config.auto_reconnect=visual_mode && config.role==COOP_GUEST;
     config.module_version=COOP_MODULE_VERSION;
     memcpy(config.build, CoopGameBuild, 32);
     int result = CoopSessionStart(&session, &config, log_event, NULL);

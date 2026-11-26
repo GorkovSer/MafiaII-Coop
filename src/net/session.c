@@ -32,7 +32,8 @@ static int send_message(CoopSession *s, CoopMessage *message, unsigned char chan
     return 1;
 }
 static void reset_peer(CoopSession *s) {
-    s->peer = NULL; s->ready = s->remote_active = s->have_sequence = 0;
+    s->peer = NULL; s->ready = s->remote_active = s->have_sequence = s->guest_connected = 0;
+    s->retry_pending=0;
     memset(&s->remote, 0, sizeof(s->remote));
     s->remote_received_at = 0;
     CoopWorldInit(&s->world, (uint32_t)s->role);
@@ -41,7 +42,11 @@ static void reset_peer(CoopSession *s) {
 static void reject(CoopSession *s, ENetPeer *peer, const char *reason) {
     ++s->rejected; record(s, reason);
     enet_peer_disconnect_now(peer, 1);
-    if (s->peer == peer) reset_peer(s);
+    if (s->peer == peer) {
+        if(s->role==COOP_GUEST && s->config.auto_reconnect)
+            s->retry_blocked=1; /* Observed protocol refusal requires operator action. */
+        reset_peer(s);
+    }
 }
 int CoopSessionStart(CoopSession *s, const CoopSessionConfig *config, CoopSessionLog log, void *context) {
     memset(s, 0, sizeof(*s));
@@ -49,7 +54,9 @@ int CoopSessionStart(CoopSession *s, const CoopSessionConfig *config, CoopSessio
     CoopWorldInit(&s->world, (uint32_t)s->role);
     ENetAddress address = {0}; address.port = config->port;
     if ((s->role != COOP_HOST && s->role != COOP_GUEST) || !address.port ||
-        !ipv4(config->address, &address.host) || (s->role == COOP_GUEST && !address.host)) return 1;
+        !ipv4(config->address, &address.host) || (s->role == COOP_GUEST && !address.host) ||
+        (config->auto_reconnect!=0 && config->auto_reconnect!=1) ||
+        (config->auto_reconnect && s->role!=COOP_GUEST)) return 1;
     strcpy(s->address,config->address); s->config.address=s->address;
     if (enet_initialize() < 0) return 2;
     s->host = enet_host_create(s->role == COOP_HOST ? &address : NULL, s->role == COOP_HOST ? 2 : 1, 2, 0, 0);
@@ -145,6 +152,9 @@ void CoopSessionTick(CoopSession *s) {
     ENetEvent event;
     for (unsigned int count = 0; count < 32 && enet_host_service(s->host, &event, 0) > 0; ++count) {
         if (event.type == ENET_EVENT_TYPE_CONNECT) {
+            if(s->role==COOP_GUEST && event.peer!=s->peer) {
+                reject(s,event.peer,"reject_peer"); continue;
+            }
             if (s->role == COOP_HOST) {
                 if (s->peer || event.data != COOP_PROTOCOL) { reject(s, event.peer, "reject_busy_or_protocol"); continue; }
                 s->peer = event.peer;
@@ -161,6 +171,9 @@ void CoopSessionTick(CoopSession *s) {
         } else if (event.type == ENET_EVENT_TYPE_RECEIVE) {
             receive(s, &event, now); enet_packet_destroy(event.packet);
         } else if (event.type == ENET_EVENT_TYPE_DISCONNECT && event.peer == s->peer) {
+            if(event.data==1 && s->role==COOP_GUEST && s->config.auto_reconnect) {
+                s->retry_blocked=1; record(s,"retry_refused");
+            }
             reset_peer(s); record(s, "disconnected");
         }
     }
@@ -172,6 +185,19 @@ void CoopSessionTick(CoopSession *s) {
         memset(s->remote.position, 0, sizeof(s->remote.position));
         s->remote.heading = 0; s->remote.heading_valid = 0;
         record(s, "remote_expired");
+    }
+    if(s->role==COOP_GUEST && s->config.auto_reconnect && !s->peer && !s->retry_blocked) {
+        if(!s->retry_pending) {
+            s->retry_pending=1; s->retry_at=now+2000; record(s,"retry_wait");
+        } else if((int32_t)(now-s->retry_at)>=0) {
+            ENetAddress address={0}; address.port=s->config.port;
+            /* The address was validated and copied at startup. */
+            if(!ipv4(s->address,&address.host)) {s->retry_blocked=1; return;}
+            s->peer=enet_host_connect(s->host,&address,2,COOP_PROTOCOL);
+            s->retry_pending=0;
+            if(s->peer) {s->deadline=now+5000; record(s,"retry_connecting");}
+            else record(s,"retry_unavailable");
+        }
     }
     if (s->ready && s->world.pending_type) {
         CoopMessage control = {0}; control.type = (uint16_t)s->world.pending_type;
@@ -193,5 +219,6 @@ void CoopSessionStop(CoopSession *s) {
     if (!s->host) return;
     if (s->peer) enet_peer_disconnect_now(s->peer, 0);
     reset_peer(s); enet_host_destroy(s->host); s->host = NULL;
+    s->retry_pending=0;
     enet_deinitialize(); record(s, "stopped");
 }
