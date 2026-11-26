@@ -66,6 +66,8 @@ if ($LASTEXITCODE -ne 0) {throw 'Optional input diagnostic build failed'}
 if ($LASTEXITCODE -ne 0) {throw 'Native menu input helper build failed'}
 & $cc @common (Join-Path $root 'tests/session_peer.c') @netSources -o (Join-Path $out 'session_peer.exe') @netLink
 if ($LASTEXITCODE -ne 0) {throw 'Session fixture build failed'}
+& $cc @common (Join-Path $root 'tests/test_session_retry.c') @netSources -o (Join-Path $out 'test_session_retry.exe') @netLink
+if ($LASTEXITCODE -ne 0) {throw 'Session retry fixture build failed'}
 & $cc @common -municode (Join-Path $root 'tests/network_bridge_host.c') (Join-Path $root 'src/net/game_bridge.c') $remoteSource @netSources -o (Join-Path $out 'network_bridge_host.exe') @netLink
 if ($LASTEXITCODE -ne 0) {throw 'Network thread fixture build failed'}
 & $cc @common (Join-Path $root 'tests/test_remote_snapshot.c') $remoteSource @netSources -o (Join-Path $out 'test_remote_snapshot.exe') @netLink

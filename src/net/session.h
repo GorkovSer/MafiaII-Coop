@@ -9,6 +9,7 @@ typedef struct {
     uint16_t port;
     uint32_t capabilities;
     uint32_t module_version;
+    int auto_reconnect; /* Local guest policy; never sent on the wire. */
     unsigned char build[32];
 } CoopSessionConfig;
 typedef void (*CoopSessionLog)(void *, const char *);
@@ -20,6 +21,8 @@ typedef struct {
     uint32_t player_id, tx_sequence, rx_sequence, deadline, next_send;
     uint32_t sent_states, received_states, rejected, stale, connections;
     uint32_t remote_received_at;
+    uint32_t retry_at;
+    int retry_pending, retry_blocked;
     CoopMessage local, remote;
     CoopWorldSync world;
     CoopSessionConfig config;

@@ -1,3 +1,18 @@
+> Latest checkpoint — 2026-11-26 (resumed at the user's request; supersedes the
+> historical pause note below). Visual guests now retry transport loss/timeout
+> with a two-second delay. The local session policy is default-off outside visual
+> guest mode; protocol/module remain 3/6. Observed protocol refusal blocks retries.
+> Old pose, peer identity and scene agreement are cleared before reconnecting.
+> One-load visual approval and physical-authority refusal remain unchanged.
+>
+> Pinned Werror build, new real-loopback retry fixture, full network suite and
+> visual-isolation suite passed. Native session 20261126-230119-981: one actual
+> guest game, three sequential synthetic hosts, late-host/replacement recovery,
+> visible model shown to the user, pause/resume, nine complete ownership cycles,
+> clean exit 1735 ms, child/launcher 0, original profile changes 0. No test process
+> remains. Details and limitations: VISUAL_MVP.md. Simultaneous real-client and
+> remote Radmin acceptance remain pending. Reduced visual MVP estimate ~75%; no
+> campaign/combat co-op completion claim. No background automation was created.
 > Latest checkpoint — 2026-11-24. The user requested publication after ten more
 > minutes, then stopping work until later. No continuing/background work is
 > scheduled. Resume only when the user asks.

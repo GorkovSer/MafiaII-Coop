@@ -57,8 +57,10 @@ from the supplied fresh profile, then one player should step aside a few paces.
 Original saves are separate. Stay in the initial
 scene. Pausing withdraws the model and resuming restores it. Reloading/changing
 the scene ends approval: close and restart the preview on both PCs.
-If the guest started before the host and timed out, close and restart the guest.
-Automatic reconnect is not included in this preview.
+The visual guest retries after a transport timeout or disconnect, with a
+two-second delay between attempts. Old poses are cleared before reconnecting.
+An observed protocol refusal blocks retries until the guest is restarted.
+Reconnection never renews approval after reloading/changing the scene.
 
 Use -SecondScreen to put the game on a second monitor. -PrepareOnly creates the
 isolated profile and checks files without starting the game. Private diagnostics
