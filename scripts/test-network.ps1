@@ -21,6 +21,8 @@ function Finish-Peer($process,$name) {
     return Get-Content (Join-Path $dir "$name.txt") -Raw
 }
 $port=Get-Random -Minimum 30000 -Maximum 50000
+& (Join-Path (Join-Path $root $BuildDirectory) 'test_session_retry.exe') $port
+if($LASTEXITCODE -ne 0) {throw 'Production guest reconnect fixture failed'}
 $hostPeer=Start-Peer good-host host $port 5000
 Start-Sleep -Milliseconds 200
 $guestPeer=Start-Peer good-guest guest $port 3500
