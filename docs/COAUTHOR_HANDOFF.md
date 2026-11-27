@@ -9,8 +9,11 @@
 > and host exit were checked. Nine creation/removal cycles balanced; all exits 0
 > and original profile changes 0. See TESTING.md and VISUAL_MVP.md.
 > Reduced visual MVP estimate ~85%, not a campaign co-op estimate. Still pending:
-> real two-PC/Radmin routing and sustained visual quality/FPS, paired mission-reload
-> acceptance. Do not restore the menu or use backend Continue to enter gameplay.
+> real two-PC/Radmin routing and sustained visual quality/FPS. A follow-up pair
+> (151254-545 host / 151323-601 guest, date 20261127) replayed the mission on each
+> client: event 32 ended scene approval, no model respawn after reload, 1/1 owned
+> lifetime each, both child/launcher 0 and profile changes 0. No game remains.
+> Do not restore the menu or use backend Continue to enter gameplay.
 > Next: finish those acceptance checks when a second PC is available; retain the
 > fixed-scene limitation and default-off physical actor authority.
 >

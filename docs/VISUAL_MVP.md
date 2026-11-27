@@ -8,8 +8,10 @@ checks. This supersedes the earlier second-instance blocker below. Nine owned
 model lifetimes balanced, all child/launcher exits were 0, original profile
 changes 0. Native evidence and remaining limitations are in TESTING.md.
 Estimated completion of this reduced visual scope: about 85%. Actual two-PC
-Radmin routing, sustained visual/FPS acceptance and paired mission reload remain
-pending. No shared campaign, combat, vehicle, save or animation support is implied.
+Radmin routing and sustained visual/FPS acceptance remain pending. A subsequent
+actual pair also passed mission replay on both roles: event 32 ended approval,
+no model respawn after reload, 1/1 owned lifetime each and clean exits/profile
+comparisons. No shared campaign, combat, vehicle, save or animation support is implied.
 
 Developer-only same-PC diagnostics (not enabled by the portable wrapper):
 
