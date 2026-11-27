@@ -50,7 +50,7 @@ int wmain(int argc, wchar_t **argv) {
     int quit = argc == 4 && !wcscmp(argv[1], L"quit");
     if ((!inspect && !quit && ((argc != 5 && argc != 6) || wcscmp(argv[1], L"key"))) ||
         !number(argv[2], &pid64) || !pid64 || pid64 > MAXDWORD) {
-        fputs("usage: coop_input inspect PID | quit PID CREATION | key PID CREATION up|down|left|right|enter|escape [hold_ms:50..2000]\n", stderr); return 2;
+        fputs("usage: coop_input inspect PID | quit PID CREATION | key PID CREATION up|down|left|right|enter|escape|w|a|s|d [hold_ms:50..2000]\n", stderr); return 2;
     }
     WORD scan = 0; DWORD flags = KEYEVENTF_SCANCODE;
     if (!inspect) {
@@ -60,6 +60,10 @@ int wmain(int argc, wchar_t **argv) {
         if (argc == 6 && (!number(argv[5], &hold_ms) || hold_ms < 50 || hold_ms > 2000)) return 2;
         if (!wcscmp(argv[4], L"enter")) scan = 0x1c;
         else if (!wcscmp(argv[4], L"escape")) scan = 0x01;
+        else if (!wcscmp(argv[4], L"w")) scan = 0x11;
+        else if (!wcscmp(argv[4], L"a")) scan = 0x1e;
+        else if (!wcscmp(argv[4], L"s")) scan = 0x1f;
+        else if (!wcscmp(argv[4], L"d")) scan = 0x20;
         else {
             flags |= KEYEVENTF_EXTENDEDKEY;
             if (!wcscmp(argv[4], L"up")) scan = 0x48;
