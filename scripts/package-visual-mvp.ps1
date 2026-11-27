@@ -40,7 +40,8 @@ $readme=@'
 Experimental fixed-scene preview: visible network model, movement and facing.
 No walk animation, collision, combat, vehicles or shared story progress yet.
 Two actual clients passed local movement/pause/disconnect/rejoin checks on one PC.
-Real two-PC/Radmin and paired mission-reload acceptance remain pending.
+Mission replay safely withdraws both models; restart the preview to reapprove.
+Real two-PC/Radmin and sustained quality/FPS acceptance remain pending.
 
 Both PCs need the pinned Mafia II Classic game and must be on the same Radmin VPN.
 Extract into a short path such as C:\MafiaCoop; keep the entire folder layout.
