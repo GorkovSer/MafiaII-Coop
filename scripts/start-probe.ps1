@@ -1,11 +1,12 @@
 param([Parameter(Mandatory=$true)][string]$GameDirectory, [switch]$WaitForExit,
-      [switch]$Observer, [string]$BuildDirectory = 'build/probe', [switch]$SecondScreen,
+      [switch]$Observer, [switch]$BackgroundVisualTest, [string]$BuildDirectory = 'build/probe', [switch]$SecondScreen,
       [ValidateSet('off','host','guest')][string]$NetworkRole='off',
       [string]$Address='127.0.0.1', [ValidateRange(1,65535)][int]$Port=28960,
       [ValidatePattern('^\d{8}-\d{6}-\d{3}$')][string]$TestProfileFrom,
       [switch]$ContinueMainStory, [switch]$TestModelClone, [switch]$TestHuman,
       [switch]$TestScriptMove, [switch]$TestVisualAvatar, [switch]$VisualNetwork,
-      [ValidatePattern('^[A-Za-z0-9_.-]{1,64}$')][string]$VisualScene='classic-alley-mvp-v1')
+      [ValidatePattern('^[A-Za-z0-9_.-]{1,64}$')][string]$VisualScene='classic-alley-mvp-v1',
+      [ValidatePattern('^\d{8}-\d{6}-\d{3}$')][string]$ConcurrentHostSession)
 $ErrorActionPreference = 'Stop'
 $NetworkRole=$NetworkRole.ToLowerInvariant()
 $root = Split-Path $PSScriptRoot -Parent
@@ -15,9 +16,23 @@ $expected = '16c79a3be483e582719e43d7b451e887e89414be81ca7ecfc0536dd8185e6c2f'
 if ((Get-FileHash -LiteralPath $exe).Hash.ToLowerInvariant() -ne $expected) {
     throw 'Unknown game executable. Audit the new build before probing; no game started.'
 }
-if (Get-Process mafia2 -ErrorAction SilentlyContinue) { throw 'Close existing Mafia II before starting this probe.' }
+$games=@(Get-Process mafia2 -ErrorAction SilentlyContinue)
+if($ConcurrentHostSession) {
+    if(!$Observer -or !$VisualNetwork -or !$TestProfileFrom -or $NetworkRole -ne 'guest' -or
+       $games.Count -ne 1 -or $games[0].Path -ne $exe){throw 'Second-client diagnostic requires one owned isolated visual host'}
+    $hostRoot=Join-Path $root "work/probe-sessions/$ConcurrentHostSession"
+    $hostLog=Get-Content -LiteralPath (Join-Path $hostRoot 'probe.log') -Raw
+    $logAge=((Get-Item -LiteralPath (Join-Path $hostRoot 'probe.log')).CreationTimeUtc-$games[0].StartTime.ToUniversalTime()).TotalSeconds
+    $hostConfig=Get-Content -LiteralPath (Join-Path $hostRoot 'coop-session.ini') -Raw
+    if($logAge -lt 0 -or $logAge -gt 30 -or $hostLog -notmatch "(?m)^process_id=$($games[0].Id)\r?$" -or
+       $hostLog -notmatch '(?m)^profile_local_appdata_redirected=1\r?$' -or
+       $hostConfig -notmatch '(?m)^role=host\r?$' -or $hostConfig -notmatch '(?m)^visual_only=1\r?$') {
+        throw 'Existing game is not the isolated visual host named by the diagnostic'
+    }
+} elseif($games.Count){throw 'Close existing Mafia II before starting this probe.'}
 $stamp = Get-Date -Format 'yyyyMMdd-HHmmss-fff'
 $local = Join-Path $root "work/probe-sessions/$stamp"
+if(Test-Path -LiteralPath $local){throw 'Fresh launch session required; no files overwritten'}
 if($VisualNetwork -and (!$Observer -or !$TestProfileFrom -or $NetworkRole -eq 'off' -or
     $TestHuman -or $TestScriptMove -or $TestModelClone -or $ContinueMainStory -or $TestVisualAvatar)) {
     throw 'Visual network requires an isolated observer profile, host/guest role and no native diagnostics'
@@ -26,7 +41,12 @@ if($TestVisualAvatar -and (!$Observer -or !$TestProfileFrom -or $NetworkRole -ne
     $TestHuman -or $TestScriptMove -or $TestModelClone -or $ContinueMainStory)) {
     throw 'Visual avatar test requires an isolated observer profile, networking off and no other native tests'
 }
+if($BackgroundVisualTest -and (!$Observer -or !$VisualNetwork -or !$TestProfileFrom)){throw 'Background diagnostic requires isolated visual networking'}
 New-Item -ItemType Directory -Path $local -Force | Out-Null
+if($BackgroundVisualTest){[IO.File]::WriteAllText((Join-Path $local 'background-test.ini'),"[test]`r`nbackground_visual_client=1`r`n",[Text.Encoding]::ASCII)}
+if($ConcurrentHostSession){
+    [IO.File]::WriteAllText((Join-Path $local 'instance-test.ini'),"[test]`r`nsecond_visual_client=1`r`n",[Text.Encoding]::ASCII)
+}
 if($TestVisualAvatar) {
     [IO.File]::WriteAllText((Join-Path $local 'visual-test.ini'),"[test]`r`nvisual_once=1`r`n",[Text.Encoding]::ASCII)
 }

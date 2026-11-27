@@ -8,6 +8,8 @@ foreach($invalid in @('', "child_exit=0`nchild_exit=7", 'child_exit=unknown',
     if($null -ne $unknown.child_exit_code) {throw 'Ambiguous launcher result incorrectly accepted'}
 }
 $out = Join-Path $root $BuildDirectory
+& (Join-Path $out 'test_instance_test.exe')
+if($LASTEXITCODE -ne 0){throw 'Instance import fixture failed'}
 & (Join-Path $out 'test_entity_registry.exe')
 if ($LASTEXITCODE -ne 0) { throw 'Production entity registry fixture failed' }
 & (Join-Path $out 'test_command_queue.exe')
