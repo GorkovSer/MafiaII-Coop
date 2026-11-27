@@ -1,5 +1,44 @@
 # Visual-only MVP
 
+## Local real-client checkpoint — 2026-11-27
+
+Two simultaneous actual Mafia II clients now passed local appearance,
+movement/facing, manual pause/resume, guest disconnect/rejoin and host disconnect
+checks. This supersedes the earlier second-instance blocker below. Nine owned
+model lifetimes balanced, all child/launcher exits were 0, original profile
+changes 0. Native evidence and remaining limitations are in TESTING.md.
+Estimated completion of this reduced visual scope: about 85%. Actual two-PC
+Radmin routing, sustained visual/FPS acceptance and paired mission reload remain
+pending. No shared campaign, combat, vehicle, save or animation support is implied.
+
+Developer-only same-PC diagnostics (not enabled by the portable wrapper):
+
+- Launch an isolated `start-probe.ps1 -Observer -VisualNetwork` host with
+  `-TestProfileFrom <seed-session> -NetworkRole host -Address <local-IPv4>`.
+  Add `-BackgroundVisualTest` for this diagnostic on both processes.
+- Launch the guest with the same scene/seed/address and `-NetworkRole guest
+  -ConcurrentHostSession <running-host-session> -BackgroundVisualTest`.
+  The script requires exactly one pinned, recently logged isolated host. Normal
+  launches still refuse an existing game. Start fresh sessions; no log overwrite.
+- `instance-test.ini` affects only the exact WinMain CreateMutexA call at
+  0x401ba4, return 0x401baa, literal 0x18edc00. The replacement name uses PID and
+  process creation time; other mutexes, ownership and last-error are preserved.
+- `background-test.ini` skips the pinned WM_ACTIVATE / WM_ACTIVATEAPP handlers
+  at 0xac6d22 / 0xac6e57 to the parameter-reloading epilogue 0xac6f6d. Whole EXE
+  hash, isolated profile and expected bytes are checked before installation,
+  before the child's entry point. This prevents automatic background pause for
+  this test; it also skips the engine's focus notification handling. Minimize
+  behavior is not accepted. Manual Escape pause and all replication guards stay.
+- These are in-memory, per-process changes; no game EXE/assets are modified.
+  `tests/mute-owned-game.ps1 -GamePid <pid>` mutes only that pinned process.
+  The scoped native input helper also accepts WASD, with unchanged foreground,
+  PID/creation-time/hash checks and key release on focus loss.
+- Enter gameplay through normal menus (`enter-story.ps1`), never backend Continue.
+  One player must step aside because both start at the same saved position.
+
+The rejected in-game menu/lobby experiment is absent from this source branch.
+The portable preview still uses the existing host/guest launch scripts.
+
 The user approved a visible network-driven model without walk animation or
 collision for the first MVP. This is not the former physical Human backend.
 No Human/Player input, AI, physics or script-movement function is used on it.

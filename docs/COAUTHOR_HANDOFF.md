@@ -1,4 +1,20 @@
-> Latest checkpoint — 2026-11-26 (resumed at the user's request; supersedes the
+> Latest checkpoint — 2026-11-27. The rejected menu/lobby experiment is absent
+> from development; preserved only on local unpushed codex/native-menu-20261126.
+> Two real clients now run on this one PC using explicit isolated diagnostics:
+> a caller-scoped launcher mutex name and pinned focus-message handler bypass.
+> Neither is enabled by normal portable launches. Default one-game guard remains.
+> Native host 20261127-150020-095, guest 20261127-150051-428 and replacement guest
+> 20261127-150320-411 reached visible career gameplay. Both remote models appeared;
+> independent movement/facing, each player's manual pause/resume, guest exit/rejoin
+> and host exit were checked. Nine creation/removal cycles balanced; all exits 0
+> and original profile changes 0. See TESTING.md and VISUAL_MVP.md.
+> Reduced visual MVP estimate ~85%, not a campaign co-op estimate. Still pending:
+> real two-PC/Radmin routing and sustained visual quality/FPS, paired mission-reload
+> acceptance. Do not restore the menu or use backend Continue to enter gameplay.
+> Next: finish those acceptance checks when a second PC is available; retain the
+> fixed-scene limitation and default-off physical actor authority.
+>
+> Previous checkpoint — 2026-11-26 (resumed at the user's request; supersedes the
 > historical pause note below). Visual guests now retry transport loss/timeout
 > with a two-second delay. The local session policy is default-off outside visual
 > guest mode; protocol/module remain 3/6. Observed protocol refusal blocks retries.

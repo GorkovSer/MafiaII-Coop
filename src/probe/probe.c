@@ -4,6 +4,8 @@
 #include <stdio.h>
 #ifdef COOP_OBSERVER
 DWORD CoopObserverInstall(const wchar_t *path);
+DWORD CoopInstanceTestInstall(const wchar_t *path);
+DWORD CoopBackgroundTestInstall(const wchar_t *path);
 #endif
 #if defined(COOP_OBSERVER) || defined(COOP_PROFILE_TEST)
 DWORD CoopProfileInstall(const wchar_t *path);
@@ -54,6 +56,10 @@ __declspec(dllexport) DWORD WINAPI CoopProbeStart(void *log_path) {
         DWORD profile_result = CoopProfileInstall((const wchar_t *)log_path);
         if (profile_result) return profile_result;
     }
+#endif
+#ifdef COOP_OBSERVER
+    if(ok){DWORD result=CoopInstanceTestInstall((const wchar_t *)log_path);if(result)return result;}
+    if(ok){DWORD result=CoopBackgroundTestInstall((const wchar_t *)log_path);if(result)return result;}
 #endif
     return ok ? 0 : 4;
 }
