@@ -1,7 +1,11 @@
-param([Parameter(Mandatory=$true)][int]$GamePid)
+[CmdletBinding(DefaultParameterSetName='Mute')]
+param([Parameter(Mandatory=$true,ParameterSetName='Mute')][int]$GamePid,
+      [Parameter(Mandatory=$true,ParameterSetName='Initialize')][switch]$InitializeOnly)
 $ErrorActionPreference='Stop'
+if(!$InitializeOnly) {
 $game=Get-Process -Id $GamePid
 if((Get-FileHash -LiteralPath $game.Path).Hash.ToLowerInvariant() -ne '16c79a3be483e582719e43d7b451e887e89414be81ca7ecfc0536dd8185e6c2f'){throw 'Unsupported game process'}
+}
 if(!('CoopAudioMute' -as [type])) {
 Add-Type -TypeDefinition @"
 using System;
@@ -34,4 +38,4 @@ public static class CoopAudioMute {
 }
 "@
 }
-[CoopAudioMute]::Apply([uint32]$GamePid)
+if(!$InitializeOnly){[CoopAudioMute]::Apply([uint32]$GamePid)}
