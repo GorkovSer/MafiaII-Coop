@@ -45,7 +45,7 @@ typedef enum {
 typedef struct {
     /* Scope-local counters; never RTT, one-way latency or loss measurements. */
     uint64_t accepted_snapshots, positive_intervals, same_ms_bursts, long_gaps;
-    uint64_t underrun_events, history_evictions;
+    uint64_t underrun_events, history_evictions, latency_clamps;
     unsigned int window_intervals, mean_interval_us, variation_us;
     unsigned int last_interval_ms, history_peak;
 } CoopTimelineDeliveryStats;

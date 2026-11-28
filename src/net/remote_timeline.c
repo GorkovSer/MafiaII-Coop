@@ -115,18 +115,27 @@ static void adapt_delay(CoopRemoteTimeline *t) {
     if (wanted<t->config.min_delay_ms) wanted=t->config.min_delay_ms;
     if (wanted>t->config.max_delay_ms) wanted=t->config.max_delay_ms;
     unsigned int delay=t->diagnostics.delay_ms;
+    unsigned int irregular=0;
+    for (unsigned int i=0;i<t->interval_count;++i) {
+        unsigned int us=t->intervals[i]*1000u;
+        unsigned int deviation=us>d->mean_interval_us ? us-d->mean_interval_us : d->mean_interval_us-us;
+        irregular+=deviation>20000u;
+    }
+    /* A single long interval remains in the window for sixteen decisions.
+       Do not mistake that one observation for sustained jitter. */
+    int sustained=irregular>=3 || d->mean_interval_us+20000u>=delay*1000u || t->underrun_since_sample;
     /* Repeated starvation can request one bounded step even if the window's
        average is low. It still needs three qualifying accepted intervals. */
     if (t->underrun_since_sample && wanted<delay+10) {
         wanted=delay+10;
         if (wanted>t->config.max_delay_ms) wanted=t->config.max_delay_ms;
     }
-    if (wanted>=delay+10) {
+    if (wanted>=delay+10 && sustained) {
         t->decrease_votes=0;
         if (++t->increase_votes>=3) {
             t->diagnostics.delay_ms=delay+10; t->increase_votes=0;
         }
-    } else if (wanted+20<=delay) {
+    } else if (wanted+20<=delay || (wanted==t->config.min_delay_ms && wanted<delay)) {
         t->increase_votes=0;
         if (++t->decrease_votes>=20) {
             unsigned int lowered=delay-5;
@@ -163,11 +172,11 @@ static void append(CoopRemoteTimeline *t, const CoopRemoteSnapshot *s) {
     }
     if (t->count==COOP_TIMELINE_CAPACITY) {
         unsigned int remove=0;
-        /* In adaptive mode keep the lower playback anchor if all subsequent
-           frames are still in its future. Downsample one interior point rather
-           than forcing the playhead forward to a new oldest timestamp. */
+        /* Preserve BOTH endpoints bracketing the displayed time. Replacing
+           its upper endpoint could revise already rendered motion even with
+           a monotonic playhead. Downsample a later interior point instead. */
         if (t->config.mode==COOP_INTERPOLATION_ADAPTIVE && t->diagnostics.presentation_valid &&
-            t->frames[1].state_received_ms>t->diagnostics.presentation_ms) remove=1;
+            t->frames[1].state_received_ms>t->diagnostics.presentation_ms) remove=2;
         memmove(t->frames+remove,t->frames+remove+1,
             (COOP_TIMELINE_CAPACITY-remove-1)*sizeof(t->frames[0]));
         --t->count; increment(&t->diagnostics.delivery.history_evictions);
@@ -188,8 +197,14 @@ static uint64_t presentation_time(CoopRemoteTimeline *t, uint64_t now) {
             uint64_t elapsed=now-t->last_render_now;
             uint64_t budget=add_saturating(elapsed,elapsed/4);
             uint64_t limit=add_saturating(d->presentation_ms,budget);
-            if (target>limit) target=limit; /* At most 1.25x catch-up, no rewind. */
+            if (target>limit) target=limit; /* Gentle 1.25x catch-up before age cap. */
         }
+        /* Avoid an arbitrarily deep playback debt after underflow. When data
+           exists, the configured maximum takes precedence over gentle catch-up.
+           Otherwise use only the newest available anchor, never prediction. */
+        uint64_t floor=now>=t->config.max_delay_ms ? now-t->config.max_delay_ms : 0;
+        if (floor>newest) floor=newest;
+        if (target<floor) {target=floor; increment(&d->delivery.latency_clamps);}
     }
     if (target<oldest) target=oldest;
     if (target>newest) target=newest; /* Hold, never extrapolate. */
