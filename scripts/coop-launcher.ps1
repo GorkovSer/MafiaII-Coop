@@ -3,6 +3,7 @@ $ErrorActionPreference='Stop'
 $root=Split-Path $PSScriptRoot -Parent
 . (Join-Path $PSScriptRoot 'launcher-diagnostics.ps1')
 . (Join-Path $PSScriptRoot 'launcher-status.ps1')
+. (Join-Path $PSScriptRoot 'launcher-game.ps1')
 trap {
     [void](Write-CoopFailureReport -Root $root -Failure $_ -Kind 'launcher-unhandled')
     break
@@ -118,16 +119,21 @@ $address.DropDownStyle='DropDown';Style-Input $address
 $address.FlatStyle='Flat'
 $addressLabel=New-Text 'IP хоста в Radmin'
 $pathRow=New-Object Windows.Forms.TableLayoutPanel
-$pathRow.Dock='Fill';$pathRow.AutoSize=$true;$pathRow.ColumnCount=2
+$pathRow.Dock='Fill';$pathRow.AutoSize=$true;$pathRow.ColumnCount=3
 $pathRow.BackColor=[Drawing.Color]::Transparent
 [void]$pathRow.ColumnStyles.Add((New-Object Windows.Forms.ColumnStyle('Percent',100)))
 [void]$pathRow.ColumnStyles.Add((New-Object Windows.Forms.ColumnStyle('Absolute',42)))
+[void]$pathRow.ColumnStyles.Add((New-Object Windows.Forms.ColumnStyle('Absolute',76)))
 $gamePath=New-Object Windows.Forms.TextBox
 $gamePath.Text='C:\Games\Mafia II Classic';Style-Input $gamePath
 $browse=New-Object Windows.Forms.Button
 $browse.Text='…';$browse.Dock='Fill';$browse.FlatStyle='Flat';$browse.BackColor=$surface
 $browse.AccessibleName='Выбрать папку Mafia II Classic'
+$findGame=New-Object Windows.Forms.Button
+$findGame.Text='Найти';$findGame.Dock='Fill';$findGame.FlatStyle='Flat';$findGame.BackColor=$surface
+$findGame.AccessibleName='Найти установленную Mafia II Classic'
 $pathRow.Controls.Add($gamePath,0,0);$pathRow.Controls.Add($browse,1,0)
+$pathRow.Controls.Add($findGame,2,0)
 $grid.Controls.Add((New-Text 'Твоя роль'),0,0);$grid.Controls.Add($role,1,0)
 $grid.Controls.Add($addressLabel,0,1);$grid.Controls.Add($address,1,1)
 $grid.Controls.Add((New-Text 'Папка игры'),0,2);$grid.Controls.Add($pathRow,1,2)
@@ -159,7 +165,7 @@ $logs.BackColor=$surface;$logs.Enabled=$false
 $crashes=New-Object Windows.Forms.Button
 $crashes.Text='Крашлоги';$crashes.AutoSize=$true;$crashes.FlatStyle='Flat'
 $crashes.BackColor=$surface;$crashes.AccessibleName='Открыть папку крашлогов'
-foreach($button in @($browse,$logs,$crashes)) {
+foreach($button in @($browse,$findGame,$logs,$crashes)) {
     $button.FlatAppearance.BorderColor=[Drawing.ColorTranslator]::FromHtml('#55565b')
     $button.FlatAppearance.MouseOverBackColor=[Drawing.Color]::Black
     $button.Cursor=[Windows.Forms.Cursors]::Hand
@@ -202,7 +208,26 @@ $browse.add_Click({
     $picker=New-Object Windows.Forms.FolderBrowserDialog
     $picker.Description='Выбери папку Mafia II Classic, внутри которой находится pc\mafia2.exe'
     $picker.ShowNewFolderButton=$false
-    try {if($picker.ShowDialog($form) -eq 'OK'){$gamePath.Text=$picker.SelectedPath}} finally {$picker.Dispose()}
+    try {if($picker.ShowDialog($form) -eq 'OK'){
+        $resolved=Resolve-CoopGameDirectory $picker.SelectedPath
+        if($resolved){$gamePath.Text=$resolved}else{Show-Problem 'Здесь нет Mafia II Classic. Выбери её папку или папку pc.'}
+    }} finally {$picker.Dispose()}
+})
+$findGame.add_Click({
+    try {
+        $findGame.Enabled=$false
+        $found=@(Find-CoopGameDirectories)
+        if(!$found.Count){Show-Problem 'В стандартных папках и библиотеках Steam игра не найдена. Укажи путь вручную через «…».';return}
+        # Prefer the audited executable when several installations exist.
+        $compatible=@($found | Where-Object {
+            (Get-FileHash -LiteralPath (Join-Path $_ 'pc/mafia2.exe')).Hash.ToLowerInvariant() -eq
+            '16c79a3be483e582719e43d7b451e887e89414be81ca7ecfc0536dd8185e6c2f'
+        })
+        if(!$compatible.Count){Show-Problem 'Найдена Mafia II, но EXE не совпал с поддерживаемой версией Classic. Файлы игры не менялись.';return}
+        $gamePath.Text=$compatible[0];$status.ForeColor=$muted
+        $status.Text='Совместимая Mafia II Classic найдена. Выбери роль и IP хоста.'
+    } catch {Show-Problem ('Не удалось найти игру: '+$_.Exception.Message)}
+    finally {$findGame.Enabled=$true}
 })
 $logs.add_Click({if($script:runDirectory){Start-Process explorer.exe -ArgumentList ('"'+$script:runDirectory+'"')}})
 $crashes.add_Click({
@@ -226,13 +251,19 @@ $start.add_Click({
         if($role.SelectedIndex -eq 0 -and @(Get-HostAddresses) -notcontains $ipText) {
             throw 'Этот IP не принадлежит твоему ПК. Для хоста выбери свой адрес из Radmin.'
         }
-        if($role.SelectedIndex -eq 1 -and @(Get-HostAddresses) -contains $ipText) {
+        if($role.SelectedIndex -eq 1 -and
+            ([Net.IPAddress]::IsLoopback($ip) -or @(Get-HostAddresses) -contains $ipText)) {
             throw 'Ты указал IP своего ПК. Для гостя нужен IP друга-хоста из Radmin.'
         }
-        $directory=[IO.Path]::GetFullPath($gamePath.Text.Trim())
-        if(!(Test-Path -LiteralPath (Join-Path $directory 'pc/mafia2.exe') -PathType Leaf)) {
-            throw 'Не найдена pc\mafia2.exe. Выбери папку Mafia II Classic.'
+        $directory=Resolve-CoopGameDirectory $gamePath.Text
+        if(!$directory) {
+            throw 'Не найдена pc\mafia2.exe. Укажи корень Mafia II Classic, папку pc или путь к mafia2.exe.'
         }
+        if((Get-FileHash -LiteralPath (Join-Path $directory 'pc/mafia2.exe')).Hash.ToLowerInvariant() -ne
+            '16c79a3be483e582719e43d7b451e887e89414be81ca7ecfc0536dd8185e6c2f') {
+            throw 'EXE этой игры не совпал с поддерживаемой версией Mafia II Classic. Игра не запущена.'
+        }
+        $gamePath.Text=$directory
         $build=Get-BuildDirectory
         foreach($file in @('probe_launcher.exe','coop_observer.dll')) {
             if(!(Test-Path -LiteralPath (Join-Path (Join-Path $root $build) $file) -PathType Leaf)) {
@@ -258,7 +289,7 @@ $start.add_Click({
         $script:sessionProcess=[Diagnostics.Process]::Start($info)
         $script:liveState=New-CoopLiveState
         $script:statusReadFailed=$false
-        foreach($control in @($start,$role,$address,$gamePath,$browse)){$control.Enabled=$false}
+        foreach($control in @($start,$role,$address,$gamePath,$browse,$findGame)){$control.Enabled=$false}
         $logs.Enabled=$true;$status.ForeColor=$muted
         $status.Text='Запуск мода… В игре пропусти интро двумя Escape и выбери «Продолжить». Сам запуск ещё не подтверждает соединение с другом.'
         $timer.Start()
@@ -316,7 +347,7 @@ $timer.add_Tick({
     }
     finally {
         $script:sessionProcess.Dispose();$script:sessionProcess=$null
-        foreach($control in @($start,$role,$address,$gamePath,$browse)){$control.Enabled=$true}
+        foreach($control in @($start,$role,$address,$gamePath,$browse,$findGame)){$control.Enabled=$true}
     }
 })
 try {[void]$form.ShowDialog()}

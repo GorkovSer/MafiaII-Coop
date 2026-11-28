@@ -11,7 +11,7 @@ $stamp=Get-Date -Format 'yyyyMMdd-HHmmss-fff'
 $stage=Join-Path $root "work/visual-package/$stamp/MafiaII-Coop-visual-preview"
 if(Test-Path -LiteralPath $stage) {throw 'Package staging already exists; no overwrite performed'}
 $files=@('scripts/coop-launcher.ps1','scripts/launcher-session.ps1',
-    'scripts/launcher-diagnostics.ps1','scripts/launcher-status.ps1',
+    'scripts/launcher-diagnostics.ps1','scripts/launcher-status.ps1','scripts/launcher-game.ps1',
     'scripts/start-visual-session.ps1','scripts/start-probe.ps1',
     'scripts/install-test-save.ps1','scripts/launch-result.ps1','scripts/visual-session-report.ps1',
     'testdata/story-save.zip','testdata/story-save.json',
