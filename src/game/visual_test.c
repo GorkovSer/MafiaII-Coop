@@ -78,8 +78,7 @@ static void poll_removed(void) {
         record("removal_registry_confirmed",pending); pending=0;
     }
 }
-static void retire(void) {
-    memset(&timeline,0,sizeof(timeline));
+static void retire_model(void) {
     if(!entity) return;
     if(GetCurrentThreadId()!=owner_thread) return; /* Keep ownership for the game thread. */
     if(!valid()) {record("lost_identity_no_release",guid); entity=model=0; return;}
@@ -88,6 +87,10 @@ static void retire(void) {
     record("release_requested",pending);
     ((EntityCall)(uintptr_t)0x119ddd0)((void *)(uintptr_t)retiring);
     record("release_returned",pending); poll_removed();
+}
+static void retire(void) {
+    memset(&timeline,0,sizeof(timeline));
+    retire_model();
 }
 static int vector_ok(const float p[3]) {
     for(unsigned int i=0;i<3;++i) if(!isfinite(p[i]) || fabsf(p[i])>=1000000) return 0;
@@ -195,7 +198,9 @@ static void network_tick(void) {
     CoopRemoteFrame frame;
     if(!CoopRemoteTimelineAt(&timeline,&s,now,&frame)) {
         if(entity) record("timeline_refused",s.received_sequence);
-        retire(); return;
+        /* Timeline owns its rejection watermark. Removing the visible model
+           must not let the same rejected mailbox seed an empty timeline. */
+        retire_model(); return;
     }
     uint32_t source; float local[3];
     if(!local_source(&source,local)) {retire(); return;}
@@ -211,8 +216,9 @@ static void network_tick(void) {
     if(!valid()) {retire(); return;}
     if(now<next_pose) return;
     next_pose=now+50;
-    float direction[3]={cosf(s.heading),sinf(s.heading),0};
-    apply_pose(frame.position,s.heading_valid ? direction : NULL,4,now);
+    /* Present one delayed pose; raw s above still owns scope/distance checks. */
+    float direction[3]={cosf(frame.heading),sinf(frame.heading),0};
+    apply_pose(frame.position,frame.heading_valid ? direction : NULL,4,now);
 }
 int CoopVisualTestStart(const wchar_t *path) {
     if(!path || wcslen(path)>=MAX_PATH) return 1;

@@ -46,6 +46,8 @@ CoopRemoteActorStatus CoopRemoteActorTick(CoopRemoteActor *a, const CoopRemoteSn
     if (a->handle && (a->retiring || !authorized || changed)) return retire(a);
     if (!authorized) return a->status = COOP_ACTOR_WAIT_WORLD;
     float target[3]; memcpy(target, s.position, sizeof(target));
+    float heading=s.heading;
+    uint32_t heading_valid=s.heading_valid;
     if (a->smoothing_enabled) {
         CoopRemoteFrame frame;
         if (!CoopRemoteTimelineAt(&a->timeline, &s, now, &frame)) {
@@ -53,6 +55,7 @@ CoopRemoteActorStatus CoopRemoteActorTick(CoopRemoteActor *a, const CoopRemoteSn
             return a->status = COOP_ACTOR_WAIT_WORLD;
         }
         memcpy(target, frame.position, sizeof(target));
+        heading=frame.heading; heading_valid=frame.heading_valid;
     }
     if (!a->handle) {
         if (now < a->retry_after) return a->status = COOP_ACTOR_CREATING;
@@ -83,7 +86,9 @@ CoopRemoteActorStatus CoopRemoteActorTick(CoopRemoteActor *a, const CoopRemoteSn
         }
         return a->status = COOP_ACTOR_TOO_FAR;
     }
-    if (s.heading_valid && (!a->ops.face || !a->ops.face(a->context, a->handle, s.heading)))
+    /* Smoothing changes presentation only; authority and raw distance guards
+       continue to use s, including the checks immediately above. */
+    if (heading_valid && (!a->ops.face || !a->ops.face(a->context, a->handle, heading)))
         return retire(a);
     if (distance <= (a->stopped ? 0.20f : 0.10f)) {
         if (!a->stopped && !a->ops.stop(a->context, a->handle)) {
