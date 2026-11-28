@@ -18,9 +18,17 @@ static int visual_mode;
 static unsigned char visual_key[32];
 static void log_event(void *context, const char *event) {
     (void)context;
-    char line[192];
-    int size = snprintf(line, sizeof(line), "network=%s thread=%lu sent=%lu received=%lu\r\n", event,
-        (unsigned long)GetCurrentThreadId(), (unsigned long)session.sent_states, (unsigned long)session.received_states);
+    FILETIME time;
+    ULARGE_INTEGER utc;
+    GetSystemTimeAsFileTime(&time);
+    utc.LowPart=time.dwLowDateTime; utc.HighPart=time.dwHighDateTime;
+    /* Local monotonic time orders events; UTC permits comparison across PCs.
+       UTC comparison still requires synchronized system clocks. */
+    unsigned long long utc_ms=(utc.QuadPart-116444736000000000ULL)/10000;
+    char line[256];
+    int size = snprintf(line, sizeof(line), "network=%s thread=%lu sent=%lu received=%lu ms=%llu utc_ms=%llu\r\n", event,
+        (unsigned long)GetCurrentThreadId(), (unsigned long)session.sent_states, (unsigned long)session.received_states,
+        (unsigned long long)GetTickCount64(),utc_ms);
     if (size <= 0 || (size_t)size >= sizeof(line)) return;
     HANDLE file = CreateFileW(evidence, FILE_APPEND_DATA, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, 0, NULL);
     if (file == INVALID_HANDLE_VALUE) return;

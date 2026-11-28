@@ -37,6 +37,12 @@ foreach($match in @($true,$false)) {
             -RedirectStandardError (Join-Path $caseRoot "$prefix-$i.err")
     }
     foreach($process in $processes) {$process.WaitForExit(); if($process.ExitCode -ne 0){throw "Visual scope fixture failed: $prefix"}}
+    foreach($log in $logs) {
+        $events=@(Get-Content -LiteralPath $log | Where-Object {$_ -like 'network=*'})
+        if(!$events.Count -or @($events | Where-Object {$_ -notmatch ' ms=\d+ utc_ms=\d+$'}).Count) {
+            throw 'Network evidence is missing monotonic/UTC timestamps'
+        }
+    }
     for($i=0;$i -lt 2;$i++) {Get-Content (Join-Path $caseRoot "$prefix-$i.txt")}
     $port++
 }
