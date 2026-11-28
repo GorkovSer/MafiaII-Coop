@@ -28,6 +28,14 @@ Feed "network=ready_guest thread=1`n" waiting_scene
 Feed "visual_test=network_bound value=3`n" avatar_visible
 Feed "network=remote_expired thread=1`n" waiting_scene
 Feed "network=retry_refused thread=1`n" refused
+Feed "network=disconnected thread=1`n" refused
+Feed "network=ready_guest thread=1`nvisual_test=network_bound value=4`n" avatar_visible
+Feed "visual_test=lost_identity_no_release value=4`n" waiting_scene
+Feed "visual_test=network_bound value=5`n" avatar_visible
+Feed "network=retry_wait thread=1`nnetwork=ready_guest thread=1`n" waiting_scene
+Feed "visual_test=network_bound value=6`n" avatar_visible
+Feed "network=stopped thread=1`nobserver=game_paused value=1`n" stopped
+Feed "network=ready_guest thread=1`nobserver=game_unpaused value=1`n" waiting_scene
 Feed "network=ready_guest thread=1`nvisual_test=scene_approval_ended value=32`nvisual_test=network_bound value=4`n" scene_ended
 # A partial line cannot be acted on, and unrelated files are never discovered.
 if(!$state.scene_ended){throw 'Scene withdrawal lost'}

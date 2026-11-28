@@ -1,15 +1,15 @@
 # Incremental, bounded reader of the one session explicitly linked by our worker.
 # No process control, network probes, or scanning unrelated session directories.
+. (Join-Path $PSScriptRoot 'launcher-files.ps1')
 function New-CoopLiveState {
     return @{session_id=$null;offset=[long]0;carry='';network='starting';loaded=$false;
-        paused=$false;scene_ended=$false;avatar=$false}
+        paused=$false;scene_ended=$false;avatar=$false;retry_blocked=$false}
 }
 function Read-CoopLiveState([string]$Root,[string]$RunDirectory,[hashtable]$State) {
     $link=Join-Path $RunDirectory 'session-info.json'
     if(!$State.session_id -and (Test-Path -LiteralPath $link)) {
-        if((Get-Item -LiteralPath $link).Length -gt 1024){throw 'Session link exceeds limit'}
-        $info=Get-Content -LiteralPath $link -Raw -Encoding UTF8 | ConvertFrom-Json
-        if($info.schema -ne 1 -or $info.session_id -notmatch '^\d{8}-\d{6}-\d{3}$') {throw 'Invalid session link'}
+        $info=Read-CoopRunJson $link 1024
+        if($info.schema -ne 1 -or $info.session_id -notmatch '\A\d{8}-\d{6}-\d{3}\z') {throw 'Invalid session link'}
         $State.session_id=[string]$info.session_id
     }
     if(!$State.session_id){return}
@@ -31,11 +31,16 @@ function Read-CoopLiveState([string]$Root,[string]$RunDirectory,[hashtable]$Stat
     foreach($line in ($text.Substring(0,$end) -split "`n")) {
         if($line -match '^network=(\w+) ') {
             $event=$Matches[1]
+            # Guest refusal is immediately followed by disconnected in session.c.
+            # That cleanup event must not advertise a retry the transport blocked.
+            if($event -eq 'retry_refused') {$State.retry_blocked=$true}
+            if($event -in @('ready_host','ready_guest')) {$State.retry_blocked=$false}
             if($event -in @('listening','connecting','ready_host','ready_guest','disconnected',
                 'timeout','retry_wait','retry_connecting','retry_unavailable','retry_refused','start_failed','stopped')) {
                 $State.network=$event
             } elseif($event -like 'reject_*') {$State.network='refused'}
-            if($event -in @('disconnected','timeout','remote_inactive','remote_expired','stopped') -or
+            if($event -in @('disconnected','timeout','remote_inactive','remote_expired','stopped',
+                'retry_wait','retry_connecting','retry_unavailable','retry_refused','start_failed') -or
                 $event -like 'reject_*') {$State.avatar=$false}
         }
         if($line -match '^observer=load_started ') {$State.loaded=$false;$State.avatar=$false}
@@ -43,12 +48,14 @@ function Read-CoopLiveState([string]$Root,[string]$RunDirectory,[hashtable]$Stat
         if($line -match '^observer=game_paused ') {$State.paused=$true;$State.avatar=$false}
         if($line -match '^observer=game_unpaused ') {$State.paused=$false}
         if($line -match '^visual_test=scene_approval_ended ') {$State.scene_ended=$true;$State.avatar=$false}
-        if($line -match '^visual_test=(release_requested|scope_withdrawn|scene_invalidated) ') {$State.avatar=$false}
+        if($line -match '^visual_test=(release_requested|scope_withdrawn|scope_changed|scene_invalidated|lost_identity_no_release|timeline_refused) ') {$State.avatar=$false}
         if($line -match '^visual_test=network_bound ') {$State.avatar=$true}
     }
 }
 function Get-CoopLiveCode([hashtable]$State) {
     if($State.scene_ended){return 'scene_ended'}
+    if($State.network -eq 'stopped'){return 'stopped'}
+    if($State.retry_blocked){return 'refused'}
     if($State.network -in @('refused','retry_refused','start_failed')){return 'refused'}
     if($State.paused){return 'paused'}
     if($State.network -in @('disconnected','timeout','retry_wait','retry_connecting','retry_unavailable')){return 'reconnecting'}
@@ -56,7 +63,6 @@ function Get-CoopLiveCode([hashtable]$State) {
     if($State.network -in @('ready_host','ready_guest')){if($State.loaded){return 'waiting_scene'};return 'connected_loading'}
     if($State.network -eq 'listening'){return 'waiting_guest'}
     if($State.network -eq 'connecting'){return 'connecting'}
-    if($State.network -eq 'stopped'){return 'stopped'}
     return 'starting'
 }
 function Get-CoopExitSummary($Evidence) {

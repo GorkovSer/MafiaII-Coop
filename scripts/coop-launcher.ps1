@@ -4,6 +4,7 @@ $root=Split-Path $PSScriptRoot -Parent
 . (Join-Path $PSScriptRoot 'launcher-diagnostics.ps1')
 . (Join-Path $PSScriptRoot 'launcher-status.ps1')
 . (Join-Path $PSScriptRoot 'launcher-game.ps1')
+. (Join-Path $PSScriptRoot 'launcher-files.ps1')
 trap {
     [void](Write-CoopFailureReport -Root $root -Failure $_ -Kind 'launcher-unhandled')
     break
@@ -33,6 +34,22 @@ function Style-Input($control) {
 }
 function Show-Problem([string]$message) {
     $status.Text=$message;$status.ForeColor=[Drawing.ColorTranslator]::FromHtml('#ffa8ad')
+}
+function Get-SessionProblemText([string]$Code) {
+    switch($Code) {
+        'session_busy' {'Mafia II или другая кооп-сессия уже запускается. Закрой игру обычным выходом и дождись завершения сессии в другом лаунчере.'}
+        'session_lock_failed' {'Не удалось подготовить защиту запуска. Открой журнал запуска; повторную игру не запускали.'}
+        'invalid_request' {'Не удалось прочитать параметры запуска. Укажи роль, IP и папку игры заново.'}
+        'path_too_long' {'Путь к preview слишком длинный. Распакуй полный архив в короткую папку, например C:\MafiaCoop.'}
+        'host_address_unavailable' {'IP хоста больше не назначен этому ПК. Проверь Radmin и выбери свой текущий адрес.'}
+        'unsupported_game' {'EXE игры не совпал с поддерживаемой Mafia II Classic. Файлы игры не заменялись.'}
+        'package_changed' {'Файлы preview отсутствуют или изменены. Распакуй полный архив заново в отдельную папку.'}
+        'profile_preparation_failed' {'Не удалось подготовить отдельное контрольное сохранение. Подробности в журнале запуска.'}
+        'original_profile_changed' {'Обнаружены изменения исходного профиля. Сохрани журналы и резервные копии перед следующим запуском; автоматического восстановления не было.'}
+        'game_launch_or_exit_failed' {'Игра не запустилась или завершилась с ошибкой. Открой журнал запуска и крашлоги.'}
+        'report_failed' {'Итоговую проверку сессии завершить не удалось. Открой журнал; успешное завершение пока не подтверждено.'}
+        default {'Сессия завершилась с ошибкой. Подробная причина сохранена в журнале запуска и крашлогах.'}
+    }
 }
 function Get-BuildDirectory {
     if($BuildDirectory){return $BuildDirectory}
@@ -172,7 +189,7 @@ foreach($button in @($browse,$findGame,$logs,$crashes)) {
 }
 $logButtons.Controls.Add($logs);$logButtons.Controls.Add($crashes)
 $layout.Controls.Add($logButtons,0,7)
-$closeNote=New-Text 'Закрытие лаунчера не завершает игру. Выходи из Mafia II обычным способом.'
+$closeNote=New-Text 'Закрытие лаунчера не завершает игру. Его можно открыть снова для просмотра статуса. Из Mafia II выходи обычным способом.'
 $closeNote.ForeColor=$muted;$closeNote.MaximumSize=New-Object Drawing.Size(620,0)
 $layout.Controls.Add($closeNote,0,8)
 
@@ -287,8 +304,10 @@ $start.add_Click({
         $info.Arguments='-NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "'+(Join-Path $PSScriptRoot 'launcher-session.ps1')+'" -RequestPath "'+$requestPath+'"'
         $info.EnvironmentVariables['PSModulePath']=(Join-Path $env:SystemRoot 'System32/WindowsPowerShell/v1.0/Modules')+';'+(Join-Path $env:ProgramFiles 'WindowsPowerShell/Modules')
         $script:sessionProcess=[Diagnostics.Process]::Start($info)
+        try {Save-CoopActiveRun -Root $root -RunDirectory $script:runDirectory -Process $script:sessionProcess}
+        catch {[void](Write-CoopFailureReport -Root $root -Failure $_ -Kind 'launcher-active-reference' -SessionDirectory $script:runDirectory)}
         $script:liveState=New-CoopLiveState
-        $script:statusReadFailed=$false
+        $script:statusReadFailures=0;$script:statusWarningLogged=$false
         foreach($control in @($start,$role,$address,$gamePath,$browse,$findGame)){$control.Enabled=$false}
         $logs.Enabled=$true;$status.ForeColor=$muted
         $status.Text='Запуск мода… В игре пропусти интро двумя Escape и выбери «Продолжить». Сам запуск ещё не подтверждает соединение с другом.'
@@ -301,10 +320,21 @@ $start.add_Click({
 $timer.add_Tick({
     if(!$script:sessionProcess){return}
     if(!$script:sessionProcess.HasExited) {
-        if(!$script:statusReadFailed) {
             try {
                 Read-CoopLiveState -Root $root -RunDirectory $script:runDirectory -State $script:liveState
-                $status.Text=switch(Get-CoopLiveCode $script:liveState) {
+                $phase=''
+                $phasePath=Join-Path $script:runDirectory 'session-state.json'
+                if(Test-Path -LiteralPath $phasePath) {
+                    $progress=Read-CoopRunJson $phasePath
+                    if($progress.schema -ne 1){throw 'Unexpected session progress format'}
+                    $phase=[string]$progress.phase
+                }
+                $liveCode=Get-CoopLiveCode $script:liveState
+                if($phase -in @('verifying_profile','verifying_result')) {$liveCode='verifying'}
+                elseif($liveCode -eq 'starting' -and $phase -in @('preparing','preparing_profile','acquiring_session')) {$liveCode='preparing'}
+                $status.Text=switch($liveCode) {
+                    'preparing' {'Проверяем файлы preview и готовим отдельное контрольное сохранение…'}
+                    'verifying' {'Игра завершилась. Проверяем исходные сейвы и освобождение аватара…'}
                     'waiting_guest' {'Хост открыт — ожидаем друга. В игре выбери «Продолжить».'}
                     'connecting' {'Подключаемся к хосту. В игре выбери «Продолжить».'}
                     'connected_loading' {'Связь установлена. Загрузи игру через «Продолжить».'}
@@ -317,21 +347,32 @@ $timer.add_Tick({
                     'stopped' {'Сетевой модуль завершён. Ожидаем обычного выхода игры.'}
                     default {'Запуск мода… Пропусти интро двумя Escape и выбери «Продолжить».'}
                 }
+                $script:statusReadFailures=0;$status.ForeColor=$muted
             } catch {
-                $script:statusReadFailed=$true
-                $status.Text='Не удалось прочитать статус. Игра продолжает работать; подробности в крашлогах.'
-                [void](Write-CoopFailureReport -Root $root -Failure $_ -Kind 'launcher-status-read' -SessionDirectory $script:runDirectory)
+                $script:statusReadFailures++
+                if($script:statusReadFailures -ge 3) {
+                    $status.Text='Статус временно недоступен. Повторяем чтение; игру не закрываем.'
+                    if(!$script:statusWarningLogged) {
+                        $script:statusWarningLogged=$true
+                        [void](Write-CoopFailureReport -Root $root -Failure $_ -Kind 'launcher-status-read' -SessionDirectory $script:runDirectory)
+                    }
+                }
             }
-        }
         return
     }
     $timer.Stop()
     try {
         $resultPath=Join-Path $script:runDirectory 'result.json'
-        if(!(Test-Path -LiteralPath $resultPath)){throw 'Процесс запуска завершился без отчёта. Открой папку журнала.'}
-        $result=Get-Content -LiteralPath $resultPath -Raw -Encoding UTF8 | ConvertFrom-Json
+        if(!(Test-Path -LiteralPath $resultPath)){
+            if(Get-Process mafia2 -ErrorAction SilentlyContinue) {
+                throw 'Процесс запуска завершился без отчёта, но Mafia II ещё открыта. Выйди из игры обычным способом перед новой сессией.'
+            }
+            throw 'Процесс запуска завершился без отчёта. Открой папку журнала.'
+        }
+        $result=Read-CoopRunJson $resultPath
+        if($result.schema -ne 1){throw 'Некорректный формат результата. Открой журнал запуска.'}
         if($result.status -ne 'finished' -or $script:sessionProcess.ExitCode -ne 0) {
-            throw ('Запуск завершился с ошибкой: '+$result.message)
+            throw (Get-SessionProblemText ([string]$result.code))
         }
         $status.ForeColor=$muted
         if($result.child_exit_code -ne 0 -or $result.launcher_exit -ne 0 -or
@@ -350,6 +391,24 @@ $timer.add_Tick({
         foreach($control in @($start,$role,$address,$gamePath,$browse,$findGame)){$control.Enabled=$true}
     }
 })
+try {
+    # Reopening this preview observes its existing worker; it never starts a
+    # replacement process or attaches to an arbitrary Mafia process.
+    $active=Open-CoopActiveRun $root
+    if($active) {
+        $script:sessionProcess=$active.process;$script:runDirectory=$active.directory
+        $role.SelectedIndex=if($active.request.role -eq 'guest'){1}else{0}
+        $address.Text=[string]$active.request.address;$gamePath.Text=[string]$active.request.game_directory
+        $script:liveState=New-CoopLiveState
+        $script:statusReadFailures=0;$script:statusWarningLogged=$false
+        foreach($control in @($start,$role,$address,$gamePath,$browse,$findGame)){$control.Enabled=$false}
+        $logs.Enabled=$true;$status.Text='Восстановлено наблюдение за текущей сессией. Новая игра не запускается.'
+        $timer.Start()
+    }
+} catch {
+    [void](Write-CoopFailureReport -Root $root -Failure $_ -Kind 'launcher-reattach' -SessionDirectory $script:runDirectory)
+    Show-Problem 'Не удалось восстановить статус прежней сессии. Если Mafia II ещё открыта, выйди из неё обычным способом перед новым запуском.'
+}
 try {[void]$form.ShowDialog()}
 finally {
     $timer.Stop();$timer.Dispose()

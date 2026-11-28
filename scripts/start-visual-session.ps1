@@ -9,10 +9,11 @@ param(
 )
 $ErrorActionPreference='Stop'
 $root=Split-Path $PSScriptRoot -Parent
+. (Join-Path $PSScriptRoot 'launcher-files.ps1')
 $Role=$Role.ToLowerInvariant()
 $profilePrefix=Join-Path $root 'work/probe-sessions/20000101-000000-000/profile-localappdata'
 if($profilePrefix.Length+80 -ge 260) {
-    throw 'Extract the preview into a shorter folder, for example C:\MafiaCoop. No game started.'
+    throw (New-CoopSessionFailure 'path_too_long' 'Extract the preview into a shorter folder, for example C:\MafiaCoop. No game started.')
 }
 $parsed=$null
 if($Address -notmatch '^(0|[1-9]\d{0,2})(\.(0|[1-9]\d{0,2})){3}$' -or
@@ -26,12 +27,12 @@ if($Role -eq 'host') {
     $localAddresses=@([Net.NetworkInformation.NetworkInterface]::GetAllNetworkInterfaces() |
         ForEach-Object {$_.GetIPProperties().UnicastAddresses} |
         ForEach-Object {$_.Address.IPAddressToString})
-    if($localAddresses -notcontains $Address) {throw 'Host address is not assigned to this PC. Use the host Radmin IP.'}
+    if($localAddresses -notcontains $Address) {throw (New-CoopSessionFailure 'host_address_unavailable' 'Host address is not assigned to this PC. Use the host Radmin IP.')}
 }
 $game=Join-Path $GameDirectory 'pc/mafia2.exe'
 $gameHash='16c79a3be483e582719e43d7b451e887e89414be81ca7ecfc0536dd8185e6c2f'
 if(!(Test-Path -LiteralPath $game) -or (Get-FileHash -LiteralPath $game).Hash.ToLowerInvariant() -ne $gameHash) {
-    throw 'This preview requires the pinned Mafia II Classic executable; no game started'
+    throw (New-CoopSessionFailure 'unsupported_game' 'This preview requires the pinned Mafia II Classic executable; no game started')
 }
 $manifestPath=Join-Path $root 'visual-preview-manifest.json'
 if(Test-Path -LiteralPath $manifestPath) {
@@ -45,7 +46,7 @@ if(Test-Path -LiteralPath $manifestPath) {
         if(!$path.StartsWith($boundary,[StringComparison]::OrdinalIgnoreCase) -or
             !(Test-Path -LiteralPath $path -PathType Leaf) -or
             (Get-FileHash -LiteralPath $path).Hash.ToLowerInvariant() -ne $file.sha256) {
-            throw 'Preview files are incomplete or changed; no game started'
+            throw (New-CoopSessionFailure 'package_changed' 'Preview files are incomplete or changed; no game started')
         }
     }
 }
@@ -54,7 +55,9 @@ foreach($name in @('probe_launcher.exe','coop_observer.dll')) {
 }
 # Always start both players from the same bundled isolated save. Do not reuse an
 # advanced user profile under the fixed first-scene approval label.
-$installed=@(& (Join-Path $PSScriptRoot 'install-test-save.ps1'))
+Write-CoopSessionPhase $SessionInfoPath 'preparing_profile'
+try {$installed=@(& (Join-Path $PSScriptRoot 'install-test-save.ps1'))}
+catch {throw (New-CoopSessionFailure 'profile_preparation_failed' $_.Exception.Message $_.Exception)}
 $seed=@($installed | ForEach-Object {if($_ -match 'TestProfileFrom=(\d{8}-\d{6}-\d{3})') {$Matches[1]}})
 if($seed.Count -ne 1) {throw 'Fresh isolated profile installation was not confirmed'}
 $launch=@{GameDirectory=$GameDirectory;Observer=$true;WaitForExit=$true;

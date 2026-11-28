@@ -7,11 +7,14 @@ if($LASTEXITCODE -ne 0) {throw 'Source commit not available'}
 $pending=@(& git -C $root status --porcelain --untracked-files=normal)
 if($LASTEXITCODE -ne 0) {throw 'Cannot verify the source worktree'}
 if($pending.Count) {throw 'Commit source changes before packaging so the manifest identifies the exact source'}
+. (Join-Path $PSScriptRoot 'build-provenance.ps1')
+$runtimeRecord=Assert-CoopBuildProvenance -Root $root -OutputDirectory (Join-Path $root $BuildDirectory) -Kind runtime -Artifacts @('probe_launcher.exe','coop_observer.dll')
+$frontendRecord=Assert-CoopBuildProvenance -Root $root -OutputDirectory (Join-Path $root $FrontendDirectory) -Kind frontend -Artifacts @('MafiaII-Coop.exe')
 $stamp=Get-Date -Format 'yyyyMMdd-HHmmss-fff'
 $stage=Join-Path $root "work/visual-package/$stamp/MafiaII-Coop-visual-preview"
 if(Test-Path -LiteralPath $stage) {throw 'Package staging already exists; no overwrite performed'}
 $files=@('scripts/coop-launcher.ps1','scripts/launcher-session.ps1',
-    'scripts/launcher-diagnostics.ps1','scripts/launcher-status.ps1','scripts/launcher-game.ps1',
+    'scripts/launcher-diagnostics.ps1','scripts/launcher-status.ps1','scripts/launcher-game.ps1','scripts/launcher-guard.ps1','scripts/launcher-files.ps1',
     'scripts/start-visual-session.ps1','scripts/start-probe.ps1',
     'scripts/install-test-save.ps1','scripts/launch-result.ps1','scripts/visual-session-report.ps1',
     'testdata/story-save.zip','testdata/story-save.json',
@@ -41,6 +44,18 @@ foreach($name in @('probe_launcher.exe','coop_observer.dll')) {
     Copy-Item -LiteralPath (Join-Path (Join-Path $root $BuildDirectory) $name) -Destination $destination
     $files+=$relative
 }
+foreach($name in @('probe_launcher.exe','coop_observer.dll')) {
+    $expected=@($runtimeRecord.artifacts | Where-Object {$_.name -ceq $name})[0].sha256
+    if((Get-FileHash -LiteralPath (Join-Path $stage "$binaryDirectory/$name")).Hash.ToLowerInvariant() -cne $expected) {
+        throw 'Runtime artifact changed while copying; package not created'
+    }
+}
+if((Get-FileHash -LiteralPath (Join-Path $stage 'MafiaII-Coop.exe')).Hash.ToLowerInvariant() -cne $frontendRecord.artifacts[0].sha256) {
+    throw 'Frontend artifact changed while copying; package not created'
+}
+$runtimeRecord | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath (Join-Path $stage 'runtime-build-provenance.json') -Encoding UTF8
+$frontendRecord | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath (Join-Path $stage 'frontend-build-provenance.json') -Encoding UTF8
+$files+=@('runtime-build-provenance.json','frontend-build-provenance.json')
 $readme=@'
 # Mafia II Coop: visual preview 0.0.6
 
@@ -98,6 +113,12 @@ The report summarizes evidence; an active session has no exit/save verdict.
 '@
 [IO.File]::WriteAllText((Join-Path $stage 'README.txt'),$readme,[Text.Encoding]::UTF8)
 $files+='README.txt'
+Assert-CoopBuildInputs $runtimeRecord.inputs @(Get-CoopBuildInputs $root runtime)
+Assert-CoopBuildInputs $frontendRecord.inputs @(Get-CoopBuildInputs $root frontend)
+$finalCommit=(& git -C $root rev-parse HEAD).Trim()
+if($LASTEXITCODE -ne 0 -or $finalCommit -ne $commit) {throw 'Source commit changed while packaging'}
+$finalPending=@(& git -C $root status --porcelain --untracked-files=normal)
+if($LASTEXITCODE -ne 0 -or $finalPending.Count){throw 'Source worktree changed while packaging'}
 $records=@(foreach($file in $files) {
     $path=Join-Path $stage $file
     [pscustomobject]@{path=$file;sha256=(Get-FileHash -LiteralPath $path).Hash.ToLowerInvariant();bytes=(Get-Item -LiteralPath $path).Length}

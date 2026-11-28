@@ -6,6 +6,8 @@ $cc=Join-Path $toolRoot 'bin/i686-w64-mingw32-clang.exe'
 $windres=Join-Path $toolRoot 'bin/i686-w64-mingw32-windres.exe'
 $out=Join-Path $root $OutputDirectory
 New-Item -ItemType Directory -Path $out -Force | Out-Null
+. (Join-Path $PSScriptRoot 'build-provenance.ps1')
+$buildRecord=Start-CoopBuildProvenance -Root $root -OutputDirectory $out -Kind frontend
 Add-Type -AssemblyName System.Drawing
 # Original geometric M / II mark, generated as build resources; no game assets.
 $frames=@()
@@ -51,4 +53,5 @@ $rc=Join-Path $out 'frontend.rc';$object=Join-Path $out 'frontend-resource.o'
 if($LASTEXITCODE -ne 0){throw 'Frontend resource compilation failed'}
 & $cc -std=c11 -O2 -Wall -Wextra -Werror -static -municode -mwindows (Join-Path $root 'src/launcher/frontend.c') $object -o (Join-Path $out 'MafiaII-Coop.exe') -luser32
 if($LASTEXITCODE -ne 0){throw 'Frontend compilation failed'}
+Complete-CoopBuildProvenance -Root $root -OutputDirectory $out -Record $buildRecord -Artifacts @('MafiaII-Coop.exe')
 Write-Output (Join-Path $out 'MafiaII-Coop.exe')

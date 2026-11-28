@@ -12,6 +12,7 @@ $ErrorActionPreference = 'Stop'
 $NetworkRole=$NetworkRole.ToLowerInvariant()
 $root = Split-Path $PSScriptRoot -Parent
 . (Join-Path $PSScriptRoot 'launch-result.ps1')
+. (Join-Path $PSScriptRoot 'launcher-files.ps1')
 $exe = Join-Path $GameDirectory 'pc/mafia2.exe'
 $expected = '16c79a3be483e582719e43d7b451e887e89414be81ca7ecfc0536dd8185e6c2f'
 if ((Get-FileHash -LiteralPath $exe).Hash.ToLowerInvariant() -ne $expected) {
@@ -45,9 +46,7 @@ if($TestVisualAvatar -and (!$Observer -or !$TestProfileFrom -or $NetworkRole -ne
 if($BackgroundVisualTest -and (!$Observer -or !$VisualNetwork -or !$TestProfileFrom)){throw 'Background diagnostic requires isolated visual networking'}
 New-Item -ItemType Directory -Path $local -Force | Out-Null
 if($SessionInfoPath) {
-    @{schema=1;session_id=$stamp} | ConvertTo-Json -Compress |
-        Set-Content -LiteralPath ($SessionInfoPath+'.tmp') -Encoding UTF8
-    Move-Item -LiteralPath ($SessionInfoPath+'.tmp') -Destination $SessionInfoPath
+    Write-CoopRunJson $SessionInfoPath @{schema=1;session_id=$stamp}
 }
 if($BackgroundVisualTest){[IO.File]::WriteAllText((Join-Path $local 'background-test.ini'),"[test]`r`nbackground_visual_client=1`r`n",[Text.Encoding]::ASCII)}
 if($ConcurrentHostSession){
@@ -154,8 +153,15 @@ $extra = @('--user')
 if ($WaitForExit) { $extra += '--wait' }
 if ($Observer) { $extra += '--early' }
 if ($SecondScreen) { $extra += '--monitor2' }
-& $launcher $exe $dll $log @extra | Tee-Object -FilePath (Join-Path $local 'launcher-output.txt')
+Write-CoopSessionPhase $SessionInfoPath 'game_starting' $stamp
+& $launcher $exe $dll $log @extra | ForEach-Object {
+    if($_ -match '^probe_loaded pid=\d+ log_written=1$') {
+        Write-CoopSessionPhase $SessionInfoPath 'game_running' $stamp
+    }
+    $_
+} | Tee-Object -FilePath (Join-Path $local 'launcher-output.txt')
 $launchExit = $LASTEXITCODE
+Write-CoopSessionPhase $SessionInfoPath 'verifying_profile' $stamp
 $profileAfter = Get-OriginalProfileHashes
 $profileAfter | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $local 'original-profile-after.json')
 $profileChanges = @(@($profileBefore.Keys) + @($profileAfter.Keys) | Sort-Object -Unique | Where-Object {
@@ -167,8 +173,8 @@ $launcherText = Get-Content -LiteralPath (Join-Path $local 'launcher-output.txt'
 Get-CoopLaunchResult -LauncherOutput $launcherText -LauncherExit $launchExit `
     -WaitedForExit ([bool]$WaitForExit) -OriginalProfileChanges $profileChanges.Count |
     ConvertTo-Json | Set-Content -LiteralPath (Join-Path $local 'launch-result.json')
-if ($profileChanges.Count) { throw "Original profile changed; inspect private backups in $local. No automatic restore performed." }
-if ($launchExit -ne 0) { throw "Probe failed; private evidence in $local" }
+if ($profileChanges.Count) { throw (New-CoopSessionFailure 'original_profile_changed' "Original profile changed; inspect private backups in $local. No automatic restore performed.") }
+if ($launchExit -ne 0) { throw (New-CoopSessionFailure 'game_launch_or_exit_failed' "Probe failed; private evidence in $local") }
 if (!(Test-Path -LiteralPath $log)) { throw 'Launcher succeeded without probe log' }
 Get-Content -LiteralPath $log -Tail 25
 Write-Output "Private evidence: $local"

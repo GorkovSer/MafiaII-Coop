@@ -9,6 +9,8 @@ if ($LASTEXITCODE -ne 0 -or $version[0] -notmatch 'clang version 23\.1\.5') {
 }
 $out = Join-Path $root $OutputDirectory
 New-Item -ItemType Directory -Path $out -Force | Out-Null
+. (Join-Path $PSScriptRoot 'build-provenance.ps1')
+$buildRecord=Start-CoopBuildProvenance -Root $root -OutputDirectory $out -Kind runtime
 $common = @('-std=c11', '-O2', '-Wall', '-Wextra', '-Werror', '-static')
 & (Join-Path $PSScriptRoot 'build-enet.ps1') -Toolchain $Toolchain -OutputDirectory $OutputDirectory
 $worldSource=Join-Path $root 'src/net/world_sync.c'
@@ -82,4 +84,5 @@ if ($LASTEXITCODE -ne 0) {throw 'Visual scope fixture build failed'}
 if ($LASTEXITCODE -ne 0) {throw 'Visual synthetic peer build failed'}
 & $cc @common -municode (Join-Path $root 'tests/visual_events_host.c') (Join-Path $root 'src/game/visual_test.c') $registrySource $timelineSource $remoteSource (Join-Path $root 'src/net/wire.c') $worldSource -o (Join-Path $out 'visual_events_host.exe')
 if ($LASTEXITCODE -ne 0) {throw 'Visual event fixture build failed'}
+Complete-CoopBuildProvenance -Root $root -OutputDirectory $out -Record $buildRecord -Artifacts @('coop_observer.dll','probe_launcher.exe')
 Get-FileHash -LiteralPath (Join-Path $out 'coop_probe.dll'),(Join-Path $out 'probe_launcher.exe'),(Join-Path $out 'probe_host.exe') | Format-Table
