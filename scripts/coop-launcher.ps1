@@ -2,6 +2,7 @@
 $ErrorActionPreference='Stop'
 $root=Split-Path $PSScriptRoot -Parent
 . (Join-Path $PSScriptRoot 'launcher-diagnostics.ps1')
+. (Join-Path $PSScriptRoot 'launcher-status.ps1')
 trap {
     [void](Write-CoopFailureReport -Root $root -Failure $_ -Kind 'launcher-unhandled')
     break
@@ -225,6 +226,9 @@ $start.add_Click({
         if($role.SelectedIndex -eq 0 -and @(Get-HostAddresses) -notcontains $ipText) {
             throw 'Этот IP не принадлежит твоему ПК. Для хоста выбери свой адрес из Radmin.'
         }
+        if($role.SelectedIndex -eq 1 -and @(Get-HostAddresses) -contains $ipText) {
+            throw 'Ты указал IP своего ПК. Для гостя нужен IP друга-хоста из Radmin.'
+        }
         $directory=[IO.Path]::GetFullPath($gamePath.Text.Trim())
         if(!(Test-Path -LiteralPath (Join-Path $directory 'pc/mafia2.exe') -PathType Leaf)) {
             throw 'Не найдена pc\mafia2.exe. Выбери папку Mafia II Classic.'
@@ -252,6 +256,8 @@ $start.add_Click({
         $info.Arguments='-NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "'+(Join-Path $PSScriptRoot 'launcher-session.ps1')+'" -RequestPath "'+$requestPath+'"'
         $info.EnvironmentVariables['PSModulePath']=(Join-Path $env:SystemRoot 'System32/WindowsPowerShell/v1.0/Modules')+';'+(Join-Path $env:ProgramFiles 'WindowsPowerShell/Modules')
         $script:sessionProcess=[Diagnostics.Process]::Start($info)
+        $script:liveState=New-CoopLiveState
+        $script:statusReadFailed=$false
         foreach($control in @($start,$role,$address,$gamePath,$browse)){$control.Enabled=$false}
         $logs.Enabled=$true;$status.ForeColor=$muted
         $status.Text='Запуск мода… В игре пропусти интро двумя Escape и выбери «Продолжить». Сам запуск ещё не подтверждает соединение с другом.'
@@ -262,7 +268,32 @@ $start.add_Click({
     }
 })
 $timer.add_Tick({
-    if(!$script:sessionProcess -or !$script:sessionProcess.HasExited){return}
+    if(!$script:sessionProcess){return}
+    if(!$script:sessionProcess.HasExited) {
+        if(!$script:statusReadFailed) {
+            try {
+                Read-CoopLiveState -Root $root -RunDirectory $script:runDirectory -State $script:liveState
+                $status.Text=switch(Get-CoopLiveCode $script:liveState) {
+                    'waiting_guest' {'Хост открыт — ожидаем друга. В игре выбери «Продолжить».'}
+                    'connecting' {'Подключаемся к хосту. В игре выбери «Продолжить».'}
+                    'connected_loading' {'Связь установлена. Загрузи игру через «Продолжить».'}
+                    'waiting_scene' {'Связь есть — ожидаем активную сцену второго игрока рядом с тобой.'}
+                    'avatar_visible' {'Сетевой аватар создан. Можно проверять движение вместе с другом.'}
+                    'paused' {'Игра на паузе или неактивна. Вернись в игру — аватар восстановится.'}
+                    'reconnecting' {'Связи с другом нет. Гость переподключается автоматически; перезапуск пока не нужен.'}
+                    'refused' {'Подключение отклонено. Сверьте версии сборки и настройки; подробности в журнале.'}
+                    'scene_ended' {'Сцена перезапущена. Для коопа заново запустите preview у обоих игроков.'}
+                    'stopped' {'Сетевой модуль завершён. Ожидаем обычного выхода игры.'}
+                    default {'Запуск мода… Пропусти интро двумя Escape и выбери «Продолжить».'}
+                }
+            } catch {
+                $script:statusReadFailed=$true
+                $status.Text='Не удалось прочитать статус. Игра продолжает работать; подробности в крашлогах.'
+                [void](Write-CoopFailureReport -Root $root -Failure $_ -Kind 'launcher-status-read' -SessionDirectory $script:runDirectory)
+            }
+        }
+        return
+    }
     $timer.Stop()
     try {
         $resultPath=Join-Path $script:runDirectory 'result.json'
@@ -272,7 +303,13 @@ $timer.add_Tick({
             throw ('Запуск завершился с ошибкой: '+$result.message)
         }
         $status.ForeColor=$muted
-        $status.Text='Игра закрыта. Можно запустить новую сессию. Подробности сохранены в журнале.'
+        if($result.child_exit_code -ne 0 -or $result.launcher_exit -ne 0 -or
+            $null -eq $result.original_profile_changed_files -or $result.original_profile_changed_files -ne 0) {
+            throw 'Нет подтверждения корректного выхода и сохранности профиля. Открой журнал запуска.'
+        }
+        $status.Text=if($result.avatar_created) {
+            'Игра закрыта без ошибок, исходные сейвы не изменены. Отчёт сессии сохранён.'
+        } else {'Игра закрыта без ошибок, исходные сейвы не изменены. Показ аватара в этой сессии не подтверждён.'}
     } catch {
         [void](Write-CoopFailureReport -Root $root -Failure $_ -Kind 'launcher-session-result' -SessionDirectory $script:runDirectory)
         Show-Problem $_.Exception.Message
