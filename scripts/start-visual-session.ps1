@@ -4,6 +4,7 @@ param(
     [string]$GameDirectory='C:\Games\Mafia II Classic',
     [ValidateRange(1,65535)][int]$Port=28960,
     [string]$BuildDirectory='build/visual-network-20261124',
+    [string]$SessionInfoPath,
     [switch]$SecondScreen, [switch]$PrepareOnly
 )
 $ErrorActionPreference='Stop'
@@ -59,11 +60,12 @@ if($seed.Count -ne 1) {throw 'Fresh isolated profile installation was not confir
 $launch=@{GameDirectory=$GameDirectory;Observer=$true;WaitForExit=$true;
     TestProfileFrom=$seed[0];VisualNetwork=$true;NetworkRole=$Role;Address=$Address;
     Port=$Port;VisualScene='classic-alley-mvp-v1';BuildDirectory=$BuildDirectory;
-    SecondScreen=[bool]$SecondScreen}
+    Windowed=$true;SecondScreen=[bool]$SecondScreen}
 $plan=[pscustomobject]@{schema=1;role=$Role;address=$Address;port=$Port;
     scene='classic-alley-mvp-v1';test_profile_from=$seed[0];game_started=$false;
     original_profile_written=$false;arguments=$launch}
 $plan | ConvertTo-Json -Depth 4 | Set-Content -LiteralPath (Join-Path $root "work/probe-sessions/$($seed[0])/visual-launch-plan.json")
 if($PrepareOnly) {return $plan}
+if($SessionInfoPath){$launch.SessionInfoPath=$SessionInfoPath}
 Write-Output "Visual preview: $Role / $Address`:$Port. Both players: choose Continue from the supplied profile."
 & (Join-Path $PSScriptRoot 'start-probe.ps1') @launch

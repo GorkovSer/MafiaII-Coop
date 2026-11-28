@@ -1,8 +1,9 @@
 param([Parameter(Mandatory=$true)][string]$GameDirectory, [switch]$WaitForExit,
-      [switch]$Observer, [switch]$BackgroundVisualTest, [string]$BuildDirectory = 'build/probe', [switch]$SecondScreen,
+      [switch]$Observer, [switch]$BackgroundVisualTest, [string]$BuildDirectory = 'build/probe', [switch]$SecondScreen, [switch]$Windowed,
       [ValidateSet('off','host','guest')][string]$NetworkRole='off',
       [string]$Address='127.0.0.1', [ValidateRange(1,65535)][int]$Port=28960,
       [ValidatePattern('^\d{8}-\d{6}-\d{3}$')][string]$TestProfileFrom,
+      [string]$SessionInfoPath,
       [switch]$ContinueMainStory, [switch]$TestModelClone, [switch]$TestHuman,
       [switch]$TestScriptMove, [switch]$TestVisualAvatar, [switch]$VisualNetwork,
       [ValidatePattern('^[A-Za-z0-9_.-]{1,64}$')][string]$VisualScene='classic-alley-mvp-v1',
@@ -43,6 +44,11 @@ if($TestVisualAvatar -and (!$Observer -or !$TestProfileFrom -or $NetworkRole -ne
 }
 if($BackgroundVisualTest -and (!$Observer -or !$VisualNetwork -or !$TestProfileFrom)){throw 'Background diagnostic requires isolated visual networking'}
 New-Item -ItemType Directory -Path $local -Force | Out-Null
+if($SessionInfoPath) {
+    @{schema=1;session_id=$stamp} | ConvertTo-Json -Compress |
+        Set-Content -LiteralPath ($SessionInfoPath+'.tmp') -Encoding UTF8
+    Move-Item -LiteralPath ($SessionInfoPath+'.tmp') -Destination $SessionInfoPath
+}
 if($BackgroundVisualTest){[IO.File]::WriteAllText((Join-Path $local 'background-test.ini'),"[test]`r`nbackground_visual_client=1`r`n",[Text.Encoding]::ASCII)}
 if($ConcurrentHostSession){
     [IO.File]::WriteAllText((Join-Path $local 'instance-test.ini'),"[test]`r`nsecond_visual_client=1`r`n",[Text.Encoding]::ASCII)
@@ -125,7 +131,7 @@ if ($Observer) {
     if (Test-Path -LiteralPath $profileSource) {
         Copy-Item -LiteralPath $profileSource -Destination (Join-Path $profileParent 'Mafia II') -Recurse
     }
-    if ($SecondScreen) {
+    if ($SecondScreen -or $Windowed) {
         $videoPath = Join-Path $profileParent 'Mafia II/Saves/videoconfig.cfg'
         $video = (Get-Content -LiteralPath $videoPath -Raw).Trim() -split '\s+'
         if ($video.Count -ne 8 -or @($video | Where-Object {$_ -notmatch '^-?\d+$'}).Count) {
@@ -136,6 +142,7 @@ if ($Observer) {
     }
 }
 if ($SecondScreen -and !$Observer) { throw 'Second-screen tests require isolated observer profile' }
+if ($Windowed -and !$Observer) { throw 'Windowed tests require isolated observer profile' }
 Get-ChildItem -LiteralPath (Join-Path $GameDirectory 'pc') -File |
     Where-Object Extension -in '.exe','.dll','.asi','.ini','.cfg' |
     Get-FileHash | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $local 'baseline-hashes.json')
