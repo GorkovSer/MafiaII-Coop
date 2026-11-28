@@ -42,3 +42,27 @@ delay; warm-up/underflow/overflow и gap/discontinuity будут явно ди�
 
 Следующие части этого же блока: production API/алгоритм, собственные сценарии,
 trace replay с пустыми результатами и финальные инструкции интеграции.
+
+## Production API — написано, запуск запрещён
+
+Добавлены DefaultConfig, Configure, Reset, ReadDiagnostics. Zero-init остаётся
+fixed 100 мс; adaptive только по явному Configure. Недопустимые параметры
+отклоняются без изменения экземпляра. Идентичная настройка — no-op, изменение
+очищает историю/оценку/presentation, сохраняя config и принятый watermark.
+Reset сохраняет config/watermark и cumulative counters; новая область/withdrawal
+сбрасывают scope-local данные. Память ограничена 8 poses + 16 intervals.
+
+Adaptive candidate defaults: delay 100..200 мс, warm-up 8 положительных
+интервалов. Окно 16 интервалов; wanted = mean + 2*MAD +20 мс, с ограничением
+min/max. Увеличение по 10 мс после 3 подтверждений, снижение по 5 после 20,
+hysteresis 10/20 мс. Bursts не голосуют; gap >250 исключается из окна.
+Presentation не отматывается при изменении delay, catch-up ограничен 1.25x.
+При underflow — удержание anchor без экстраполяции. В adaptive overflow
+сохраняет нижний anchor, удаляя одну внутреннюю точку, если она ещё в будущем;
+погрешность такого downsampling подлежит оценке по трассам. Fixed FIFO сохранён.
+
+Диагностика: политика delay, фактический возраст presentation, прогрев, holding,
+заполнение, arrival-window, burst/gap/underflow и причины отказов/reset.
+Отказы считаются по вызовам, reset — по переходам состояния; счётчики насыщаются.
+Все коэффициенты кандидаты, не измеренные оптимумы. Статическая проверка и
+написание сценариев продолжаются; никаких результатов выполнения пока нет.
