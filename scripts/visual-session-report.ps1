@@ -56,6 +56,21 @@ foreach($event in $network) {
     if(!$networkCounts.ContainsKey($name)) {$networkCounts[$name]=0}
     $networkCounts[$name]++
 }
+$timeline=New-Object 'System.Collections.Generic.List[object]'
+$timedEvents=0
+foreach($event in $network) {
+    $line=$event.Value
+    $tick=$null;$utc=$null;$sent=$null;$received=$null
+    if($line -match ' ms=(\d+)(?: |$)') {$tick=[long]$Matches[1];$timedEvents++}
+    if($line -match ' utc_ms=(\d+)(?: |$)') {$utc=[long]$Matches[1]}
+    if($line -match ' sent=(\d+)(?: |$)') {$sent=[long]$Matches[1]}
+    if($line -match ' received=(\d+)(?: |$)') {$received=[long]$Matches[1]}
+    $timeline.Add([pscustomobject]@{event=$event.Groups[1].Value;tick_ms=$tick;
+        utc_ms=$utc;sent=$sent;received=$received})
+}
+# Preserve old logs honestly: no timestamps inferred from adjacent player samples.
+$timelineDropped=[Math]::Max(0,$timeline.Count-256)
+$timeline=@($timeline | Select-Object -Last 256)
 [pscustomobject]@{
     schema=1
     evidence_only=$true
@@ -66,6 +81,10 @@ foreach($event in $network) {
     model_lifetimes_balanced_after_exit=$balanced
     last_network_event=$networkState
     network_events=$networkCounts
+    network_timeline=$timeline
+    network_timeline_dropped=$timelineDropped
+    network_events_without_tick=($network.Count-$timedEvents)
+    network_clock_note='tick_ms is local monotonic time; utc_ms requires synchronized PC clocks; null means unavailable'
     launch_result=$exitResult
     exit_evidence_wait_timed_out=($WaitForExitSeconds -gt 0 -and
         ($null -eq $exitResult -or $exitResult.waited_for_exit -ne $true))
