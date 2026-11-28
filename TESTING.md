@@ -1,5 +1,66 @@
 # Проверки
 
+## 2026-11-29 — launcher recovery и проверки consumers
+
+test-launcher-status PS5.1/PS7 PASS после воспроизведённого отказа:
+retry_refused->disconnected раньше ошибочно давал reconnecting. Теперь refused
+сохраняется до нового ready. Добавлены loss-of-identity, retry без старого avatar
+и stopped при старой pause. Production transport не изменён.
+test-launcher-reattach PS5.1/PS7 PASS на отдельном fixture worker: PID/start/path,
+stale identity, traversal, invalid role, retained ExitCode17, dead reference.
+Это helper tests без игры и GUI; test worker штатно завершён собственным сигналом.
+test_remote_actor дополнен delayed/unknown heading, raw distance veto и отказом
+повторному старому mailbox после удаления. Runner timeline O0/O2 и actor/
+foundation PASS. Первый новый unknown fixture имел запрещённый ненулевой angle
+при valid0; исправлена входная fixture, production validation сохранена.
+test-build-provenance PS5.1/PS7 PASS: missing/incomplete/wrong kind, changed
+artifact/source/script, added source, source mutation during build, frontend
+exclusion и runtime launcher inclusion. Сценарий changed probe_launcher.c
+воспроизвёл дыру до исправления списка runtime inputs; повтор прошёл.
+В этих проверках Mafia не запускалась, аудио и мониторы не менялись.
+
+## 2026-11-29 — игровой smoke, audio regression и PR22
+
+Локальный ZIP source ad108fd, SHA256
+8af7856928e9dfe3857edacb50d97c5a8544f583388d41fc25abec5639a30ecc,
+session20261129-001955-516. Native evidence DISPLAY2 x2877 y141,
+client1280x720, window_contained=1. Два Escape пропустили интро; stock Continue,
+визуально подтверждённый переулок, движение, pause/resume и normal exit PASS.
+Выход1625ms, child_exit0, launcher_exit0, original_profile_changed_files0.
+Второго клиента/моделей нет: это standalone smoke, не two-PC проверка сглаживания.
+Запуск через start-visual-session -SecondScreen, не полный worker/UI cycle.
+
+Звук на старте присутствовал вопреки требованию пользователя: заранее готовый
+watcher упал на Get-FileHash, недоступном через унаследованный PSModulePath.
+Отдельный mute-owned-game сообщил 1 обработанную сессию Mafia; игра штатно закрыта.
+Исправлено: inbox Utility/Management импортируются из PSHOME, зависимые commands
+проверяются до ready. -PreflightOnly PASS в Windows PowerShell5.1 с PSModulePath,
+указывающим на отсутствующий каталог. Этот прогон не запускает игру и не меняет
+звук; полного повторного беззвучного старта после исправления пока нет.
+test-launcher-guard.ps1 PS5.1 PASS: cross-process busy и acquisition после release.
+
+Draft PR22 head663f5f8: isolated source, штатный runner с ReplayTraces запросом
+остановился на legacy O0 (16 passed/1 failed, test_remote_timeline.c:242).
+Clock/adaptive/O2/replay не достигнуты. Подтверждён статический R1;
+PR22 не объединён и в игровом smoke не использовался.
+
+## 2026-11-29 — интеграция PR21 и metadata launcher
+
+Пользователь разрешил тесты; игровые запуски только на втором экране без звука.
+Runtime build/integration-20261129 и frontend build/launcher-integration-20261129
+собраны pinned clang23.1.5 с warnings-as-errors и новой build provenance.
+test-probe.ps1 завершился успешно: production fixtures, real x86 loader,
+early load, отказ неизвестному image, profile redirect, user-token normal exit.
+test-remote-timeline.ps1: 17/17 O0, 17/17 O2, actor/foundation regressions PASS.
+Это fixed100 PR21 + локальные consumers; адаптивный PR22 не входит в сборку.
+Windows PowerShell5.1: test-launcher-status/game PASS. PS5.1 и PS7:
+test-launcher-files PASS (BOM/no BOM, malformed JSON/UTF-8, root types,
+byte limits, atomic replacement with shared reader, preservation on failure).
+Первый прогон files выявил ошибку File.Replace backup=$null в PS5.1;
+после замены на [NullString]::Value повтор в обоих runtimes прошёл.
+Фиктивные EXE из game discovery не исполнялись. Игровой результат новой
+сборки пока отсутствует; эти результаты не доказывают two-PC gameplay.
+
 ## 2026-11-28 — ограниченный поиск установки для launcher
 
 scripts/test-launcher-game.ps1 проверяет root/pc/EXE, конечный разделитель,
