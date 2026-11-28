@@ -105,6 +105,56 @@ int main(void) {
     assert(turning.removed==1 && !turning.moved);
     assert(CoopRemoteActorTick(&turn_actor,NULL,1005)==COOP_ACTOR_REMOVING && turning.faced==3);
     turning.gone=1; CoopRemoteActorTick(&turn_actor,NULL,1006); assert(!turn_actor.handle);
-    puts("PASS actor ownership retirement, fresh-world gating and bounded motion requests");
+    {
+        Backend smooth={0}; CoopRemoteActor actor;
+        CoopRemoteActorInit(&actor,&ops,&smooth);
+        assert(CoopRemoteActorEnableSmoothing(&actor,1));
+        s=snapshot(); s.received_sequence=1; s.heading_valid=1; s.heading=0;
+        assert(CoopRemoteActorTick(&actor,&s,1000)==COOP_ACTOR_CREATING);
+        s.received_sequence=2; s.heading=1;
+        s.state_received_ms=s.mailbox_published_ms=s.world_observed_ms=1050;
+        assert(CoopRemoteActorTick(&actor,&s,1050)==COOP_ACTOR_STANDING);
+        assert(smooth.faced==1 && fabsf(smooth.heading)<0.001f);
+        assert(CoopRemoteActorTick(&actor,&s,1125)==COOP_ACTOR_STANDING);
+        assert(smooth.faced==2 && fabsf(smooth.heading-0.5f)<0.001f);
+        assert(s.heading==1 && s.state_received_ms==1050); /* Authority stays raw. */
+        s.received_sequence=3; s.heading_valid=0; s.heading=0;
+        s.state_received_ms=s.mailbox_published_ms=s.world_observed_ms=1150;
+        assert(CoopRemoteActorTick(&actor,&s,1175)==COOP_ACTOR_STANDING);
+        assert(smooth.faced==2); /* Do not invent a facing across unknown pose. */
+    }
+    {
+        Backend guarded={0}; CoopRemoteActor actor;
+        CoopRemoteActorInit(&actor,&ops,&guarded);
+        assert(CoopRemoteActorEnableSmoothing(&actor,1));
+        s=snapshot(); s.received_sequence=1;
+        assert(CoopRemoteActorTick(&actor,&s,1000)==COOP_ACTOR_CREATING);
+        s.received_sequence=2; s.position[0]=19;
+        s.state_received_ms=s.mailbox_published_ms=s.world_observed_ms=1050;
+        assert(CoopRemoteActorTick(&actor,&s,1050)==COOP_ACTOR_STANDING);
+        s.received_sequence=3; s.position[0]=22;
+        s.state_received_ms=s.mailbox_published_ms=s.world_observed_ms=1100;
+        assert(CoopRemoteActorTick(&actor,&s,1100)==COOP_ACTOR_TOO_FAR);
+        assert(!guarded.moved); /* Delayed target is near; raw position must veto. */
+    }
+    {
+        Backend rejected={0}; CoopRemoteActor actor;
+        CoopRemoteActorInit(&actor,&ops,&rejected);
+        assert(CoopRemoteActorEnableSmoothing(&actor,1));
+        s=snapshot(); s.received_sequence=1;
+        assert(CoopRemoteActorTick(&actor,&s,1000)==COOP_ACTOR_CREATING);
+        s.received_sequence=3;
+        s.state_received_ms=s.mailbox_published_ms=s.world_observed_ms=1050;
+        assert(CoopRemoteActorTick(&actor,&s,1050)==COOP_ACTOR_STANDING);
+        s.received_sequence=2;
+        assert(CoopRemoteActorTick(&actor,&s,1051)==COOP_ACTOR_REMOVING);
+        rejected.gone=1;
+        assert(CoopRemoteActorTick(&actor,&s,1052)==COOP_ACTOR_WAIT_WORLD);
+        for(uint64_t now=1053;now<1060;++now)
+            assert(CoopRemoteActorTick(&actor,&s,now)==COOP_ACTOR_WAIT_WORLD);
+        assert(rejected.created==1 && rejected.removed==1);
+        assert(actor.timeline.have_newest && actor.timeline.newest.received_sequence==3);
+    }
+    puts("PASS actor retirement, raw authority guards, delayed heading, unknown pose and rejected mailbox replay");
     return 0;
 }

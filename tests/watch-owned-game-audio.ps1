@@ -1,7 +1,17 @@
 param([Parameter(Mandatory=$true)][string]$PreviewRoot,
-      [Parameter(Mandatory=$true)][string]$RunDirectory)
+      [Parameter(Mandatory=$true)][string]$RunDirectory,
+      [switch]$PreflightOnly)
 $ErrorActionPreference='Stop'
+# A Windows PowerShell child can inherit PS7's incompatible PSModulePath.
+# Load the matching inbox modules before advertising readiness for game launch.
+foreach($module in @('Microsoft.PowerShell.Utility','Microsoft.PowerShell.Management')) {
+    Import-Module (Join-Path $PSHOME ('Modules/'+$module+'/'+$module+'.psd1')) -ErrorAction Stop
+}
+foreach($command in @('Get-FileHash','ConvertFrom-Json','Get-Content','Select-String','Get-Process','Test-Path','Start-Sleep')) {
+    [void](Get-Command $command -ErrorAction Stop)
+}
 . (Join-Path $PSScriptRoot 'mute-owned-game.ps1') -InitializeOnly
+if($PreflightOnly){Write-Output 'PASS owned audio watcher dependencies and CoreAudio initialization';return}
 # Signal only after CoreAudio interop has compiled, before the game is started.
 [IO.File]::WriteAllText((Join-Path $RunDirectory 'audio-watcher-ready.txt'),'ready')
 $watch=[Diagnostics.Stopwatch]::StartNew()
