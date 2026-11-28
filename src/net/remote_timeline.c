@@ -223,6 +223,15 @@ int CoopRemoteTimelineAt(CoopRemoteTimeline *t, const CoopRemoteSnapshot *curren
     memset(out,0,sizeof(*out));
     if (!t) return 0;
     ensure_config(t);
+    /* A backwards receiver clock is not a new stream. Preserve packet identity
+       and the old clock floor; otherwise an older sequence could seed history. */
+    if (now<t->last_now) {
+        if (t->count || t->diagnostics.presentation_valid)
+            reset_stream(t,COOP_TIMELINE_RESET_CLOCK,1,1);
+        increment(&t->diagnostics.refusals[COOP_TIMELINE_REFUSAL_CLOCK]);
+        t->diagnostics.last_refusal_reason=COOP_TIMELINE_REFUSAL_CLOCK;
+        return 0;
+    }
     CoopRemoteSnapshot s;
     if (!CoopRemoteSnapshotAt(current ? &raw : NULL,now,&s) || !s.active || !s.world_authorized) {
         CoopTimelineRefusalReason refusal=COOP_TIMELINE_REFUSAL_INVALID;
@@ -238,7 +247,6 @@ int CoopRemoteTimelineAt(CoopRemoteTimeline *t, const CoopRemoteSnapshot *curren
         t->last_now=0; return 0;
     }
     if (t->count>COOP_TIMELINE_CAPACITY) reset_stream(t,COOP_TIMELINE_RESET_CORRUPT,0,0);
-    if (now<t->last_now) reset_stream(t,COOP_TIMELINE_RESET_CLOCK,0,0);
     if (t->have_newest && !same_world(&t->newest,&s)) reset_stream(t,COOP_TIMELINE_RESET_SCOPE,0,0);
     t->last_now=now;
     unsigned int new_packet=!t->have_newest || s.received_sequence!=t->newest.received_sequence;
