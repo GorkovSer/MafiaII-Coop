@@ -1,5 +1,188 @@
 # Следующие действия для Codex — 2026-11-28
 
+## 2026-11-29: статусы отказа, reattach и consumer regressions
+
+Исправлен UI reader: retry_refused -> disconnected больше не теряет запрет
+переподключения. Блокировка снимается только новым ready; stopped приоритетнее
+старой паузы, retry/потеря identity/scope/timeline refusal снимают avatar flag.
+Регрессия отказа сначала упала, после исправления test-launcher-status прошёл
+PS5.1/PS7. Только интерпретация журнала; протокол/session transport не менялись.
+Новый test-launcher-reattach прошёл PS5.1/PS7 на отдельном короткоживущем
+PowerShell fixture: точный process identity, stale start ticks, traversal,
+invalid request, сохранение ExitCode17 после выхода, отказ завершённому PID.
+Это проверка helper, не визуальная приёмка повторного открытия реального GUI.
+
+test_remote_actor расширен: delayed heading0->0.5 при raw heading1,
+unknown heading без face, raw position22 запрещает движение при near delayed
+target, repeated rejected sequence не создаёт новую модель после retirement.
+Runner timeline O0/O2 + расширенный actor/foundation прошёл. Первоначальная
+ошибка нового fixture (heading_valid0 с ненулевым heading) исправлена в fixture
+до повторного успешного прогона; validation production не ослаблялась.
+
+Новый test-build-provenance обнаружил, что runtime inputs ошибочно исключали
+весь src/launcher, включая probe_launcher.c/window.c/user_process.c. Runtime
+теперь исключает только frontend.c/manifest. Тест отказа изменённому launcher
+сначала падал, после исправления suite прошёл PS5.1/PS7. Также проверены missing/
+incomplete/kind mismatch, artifact/source/script mutation, added input и
+изменение source между Start и Complete. Старые provenance требуют пересборки;
+runtime/frontend outputs повторно собраны с Werror и новым полным provenance.
+
+## 2026-11-29: игровая проверка и отдельный отказ PR22
+
+Из commit ad108fd собран локальный draft ZIP (24 files), SHA256
+8af7856928e9dfe3857edacb50d97c5a8544f583388d41fc25abec5639a30ecc.
+Извлечён в короткую C:/MafiaCoop/integration-20261129-001935.
+Session 20261129-001955-516: DISPLAY2, client1280x720, window_contained=1.
+Stock Continue загрузил контрольный переулок, сцена визуально подтверждена;
+движение, paused/resume->waiting_guest и штатный выход проверены.
+child_exit=0, launcher_exit=0, original_profile_changed_files=0.
+Второго клиента не было, моделей не создавалось; lifetime boolean=false
+в этом пустом отчёте не является доказательством утечки или парной приёмки.
+Это прямой start-visual-session -SecondScreen, не полная UI/worker reattach приёмка.
+
+Аудиотребование сначала НАРУШЕНО: watcher прошёл Add-Type, но после запуска
+упал на Get-FileHash из-за унаследованного PS7 PSModulePath. Пользователь слышал
+игру. Отдельный mute-owned-game заглушил одну сессию Mafia; прочий звук не менялся.
+Watcher теперь явно импортирует inbox Utility/Management из своего PSHOME и
+проверяет команды до ready. Новый -PreflightOnly прошёл PS5.1 с намеренно
+неработающим PSModulePath, без запуска игры/изменения звука. Полный повтор
+watcher + startup после исправления пока отсутствует; беззвучный старт не принят.
+test-launcher-guard.ps1 прошёл PS5.1: другой процесс отклонён session_busy,
+после release следующий процесс получил mutex. Никакая Mafia не запускалась.
+
+PR22 head663f5f8 проверен в изолированной source copy его runner: legacy O0
+16/17, отказ alias/clock rollback line242, подтверждающий R1. Runner остановился;
+clock/adaptive/O2/replay ещё не запускались. См. PR22_REVIEW.md. Не merge.
+
+## 2026-11-29: пользователь разрешил тесты, только второй экран и без звука
+
+Полная runtime сборка build/integration-20261129 и frontend
+build/launcher-integration-20261129 завершились с Werror и provenance.
+test-probe.ps1 прошёл production fixtures, x86 loader/early load, negative image,
+profile redirect и user-token checks. test-remote-timeline.ps1 прошёл 17/17
+при O0 и O2 плюс actor/foundation. Это текущий PR21 с consumer follow-up;
+PR22 не объединён и этим прогоном не проверен.
+test-launcher-status/game прошли в Windows PowerShell5.1. Новый
+test-launcher-files.ps1 прошёл в PS5.1 и PS7: UTF-8/BOM, invalid JSON/UTF-8,
+объектный root, exact/overflow limit, atomic replacement при reader и отказе.
+Именно новый тест обнаружил, что File.Replace(...,$null) в PS5.1 получает
+пустой backup path и падает. Исправлено явным [NullString]::Value; повтор прошёл.
+Игровая проверка новой сборки ещё не выполнена. Разрешена только windowed
+на втором дисплее, с подготовленным audio watcher и двумя Escape для интро.
+
+## Черновик 2026-11-29: ограниченное чтение metadata
+
+Read-CoopRunJson теперь ограничивает фактически прочитанные bytes, а не только
+исходную Length файла: максимум limit+1, с отказом при превышении. Принимает
+UTF-8 с BOM или без него; пустые, повреждённые UTF-8/JSON и корневые значения,
+отличные от объекта, отклоняются. ConvertFrom-Json явно terminating, независимо
+от настроек вызывающего кода. Live status использует тот же reader (1024 bytes
+для session link); producer записывает link через общий atomic writer с уникальным
+temp вместо фиксированного .tmp. Session ID в обоих readers ограничен \A…\z.
+Это кодовый draft, без компиляции, тестов, replay, игры или новой упаковки.
+После разрешения проверить BOM/no BOM, пустой/обрезанный/невалидный JSON/UTF-8,
+корневые null/array/scalar, лимит и limit+1, замену файла при открытом reader,
+появление link во время polling, сохранение старого destination при ошибке записи.
+PR22 остаётся отдельно; область timeline соавтора не изменена.
+
+## Draft PR22 рассмотрен чтением, не объединён
+
+Head 663f5f89da7c8484cf737e8577ff3070fe25a3be получен в origin/pr22-review,
+но его timeline не включён в текущую интеграционную ветку. См. PR22_REVIEW.md.
+Выявлено несовместимое ожидание старого alias_and_clock_rollback: после now1001
+он требует success при now1000, новый code намеренно отказывает. Новый runner
+запускает этот старый тест. Нужна правка сценария соавтором, не ослабление guard.
+Это вывод по исходникам, без фактического запуска. Код/fixtures/replay PR22
+по-прежнему не собраны и не протестированы. Adaptive не включать, Draft не
+считать готовым к merge/упаковке. Будущая интеграция отдельно должна учитывать
+сохранность config при полном отзыве visual/actor timeline.
+
+## Review PR21 и подключение render heading — без запуска тестов
+
+Проверены diff/source и handoff PR21, точный head
+4705d4df3138fb43d20794c3185be5a7123bf84a. Область соответствует договорённости:
+timeline.c/h, отдельные fixtures/runner и свой документ. Блокирующих замечаний
+статический review не выявил: authority не подменяется; freshness/withdrawal
+проверяются до интерполяции; watermark удерживается при отказе старому/изменённому
+sequence; угол интерполируется по короткой дуге в том же времени, что позиция.
+Результаты 17/17 O0/O2 и full Werror — сведения соавтора, не новый локальный прогон.
+
+PR подключён к локальной интеграционной ветке. Отдельно изменены потребители:
+visual_test.c применяет frame.heading/heading_valid вместе с frame.position;
+remote_actor.c использует frame angle только при включённом smoothing, иначе raw.
+Raw s остаётся источником scope/authority/distance guards, без присваивания туда
+задержанного pose. Файлы timeline соавтора дополнительно не правились.
+PR21 также вручную объединён на GitHub: development commit 4ee648a; дерево
+объединения сверено с рассмотренным head, различий нет.
+
+Выявлена интеграционная особенность visual consumer: его retire() безусловно
+обнулял timeline после отказа, стирая rejection watermark модуля. Разделены
+retire_model() и полный retire(): при timeline refusal удаляется модель с
+сохранением состояния, которым владеет timeline. На withdrawal/scope change/
+pause полный сброс сохранён. Сам timeline уже обнуляет себя на невалидном/
+просроченном current; эта семантика не обходится. Actor consumer сохраняет
+watermark при отказе, его retire не обнуляет timeline. Новый follow-up требует
+проверки повторного stale/mutated mailbox через настоящий visual consumer.
+
+Пользователь по-прежнему запретил тесты/сборку/игру до отдельной команды.
+Потребительский follow-up НЕ проверен компиляцией, fixtures или в игре.
+Перед новой упаковкой нужна полная пересборка всех потребителей расширенных
+CoopRemoteFrame/Timeline и согласованный одинаковый ZIP для двух ПК.
+В будущем отдельно проверить raw mode, smoothing mode, unknown heading,
+переход через ±π, смену scope, большие скачки и отзыв на паузе/разрыве.
+
+## Продолжение без тестов: этапы worker и восстановление чтения статуса
+
+Дополнительно UI записывает work/active-launcher-run.json после запуска worker.
+Повторное открытие ТОЙ ЖЕ preview папки восстанавливает только наблюдение:
+run_id проверяется, PID сопоставляется с точными StartTime ticks и системным
+PowerShell path. Handle удерживается через EnableRaisingEvents для ExitCode.
+Ни новая игра, ни замена worker, ни завершение какого-либо процесса не выполняются.
+Мёртвый/reused PID игнорируется. Ошибка сохранения ссылки не прерывает сессию.
+Нужно отдельно проверить reopen при живом worker, старый PID, повреждённую ссылку,
+закрытие двух наблюдающих окон и завершение worker во время подключения UI.
+
+В той же черновой ветке launcher-safety добавлен launcher-files.ps1: ограниченное
+чтение run JSON с FileShare.Delete и атомарная запись через File.Replace/Move.
+session-state.json отдельно сообщает подготовку профиля, реальный probe_loaded,
+проверку профиля и итоговый отчёт. Ошибка progress-файла не прерывает игру.
+Worker заранее создаёт неуспешный результат, сохраняет исходную причину даже при
+ошибке дополнительного логирования и возвращает машинные failure codes.
+UI показывает русские сообщения для типовых ошибок, повторяет чтение статуса
+после временного сбоя и не называет игру закрытой при смерти worker без отчёта.
+Новый helper включён в упаковку. Исходный exception подготовки профиля сохранён
+как InnerException. Ни тесты, ни синтаксический запуск/сборка/игра НЕ выполнялись.
+При будущей приёмке проверить metadata replace во время чтения, временный IO
+сбой с восстановлением UI, смерть worker при живой игре, ошибки записи логов/
+результата и полный цикл подготовки/игры/проверки сейвов. Эти изменения пока
+не включены в опубликованный рабочий ZIP и не должны иметь статус «проверено».
+
+## Новый код без тестового запуска: защита одновременных launcher workers
+
+Также добавлена привязка native build к исходникам: build-provenance.ps1,
+интеграция build-probe/build-launcher/package-visual-mvp. Build сначала пишет
+complete=false, затем отмечает complete=true только после успеха и проверки,
+что набор/байты входных файлов не менялись за время компиляции. Упаковщик
+сверяет текущие исходники и хеши DLL/EXE, проверяет скопированные бинарники,
+кладёт оба provenance JSON в manifest и повторно проверяет чистоту/commit.
+Старые build директории без metadata теперь требуют новой сборки; нельзя
+создавать metadata вручную, выдавая старые бинарники за актуальные.
+Эта часть тоже НЕ запускалась, не собиралась и не тестировалась. Сначала после
+разрешения проверить изменённый исходник, подменённый бинарник, незавершённый
+build и изменение исходников во время сборки/упаковки. Подробнее BUILD_PACKAGING.md.
+
+Пользователь запретил текущие тесты. Добавлен launcher-guard.ps1: per-user Local
+named mutex общий для разных распакованных preview. Worker захватывает его до
+подготовки профиля и держит до завершения игры, отчёта и записи результата.
+Занятая блокировка или уже существующая Mafia дают код session_busy; UI выводит
+понятную подсказку, без остановки чужой игры. Abandoned mutex допускает новый
+worker только после повторной проверки отсутствия Mafia. Никакой правки штатного
+игрового mutex или диагностического второго клиента здесь нет.
+Guard освобождается в finally даже при ошибке записи result; helper включён
+в упаковщик. Изменения НЕ проверялись запуском/fixtures/игрой/сборкой.
+После разрешения тестов проверить два worker из разных папок, занятый game,
+abandoned worker и ошибку записи результата; не выдавать этот код за принятую сборку.
+
 ## Разделение работы и поиск игры
 
 Соавтору передана отдельная ветка codex/avatar-smoothing: remote_timeline.c/h,
